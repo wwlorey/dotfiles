@@ -1,0 +1,15 @@
+{
+    "window.zoomLevel": 0,
+    "vim.insertModeKeyBindings": [
+      {
+        "before": ["j", "k"],
+        "after": ["<Esc>"]
+      }
+    ],
+    "editor.autoClosingBrackets": "never",
+    "html.autoClosingTags": false,
+    "javascript.autoClosingTags": false,
+    "javascript.updateImportsOnFileMove.enabled": "always",
+    "markdown-pdf.displayHeaderFooter": false,
+    "markdown-pdf.highlightStyle": "github.css"
+}
