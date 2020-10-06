@@ -1,11 +1,16 @@
 {
     "window.zoomLevel": 0,
+    "terminal.integrated.shell.osx": "/bin/zsh",
+    "editor.fontFamily": "Fira Code",
     "vim.insertModeKeyBindings": [
       {
         "before": ["j", "k"],
         "after": ["<Esc>"]
       }
     ],
+    "editor.fontLigatures": true,
+    "editor.tabSize": 4,
+    "diffEditor.renderSideBySide": false,
     "editor.autoClosingBrackets": "never",
     "html.autoClosingTags": false,
     "javascript.autoClosingTags": false,
