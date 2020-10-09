@@ -1,3 +1,9 @@
+# https://github.com/ohmyzsh/ohmyzsh
 export ZSH="~/.oh-my-zsh"
-ZSH_THEME="typewritten"
-plugins=(git)
+
+# https://github.com/reobin/typewritten
+fpath+=~/.zsh/typewritten
+autoload -U promptinit; promptinit
+prompt typewritten
+
+plugins=(git osx)
