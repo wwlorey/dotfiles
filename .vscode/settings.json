@@ -1,5 +1,5 @@
 {
-    "window.zoomLevel": 0,
+    "window.zoomLevel": -1,
     "terminal.integrated.shell.osx": "/bin/zsh",
     "editor.fontFamily": "Fira Code",
     "vim.insertModeKeyBindings": [

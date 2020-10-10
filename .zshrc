@@ -3,7 +3,7 @@ export ZSH=$HOME/.oh-my-zsh
 
 # https://github.com/reobin/typewritten
 TYPEWRITTEN_SYMBOL=">"
-fpath+=~/.zsh/typewritten
+fpath+=$HOME/.zsh/typewritten
 autoload -U promptinit; promptinit
 prompt typewritten
 
