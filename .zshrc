@@ -2,10 +2,11 @@
 export ZSH=$HOME/.oh-my-zsh
 
 # https://github.com/reobin/typewritten
-TYPEWRITTEN_SYMBOL=">"
 fpath+=$HOME/.zsh/typewritten
 autoload -U promptinit; promptinit
 prompt typewritten
+ZSH_THEME=""
+TYPEWRITTEN_SYMBOL=">"
 
 plugins=(
     git
