@@ -1,0 +1,4 @@
+#!/bin/sh
+
+backgroundLocation="$HOME/.local/share/background"
+xwallpaper --zoom "$backgroundLocation"

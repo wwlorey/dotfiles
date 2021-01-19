@@ -1,3 +1,3 @@
 #!/bin/bash
 
-rsync -vr --exclude=.git --exclude=*.sh . ~/
+rsync -avr --exclude=.git --exclude=*.sh . ~/
