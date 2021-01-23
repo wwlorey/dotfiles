@@ -1,0 +1,3 @@
+dwmblocks &
+setbackground &
+dwm
