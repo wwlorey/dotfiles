@@ -36,7 +36,7 @@ set noshowcmd
 	filetype plugin on
 	syntax on
 	set encoding=utf-8
-	set number relativenumber
+	set number
 " Enable autocompletion:
 	set wildmode=longest,list,full
 " Disables automatic commenting on newline:
