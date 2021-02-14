@@ -1,0 +1,18 @@
+#!/bin/bash
+
+if [ -z "$1" ]
+then
+	echo "Error: No destination provided for backup."
+	exit 1;
+fi
+
+# Save GNOME configuration
+dconf dump / > ~/.config/dconf/user.conf
+# To restore:
+# dconf load / < ~/.config/dconf/user.conf
+
+# Save list of installed packages
+pacman -Q > ~/.packages
+
+# Backup the home directory
+rsync --archive --progress --verbose --exclude={.cache,.viminfo} ~/ "$1"
