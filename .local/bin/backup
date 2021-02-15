@@ -7,12 +7,12 @@ then
 fi
 
 # Save GNOME configuration
-dconf dump / > ~/.config/dconf/user.conf
+dconf dump / > ~/.dconf-backup
 # To restore:
-# dconf load / < ~/.config/dconf/user.conf
+# dconf load / < ~/.dconf-backup
 
 # Save list of installed packages
 pacman -Q > ~/.packages
 
 # Backup the home directory
-rsync --archive --progress --verbose --exclude={.cache,.viminfo} ~/ "$1"
+rsync --archive --progress --verbose --exclude={.cache,.config,.viminfo} ~/ "$1"
