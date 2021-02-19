@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+
+THIS_BRANCH=$(git branch --show-current)
+git push --set-upstream origin "${THIS_BRANCH}"

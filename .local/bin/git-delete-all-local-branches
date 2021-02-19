@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+
+echo "Are you sure? (y/n)"
+read RESPONSE
+
+if [[ $RESPONSE = "y" || $RESPONSE = "yes" || $RESPONSE = "Y" || $RESPONSE = "YES" ]]
+then
+	git for-each-ref --format '%(refname:short)' refs/heads | grep -v master | xargs git branch -D
+else
+	echo "Cancelled."
+fi
+
