@@ -3,13 +3,22 @@
 
 PS1='[\u@\h \W]\$ '
 
-alias grep='grep --color=auto'
 alias ll='ls -la'
 alias la='ls -a'
 
+# Ask before clobbering
+alias rm='rm -i'
+alias cp='cp -i'
+alias mv='mv -i'
+
+# Colored command output
+alias grep='grep --color=auto'
 if [[ "$OSTYPE" == "darwin"* ]];
 then
 	alias ls='ls -G'
 else
 	alias ls='ls --color=auto'
 fi
+
+# Use vi-style command line editing
+set -o vi
