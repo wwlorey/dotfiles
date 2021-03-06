@@ -3,16 +3,26 @@
 if [ -z "$1" ]
 then
 	echo "Error: No destination provided for backup."
-	exit 1;
+	exit 1
 fi
-
-# Save GNOME configuration
-dconf dump / > ~/.dconf-backup
-# To restore:
-# dconf load / < ~/.dconf-backup
 
 # Save list of installed packages
 pacman -Q > ~/.packages
 
 # Backup the home directory
-rsync --archive --progress --verbose --exclude={.cache,.config,.viminfo} ~/ "$1"
+echo "Starting **DRY RUN**"
+sudo rsync --dry-run --delete --archive --progress --verbose --exclude={.cache,.viminfo} ~/ "$1"
+
+echo && read -p "Continue with backup? (y/n) " continue
+if [[ $continue == "y" || $continue == "Y" ]]
+then
+	read -p "Are you sure? (y/n) " continue
+	if [[ $continue == "y" || $continue == "Y" ]]
+	then
+		sudo rsync --delete --archive --progress --verbose --exclude={.cache,.viminfo} ~/ "$1"
+		exit 0
+	fi
+fi
+
+echo "Backup cancelled."
+exit 1
