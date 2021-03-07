@@ -13,6 +13,7 @@ alias mv='mv -i'
 
 # Colored command output
 alias grep='grep --color=auto'
+alias diff='diff --color=auto'
 if [[ "$OSTYPE" == "darwin"* ]];
 then
 	alias ls='ls -G'
