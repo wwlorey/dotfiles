@@ -3,8 +3,15 @@
 
 PS1='[\u@\h \W]\$ '
 
+alias c='clear'
+
 alias ll='ls -la'
 alias la='ls -a'
+
+alias gb='git branch'
+alias gd='git diff'
+alias gl='git log --graph'
+alias gs='git status'
 
 # Ask before clobbering
 alias rm='rm -i'
