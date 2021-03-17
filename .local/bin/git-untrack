@@ -1,0 +1,9 @@
+#!/bin/bash
+
+if [ -z "$1" ]
+then
+	echo "Error: Must provide something to untrack."
+	exit 1
+fi
+
+git rm --cached "$@"

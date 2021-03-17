@@ -10,8 +10,7 @@ fi
 pacman -Q > ~/.packages
 
 # Backup the home directory
-echo "Starting **DRY RUN**"
-sudo rsync --dry-run --delete --archive --progress --verbose --exclude={.cache,.viminfo} ~/ "$1"
+backup-dry-run "$1"
 
 echo && read -p "Continue with backup? (y/n) " continue
 if [[ $continue == "y" || $continue == "Y" ]]
