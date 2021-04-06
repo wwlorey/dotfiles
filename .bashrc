@@ -28,5 +28,8 @@ else
 	alias ls='ls --color=auto'
 fi
 
+# XFCE file explorer
+alias fe='thunar'
+
 # Use vi-style command line editing
 set -o vi
