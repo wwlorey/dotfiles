@@ -5,7 +5,7 @@ PS1='[\u@\h \W]\$ '
 
 alias c='clear'
 
-alias ll='ls -la'
+alias ll='ls -lah'
 alias la='ls -a'
 
 alias gb='git branch'
