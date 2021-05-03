@@ -10,6 +10,7 @@ alias la='ls -a'
 
 alias gb='git branch'
 alias gd='git diff'
+alias gds='git diff --staged'
 alias gl='git log --graph'
 alias gs='git status'
 
