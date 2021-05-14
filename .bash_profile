@@ -2,6 +2,7 @@ export PATH="$PATH:$HOME/.local/bin"
 export EDITOR="nvim"
 export TERMINAL="gnome-terminal"
 export BROWSER="brave"
+export SFTP="/home/sftp/share"
 
 if [[ "$OSTYPE" == "darwin"* ]];
 then
