@@ -14,6 +14,8 @@ alias gds='git diff --staged'
 alias gl='git log --graph'
 alias gs='git status'
 
+alias ci='code-insiders'
+
 # Ask before clobbering
 alias rm='rm -i'
 alias cp='cp -i'
@@ -34,3 +36,7 @@ alias fe='thunar'
 
 # Use vi-style command line editing
 set -o vi
+
+# Homebrew's default install location is different on M1 macs: https://apple.stackexchange.com/a/148919
+export PATH="/opt/homebrew/bin:$PATH"
+
