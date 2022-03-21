@@ -1,4 +1,5 @@
 inoremap jk <Esc>
+map <F5> :!./build <enter>
 syntax on
 set mouse=a
 set clipboard+=unnamedplus
