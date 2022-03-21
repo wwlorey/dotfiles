@@ -18,7 +18,7 @@ then
 	read -p "Are you sure? (y/n) " continue
 	if [[ $continue == "y" || $continue == "Y" ]]
 	then
-		sudo rsync --delete --archive --progress --verbose --exclude={.cache,.viminfo} ~/ "$1"
+		sudo rsync --delete --archive --progress --verbose --exclude={.cache,.viminfo,.config,.nvm,.texlive,.npm,.node-gyp,.cargo,.mozilla,.local,.vscode} ~/ "$1"
 		exit 0
 	fi
 fi

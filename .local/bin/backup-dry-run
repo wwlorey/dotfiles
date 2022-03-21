@@ -7,5 +7,4 @@ then
 fi
 
 echo "Starting **DRY RUN**"
-sudo rsync --dry-run --delete --archive --progress --verbose --exclude={.cache,.viminfo} ~/ "$1"
-
+sudo rsync --dry-run --delete --archive --progress --verbose --exclude={.cache,.viminfo,.config,.nvm,.texlive,.npm,.node-gyp,.cargo,.mozilla,.local,.vscode} ~/ "$1"
