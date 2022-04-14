@@ -28,21 +28,21 @@ if [[ "$OSTYPE" == "darwin"* ]];
 then
 	alias ls='ls -G'
 
-    # Homebrew's default install location is different on M1 macs: https://apple.stackexchange.com/a/148919
-    export PATH="/opt/homebrew/bin:$PATH"
+	# Homebrew's default install location is different on M1 macs: https://apple.stackexchange.com/a/148919
+	export PATH="/opt/homebrew/bin:$PATH"
 
-    # nvm is particular
-    if [[ -d ~/.nvm ]]
-    then
-        export NVM_DIR=~/.nvm
-        source $(brew --prefix nvm)/nvm.sh
-    fi
+	# nvm is particular
+	if [[ -d ~/.nvm ]]
+	then
+		export NVM_DIR=~/.nvm
+		source $(brew --prefix nvm)/nvm.sh
+	fi
 else
 	alias ls='ls --color=auto'
 	alias diff='diff --color=auto'
 
-    # XFCE file explorer
-    alias fe='thunar'
+	# XFCE file explorer
+	alias fe='thunar'
 
 fi
 
