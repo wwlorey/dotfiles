@@ -1,7 +1,0 @@
-#!/usr/bin/env bash
-
-git clean -xfd
-npm cache clean --force
-npm install
-npm run build
-echo "👌"
