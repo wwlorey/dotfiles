@@ -10,7 +10,7 @@ then
 	# Homebrew's default install location is different on M1 macs: https://apple.stackexchange.com/a/148919
 	export PATH="/opt/homebrew/bin:$PATH"
 
-	which init-stellar-bash-profile > /dev/null && init-stellar-bash-profile || echo "Failed to initialize Stellar bash profile."
+	which init-stellar-profile > /dev/null && . init-stellar-profile || echo "Failed to initialize Stellar profile."
 else
 	export TERMINAL="gnome-terminal"
 

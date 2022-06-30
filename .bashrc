@@ -37,7 +37,7 @@ fi
 set -o vi
 
 # Lazy load nvm (source: http://broken-by.me/lazy-load-nvm/, https://gist.github.com/fl0w/07ce79bd44788f647deab307c94d6922)
-lazynvm() {
+lazyLoadNvm() {
     unset -f nvm node npm npx
     export NVM_DIR=~/.nvm
     # Load nvm
@@ -49,22 +49,22 @@ lazynvm() {
 }
 
 nvm() {
-    lazynvm 
+    lazyLoadNvm
     nvm $@
 }
  
 node() {
-    lazynvm
+    lazyLoadNvm
     node $@
 }
  
 npm() {
-    lazynvm
+    lazyLoadNvm
     npm $@
 }
 
 npx() {
-    lazynvm
+    lazyLoadNvm
     npx $@
 }
 
