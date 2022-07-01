@@ -1,6 +1,3 @@
-# If not running interactively, don't do anything
-[[ $- != *i* ]] && return
-
 PS1='[\u@\h \W]\$ '
 
 alias c='clear'
@@ -15,7 +12,7 @@ alias gl='git log --graph'
 alias gs='git status'
 alias gcb='git branch --show-current'
 
-# Ask before clobbering & be verbose
+# Ask for consent & be verbose
 alias rm='rm -iv'
 alias cp='cp -iv'
 alias mv='mv -iv'
