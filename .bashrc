@@ -15,16 +15,18 @@ alias gl='git log --graph'
 alias gs='git status'
 alias gcb='git branch --show-current'
 
-# Ask before clobbering
-alias rm='rm -i'
-alias cp='cp -i'
-alias mv='mv -i'
+# Ask before clobbering & be verbose
+alias rm='rm -iv'
+alias cp='cp -iv'
+alias mv='mv -iv'
 
 alias grep='grep --color=auto'
 
 if [[ "$OSTYPE" == "darwin"* ]];
 then
 	alias ls='ls -G'
+
+    alias brave='/Applications/Brave\ Browser.app/Contents/MacOS/Brave\ Browser'
 else
 	alias ls='ls --color=auto'
 	alias diff='diff --color=auto'
