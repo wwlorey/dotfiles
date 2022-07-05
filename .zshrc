@@ -1,5 +1,6 @@
 . $HOME/.bashrc
 . $HOME/.config/git-prompt
+. $HOME/.fzf.zsh
 
 # Set command prompt and truncate username
 PS1='%F{yellow}%4>>%n%<<%f%F{blue}@%f%F{red}%m%f %B%1~%b %B%F{blue}>%f%b '
@@ -73,4 +74,5 @@ for index ({0..9}) alias '$index'='cd +${index}'; unset index
 
 . $HOME/.zsh/plugins/fast-syntax-highlighting/fast-syntax-highlighting.plugin.zsh
 . $HOME/.zsh/plugins/zsh-bd/bd.zsh
+. $HOME/.zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh
 
