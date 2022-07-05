@@ -74,5 +74,4 @@ for index ({0..9}) alias '$index'='cd +${index}'; unset index
 
 . $HOME/.zsh/plugins/fast-syntax-highlighting/fast-syntax-highlighting.plugin.zsh
 . $HOME/.zsh/plugins/zsh-bd/bd.zsh
-. $HOME/.zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh
 
