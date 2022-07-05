@@ -1,0 +1,6 @@
+[submodule ".zsh/plugins/fast-syntax-highlighting"]
+	path = .zsh/plugins/fast-syntax-highlighting
+	url = https://github.com/zdharma-continuum/fast-syntax-highlighting.git
+[submodule ".zsh/plugins/zsh-bd"]
+	path = .zsh/plugins/zsh-bd
+	url = https://github.com/Tarrasch/zsh-bd.git

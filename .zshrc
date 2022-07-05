@@ -4,6 +4,16 @@
 # Set command prompt and truncate username
 PS1='%F{yellow}%4>>%n%<<%f%F{blue}@%f%F{red}%m%f %B%1~%b %B%F{blue}>%f%b '
 
+# Git prompt
+GIT_PS1_SHOWDIRTYSTATE=1
+GIT_PS1_SHOWCOLORHINTS=1
+precmd () { RPROMPT=$(__git_ps1 " (%s)") }
+
+# Keep track of history
+export HISTSIZE=10000
+export SAVEHIST=10000
+export HISTFILE=$HOME/.cache/zsh/history
+
 # Automatically cd into typed directory
 setopt autocd
 
@@ -20,21 +30,39 @@ bindkey -M menuselect 'k' vi-up-line-or-history
 bindkey -M menuselect 'l' vi-forward-char
 bindkey -M menuselect 'j' vi-down-line-or-history
 
-# Fix vi mode bug: https://github.com/spaceship-prompt/spaceship-prompt/issues/91
+# https://github.com/spaceship-prompt/spaceship-prompt/issues/91
 bindkey "^?" backward-delete-char
 
 # Quickly switch between vi modes
 export KEYTIMEOUT=1
 
-# Keep track of history
-export HISTSIZE=10000
-export SAVEHIST=10000
-export HISTFILE=$HOME/.cache/zsh/history
+# Change the cursor depending on the vi mode
+# Vim control sequences: https://ttssh2.osdn.jp/manual/4/en/usage/tips/vim.html
+cursorBlock='\e[2 q'
+cursorVertLine='\e[6 q'
 
-# Git prompt
-GIT_PS1_SHOWDIRTYSTATE=1
-GIT_PS1_SHOWCOLORHINTS=1
-precmd () { RPROMPT=$(__git_ps1 " (%s)") }
+zle-line-init() {
+    echo -ne $cursorVertLine
+}
+zle -N zle-line-init
+
+zle-keymap-select() {
+    if [[ ${KEYMAP} == vicmd ]] ||
+        [[ $1 = 'block' ]]; then
+        echo -ne $cursorBlock
+    elif [[ ${KEYMAP} == main ]] ||
+        [[ ${KEYMAP} == viins ]] ||
+        [[ ${KEYMAP} = '' ]] ||
+        [[ $1 = 'beam' ]]; then
+        echo -ne $cursorVertLine
+    fi
+}
+zle -N zle-keymap-select
+
+# Edit current line in $EDITOR
+autoload edit-command-line; zle -N edit-command-line
+bindkey '^e' edit-command-line
+bindkey -M vicmd '^e' edit-command-line
 
 # Directory stack
 setopt AUTO_PUSHD
@@ -42,4 +70,7 @@ setopt PUSHD_IGNORE_DUPS
 setopt PUSHD_SILENT
 alias ds='dirs -v'
 for index ({0..9}) alias '$index'='cd +${index}'; unset index
+
+. $HOME/.zsh/plugins/fast-syntax-highlighting/fast-syntax-highlighting.plugin.zsh
+. $HOME/.zsh/plugins/zsh-bd/bd.zsh
 
