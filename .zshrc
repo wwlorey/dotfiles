@@ -37,6 +37,13 @@ bindkey "^?" backward-delete-char
 # Quickly switch between vi modes
 export KEYTIMEOUT=1
 
+# Set fzf to use ripgrep if available
+which rg > /dev/null && export FZF_DEFAULT_COMMAND='rg --files --hidden -g "!**/.git/**"'
+
+# fzf bindings
+bindkey -s '^f' '^ucd "$(dirname "$(fzf)")"\n'
+bindkey -s '^e' '^unvim "$(fzf)"\n'
+
 # Change the cursor depending on the vi mode
 # Vim control sequences: https://ttssh2.osdn.jp/manual/4/en/usage/tips/vim.html
 cursorBlock='\e[2 q'
@@ -62,15 +69,15 @@ zle -N zle-keymap-select
 
 # Edit current line in $EDITOR
 autoload edit-command-line; zle -N edit-command-line
-bindkey '^e' edit-command-line
-bindkey -M vicmd '^e' edit-command-line
+bindkey '^l' edit-command-line
+bindkey -M vicmd '^l' edit-command-line
 
 # Directory stack
 setopt AUTO_PUSHD
 setopt PUSHD_IGNORE_DUPS
 setopt PUSHD_SILENT
 alias ds='dirs -v'
-for index ({0..9}) alias '$index'='cd +${index}'; unset index
+for index ({1..9}) alias "$index"="cd +${index}"; unset index
 
 . $HOME/.zsh/plugins/fast-syntax-highlighting/fast-syntax-highlighting.plugin.zsh
 . $HOME/.zsh/plugins/zsh-bd/bd.zsh

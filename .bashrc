@@ -1,5 +1,3 @@
-# . $HOME/.fzf.bash
-
 PS1='[\u@\h \W]\$ '
 
 alias c='clear'
