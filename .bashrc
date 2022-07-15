@@ -47,35 +47,10 @@ fi
 # Use vi-style command line editing
 set -o vi
 
-# Lazy load nvm (source: http://broken-by.me/lazy-load-nvm/, https://gist.github.com/fl0w/07ce79bd44788f647deab307c94d6922)
-lazyLoadNvm() {
-    unset -f nvm node npm npx
-    export NVM_DIR=~/.nvm
-    # Load nvm
-    [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
-    # Load nvm bash_completion
-    if [ -f "$NVM_DIR/bash_completion" ]; then
-        [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
-    fi
-}
-
-nvm() {
-    lazyLoadNvm
-    nvm $@
-}
- 
-node() {
-    lazyLoadNvm
-    node $@
-}
- 
-npm() {
-    lazyLoadNvm
-    npm $@
-}
-
-npx() {
-    lazyLoadNvm
-    npx $@
-}
+# Load nvm
+[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+# Load nvm bash_completion
+if [ -f "$NVM_DIR/bash_completion" ]; then
+    [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
+fi
 

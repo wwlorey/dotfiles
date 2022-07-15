@@ -2,6 +2,7 @@ export PATH="$PATH:$HOME/.local/bin"
 export EDITOR="nvim"
 export VISUAL="nvim"
 export BROWSER="brave"
+export NVM_DIR=~/.nvm
 
 if [[ "$OSTYPE" == "darwin"* ]];
 then
@@ -11,6 +12,5 @@ then
 	which init-stellar-profile > /dev/null && . init-stellar-profile || echo "Failed to initialize Stellar profile."
 else
 	export TERMINAL="gnome-terminal"
-
 fi
 
