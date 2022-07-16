@@ -3,7 +3,9 @@ Plug 'neoclide/coc.nvim', {'branch': 'release'}
 Plug 'preservim/nerdtree'
 Plug 'xuyuanp/nerdtree-git-plugin'
 Plug 'ryanoasis/vim-devicons'
+Plug 'ctrlpvim/ctrlp.vim'
 Plug 'airblade/vim-gitgutter'
+Plug 'TimUntersberger/neogit'
 Plug 'nvim-lua/plenary.nvim' " Required by diffview
 Plug 'sindrets/diffview.nvim'
 Plug 'preservim/nerdcommenter'
@@ -51,6 +53,9 @@ let g:NERDTreeGitStatusIndicatorMapCustom = {
     \ 'Clean'     :'✔',
     \ 'Unknown'   :'?',
     \ }
+
+" ctrlp
+let g:ctrlp_show_hidden = 1
 
 " GitGutter
 nmap ]g <Plug>(GitGutterNextHunk)
