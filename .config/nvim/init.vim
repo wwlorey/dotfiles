@@ -5,9 +5,9 @@ Plug 'xuyuanp/nerdtree-git-plugin'
 Plug 'ryanoasis/vim-devicons'
 Plug 'ctrlpvim/ctrlp.vim'
 Plug 'airblade/vim-gitgutter'
-Plug 'TimUntersberger/neogit'
 Plug 'nvim-lua/plenary.nvim' " Required by diffview
 Plug 'sindrets/diffview.nvim'
+Plug 'TimUntersberger/neogit'
 Plug 'preservim/nerdcommenter'
 Plug 'christoomey/vim-tmux-navigator'
 Plug 'projekt0n/github-nvim-theme'
@@ -38,7 +38,7 @@ set spell
 au FileType * set fo-=c fo-=r fo-=o
 
 " NERDTree
-nmap <C-n> :NERDTreeToggle<CR>
+nmap <C-e> :NERDTreeToggle<CR>
 let NERDTreeShowHidden = 1
 let g:NERDTreeGitStatusUseNerdFonts = 1
 let g:NERDTreeGitStatusIndicatorMapCustom = {
@@ -64,14 +64,24 @@ nmap gh <Plug>(GitGutterPreviewHunk)
 " Toggle focus on the floating window
 nmap gf <C-w><C-w>
 " Use <Esc> to close the floating window when it isn't focused
-let g:gitgutter_close_preview_on_escape=1
+let g:gitgutter_close_preview_on_escape = 1
 
 " Diffview
-nmap <C-g> :DiffviewOpen<CR>
-nmap gc :DiffviewClose<CR>
+nmap <C-d> :DiffviewOpen<CR>
+nmap dc :DiffviewClose<CR>
 lua << EOF
 require'diffview'.setup {
-  use_icons = false
+    use_icons = false
+}
+EOF
+
+" Neogit
+nmap <C-g> :Neogit<CR>
+lua << EOF
+require'neogit'.setup {
+    integrations = { 
+        diffview = true 
+    }
 }
 EOF
 
@@ -115,13 +125,7 @@ set updatetime=300
 set shortmess+=c
 
 " Always show the signcolumn, otherwise it would shift the text each time
-" diagnostics appear/become resolved.
-if has("nvim-0.5.0") || has("patch-8.1.1564")
-  " Recently vim can merge signcolumn and number column into one
-  set signcolumn=number
-else
-  set signcolumn=yes
-endif
+set signcolumn=yes
 
 " Use tab for trigger completion with characters ahead and navigate.
 " NOTE: Use command ':verbose imap <tab>' to make sure tab is not mapped by
