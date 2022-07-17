@@ -10,6 +10,7 @@ Plug 'sindrets/diffview.nvim'
 Plug 'TimUntersberger/neogit'
 Plug 'preservim/nerdcommenter'
 Plug 'christoomey/vim-tmux-navigator'
+Plug 'nvim-lualine/lualine.nvim'
 Plug 'projekt0n/github-nvim-theme'
 call plug#end()
 
@@ -90,6 +91,11 @@ EOF
 nmap <C-_> <Plug>NERDCommenterToggle
 vmap <C-_> <Plug>NERDCommenterToggle
 let g:NERDSpaceDelims = 1
+
+" Lualine
+lua << EOF
+require'lualine'.setup {}
+EOF
 
 " Theme
 " colorscheme github_light
