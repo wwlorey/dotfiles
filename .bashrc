@@ -31,6 +31,8 @@ alias mv='mv -iv'
 
 alias fzf='fzf --preview "bat --color=always --style=numbers --line-range=:500 {}"'
 
+alias ev='nvim $HOME/Repos/dotfiles/.config/nvim/init.vim'
+
 alias grep='grep --color=auto'
 
 if [[ "$OSTYPE" == "darwin"* ]];

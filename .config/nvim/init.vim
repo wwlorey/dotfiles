@@ -15,6 +15,7 @@ Plug 'nvim-lualine/lualine.nvim'
 Plug 'projekt0n/github-nvim-theme'
 call plug#end()
 
+let mapleader = " "
 inoremap jk <Esc>
 
 " Use jk to traverse virtual lines (lines that wrap)
@@ -36,12 +37,19 @@ set smarttab
 set expandtab
 set spell
 
+nmap <C-u> <C-b>
+vmap <C-u> <C-b>
+
 " https://vi.stackexchange.com/questions/1983/how-can-i-get-vim-to-stop-putting-comments-in-front-of-new-lines
 au FileType * set fo-=c fo-=r fo-=o
 
+nmap <leader>so :!save-config<CR>:so $VIMRC<CR>
+
 " NERDTree
 nmap <C-e> :NERDTreeToggle<CR>
+nmap <leader>er :NERDTreeFind<CR>
 let NERDTreeShowHidden = 1
+let NERDTreeStatusline = -1
 let g:NERDTreeGitStatusUseNerdFonts = 1
 let g:NERDTreeGitStatusIndicatorMapCustom = {
     \ 'Modified'  :'✎',
@@ -95,7 +103,35 @@ let g:NERDSpaceDelims = 1
 
 " Lualine
 lua << EOF
-require'lualine'.setup {}
+require'lualine'.setup {
+  options = {
+    icons_enabled = true,
+    theme = 'auto',
+    component_separators = { left = '', right = ''},
+    section_separators = { left = '', right = ''},
+    disabled_filetypes = {},
+    always_divide_middle = true,
+    globalstatus = false,
+  },
+  sections = {
+    lualine_a = {'mode'},
+    lualine_b = {'branch', 'diff', { 'diagnostics', sources={'nvim_lsp', 'coc'}}},
+    lualine_c = {'filename'},
+    lualine_x = {'filetype'},
+    lualine_y = {'progress'},
+    lualine_z = {'location'}
+  },
+  inactive_sections = {
+    lualine_a = {},
+    lualine_b = {},
+    lualine_c = {'filename'},
+    lualine_x = {'location'},
+    lualine_y = {},
+    lualine_z = {}
+  },
+  tabline = {},
+  extensions = {'man', 'nerdtree'}
+\ }
 EOF
 
 " Theme
@@ -251,7 +287,7 @@ command! -nargs=0 OR   :call     CocActionAsync('runCommand', 'editor.action.org
 " Add (Neo)Vim's native statusline support.
 " NOTE: Please see `:h coc-status` for integrations with external plugins that
 " provide custom statusline: lightline.vim, vim-airline.
-set statusline^=%{coc#status()}%{get(b:,'coc_current_function','')}
+" set statusline^=%{coc#status()}%{get(b:,'coc_current_function','')}
 
 " Mappings for CoCList
 " Show all diagnostics.
@@ -263,7 +299,7 @@ nnoremap <silent><nowait> <space>c  :<C-u>CocList commands<cr>
 " Find symbol of current document.
 nnoremap <silent><nowait> <space>o  :<C-u>CocList outline<cr>
 " Search workspace symbols.
-nnoremap <silent><nowait> <space>s  :<C-u>CocList -I symbols<cr>
+nnoremap <silent><nowait> <space>sy  :<C-u>CocList -I symbols<cr>
 " Do default action for next item.
 nnoremap <silent><nowait> <space>j  :<C-u>CocNext<CR>
 " Do default action for previous item.

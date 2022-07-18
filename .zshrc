@@ -42,7 +42,7 @@ which rg > /dev/null && export FZF_DEFAULT_COMMAND='rg --files --hidden -g "!**/
 
 # fzf bindings
 bindkey -s '^f' 'cd "$(dirname "$(fzf)")"\n'
-bindkey -s '^e' 'fzf | xargs -r $EDITOR\n'
+bindkey -s '^p' 'fzf | xargs -r $EDITOR\n'
 
 # Change the cursor depending on the vi mode
 # Vim control sequences: https://ttssh2.osdn.jp/manual/4/en/usage/tips/vim.html
