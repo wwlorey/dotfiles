@@ -29,6 +29,8 @@ alias rm='rm -iv'
 alias cp='cp -iv'
 alias mv='mv -iv'
 
+alias fzf='fzf --preview "bat --color=always --style=numbers --line-range=:500 {}"'
+
 alias grep='grep --color=auto'
 
 if [[ "$OSTYPE" == "darwin"* ]];

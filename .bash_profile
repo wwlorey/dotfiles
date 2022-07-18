@@ -3,6 +3,7 @@ export EDITOR="nvim"
 export VISUAL="nvim"
 export BROWSER="brave"
 export NVM_DIR=~/.nvm
+export BAT_THEME=OneHalfDark
 
 if [[ "$OSTYPE" == "darwin"* ]];
 then

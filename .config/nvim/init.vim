@@ -3,7 +3,8 @@ Plug 'neoclide/coc.nvim', {'branch': 'release'}
 Plug 'preservim/nerdtree'
 Plug 'xuyuanp/nerdtree-git-plugin'
 Plug 'ryanoasis/vim-devicons'
-Plug 'ctrlpvim/ctrlp.vim'
+Plug 'junegunn/fzf', { 'do': { -> fzf#install() } }
+Plug 'junegunn/fzf.vim'
 Plug 'airblade/vim-gitgutter'
 Plug 'nvim-lua/plenary.nvim' " Required by diffview
 Plug 'sindrets/diffview.nvim'
@@ -55,8 +56,8 @@ let g:NERDTreeGitStatusIndicatorMapCustom = {
     \ 'Unknown'   :'?',
     \ }
 
-" ctrlp
-let g:ctrlp_show_hidden = 1
+" fzf
+nmap <C-p> :Files<CR>
 
 " GitGutter
 nmap ]g <Plug>(GitGutterNextHunk)
