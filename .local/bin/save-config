@@ -1,0 +1,12 @@
+#!/bin/bash
+
+dotfilesDir="$HOME/Repos/dotfiles"
+
+if [[ -d "$dotfilesDir" ]]
+then
+    cd "$dotfilesDir"
+    rsync -avr --exclude=.git* . ~/
+else
+    echo "'$dotfilesDir' does not exist."
+fi
+
