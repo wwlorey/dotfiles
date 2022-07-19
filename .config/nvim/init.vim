@@ -47,8 +47,8 @@ au FileType * set fo-=c fo-=r fo-=o
 nmap <leader>so :!save-config<CR>:so $VIMRC<CR>
 
 " NERDTree
-nmap <C-e> :NERDTreeToggle<CR>
-nmap <leader>er :NERDTreeFind<CR>
+map <C-e> :NERDTreeToggle<CR>
+map <leader>er :NERDTreeFind<CR>
 let NERDTreeShowHidden = 1
 let NERDTreeStatusline = -1
 let NERDTreeMapActivateNode = "<Tab>"
@@ -67,11 +67,12 @@ let g:NERDTreeGitStatusIndicatorMapCustom = {
     \ }
 
 " fzf
-nmap <C-p> :Files<CR>
+map <C-p> :Files<CR>
 
 " CtrlSF
 map <C-s> :CtrlSFToggle<CR>
 map <leader>sn :CtrlSF -ignoredir ".git" -ignoredir "node_modules" -hidden -I -W 
+map <leader>sr :CtrlSF -ignoredir ".git" -ignoredir "node_modules" -hidden -R -I -W 
 map <leader>si :CtrlSF -ignoredir ".git" -ignoredir "node_modules" -hidden -I 
 map <leader>sw :CtrlSF -ignoredir ".git" -ignoredir "node_modules" -hidden -W 
 map <leader>sv :CtrlSF -ignoredir ".git" -ignoredir "node_modules" -hidden 
@@ -306,7 +307,7 @@ command! -nargs=0 OR   :call     CocActionAsync('runCommand', 'editor.action.org
 " Show all diagnostics.
 nnoremap <silent><nowait> <space>a  :<C-u>CocList diagnostics<cr>
 " Manage extensions.
-nnoremap <silent><nowait> <space>e  :<C-u>CocList extensions<cr>
+nnoremap <silent><nowait> <space>ex  :<C-u>CocList extensions<cr>
 " Show commands.
 nnoremap <silent><nowait> <space>c  :<C-u>CocList commands<cr>
 " Find symbol of current document.
