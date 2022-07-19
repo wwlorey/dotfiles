@@ -13,6 +13,7 @@ Plug 'TimUntersberger/neogit'
 Plug 'preservim/nerdcommenter'
 Plug 'christoomey/vim-tmux-navigator'
 Plug 'nvim-lualine/lualine.nvim'
+Plug 'tpope/vim-sleuth'
 Plug 'yuezk/vim-js'
 Plug 'maxmellon/vim-jsx-pretty'
 Plug 'projekt0n/github-nvim-theme'
@@ -20,32 +21,83 @@ call plug#end()
 
 let mapleader = " "
 inoremap jk <Esc>
+set encoding=utf-8
 
 " Use jk to traverse virtual lines (lines that wrap)
 noremap <silent> <expr> j (v:count == 0 ? 'gj' : 'j')
 noremap <silent> <expr> k (v:count == 0 ? 'gk' : 'k')
 
-map <F5> :!./build<CR>
-syntax on
-set mouse=a
+" Paste from clipboard
+cnoremap <C-v> <C-r>*
+inoremap <C-v> <C-r>*
+
+" Yank to system clipboard
 set clipboard+=unnamedplus
-set encoding=utf-8
+
+" Better Y behavior
+nmap Y y$
+
+" <C-b> is hard to reach and default <C-u> doesn't invert <C-f>
+nmap <C-u> <C-b>
+vmap <C-u> <C-b>
+
+" Syntax highlighting
+syntax on
+
+" Enable mouse in all modes
+set mouse=a
+
+" Line numbers
 set number
+
+" Default tab/shift width
 set tabstop=4
 set shiftwidth=4
 
-" TODO: not sure if this is needed
-set smarttab
-
+" Insert the appropriate number of spaces when <Tab> is pressed
 set expandtab
+
+" Spellchecking
 set spell
 
-nmap <C-u> <C-b>
-vmap <C-u> <C-b>
+" https://stackoverflow.com/questions/2287440/how-to-do-case-insensitive-search-in-vim
+set ignorecase
+set smartcase
+
+" Integrated terminal
+map <leader>` :split<CR>:terminal<CR>a
+tnoremap <Esc> <C-\><C-n>
+
+" Tabs
+nnoremap <Tab> gt
+nnoremap <S-Tab> gT
+nmap gm :tabmove +<CR>
+nmap gn :tabmove -<CR>
+nmap g1 1gt
+nmap g2 2gt
+nmap g3 3gt
+nmap g4 4gt
+nmap g5 5gt
+nmap g6 6gt
+nmap g7 7gt
+nmap g8 8gt
+nmap g9 9gt
+
+" Natural split behavior
+set splitbelow
+set splitright
+
+" Open previously opened buffer in a new split
+nmap <leader>V :vsplit<CR><C-^>
+
+" Open new split/tab with the current buffer's contents
+nmap <leader>v :vsplit<CR>
+nmap <leader>t :tabnew<CR><C-^>
 
 " https://vi.stackexchange.com/questions/1983/how-can-i-get-vim-to-stop-putting-comments-in-front-of-new-lines
 au FileType * set fo-=c fo-=r fo-=o
 
+" Copy configuration to home directory and source the vim config
 nmap <leader>so :!save-config<CR>:so $VIMRC<CR>
 
 " NERDTree
@@ -70,14 +122,17 @@ let g:NERDTreeGitStatusIndicatorMapCustom = {
 
 " fzf
 map <C-p> :Files<CR>
+let g:fzf_action = {
+    \ 'tab': 'tab split',
+    \ 'ctrl-h': 'split',
+    \ 'ctrl-v': 'vsplit' 
+    \}
 
 " CtrlSF
 map <C-s> :CtrlSFToggle<CR>
-map <leader>sn :CtrlSF -ignoredir ".git" -ignoredir "node_modules" -hidden -I -W 
-map <leader>sr :CtrlSF -ignoredir ".git" -ignoredir "node_modules" -hidden -R -I -W 
-map <leader>si :CtrlSF -ignoredir ".git" -ignoredir "node_modules" -hidden -I 
-map <leader>sw :CtrlSF -ignoredir ".git" -ignoredir "node_modules" -hidden -W 
-map <leader>sv :CtrlSF -ignoredir ".git" -ignoredir "node_modules" -hidden 
+map <leader>se :CtrlSF -hidden -I -W 
+map <leader>sc <Plug>CtrlSFCwordExec
+let g:ctrlsf_ignore_dir = ['.git', 'node_modules']
 let g:ctrlsf_auto_focus = {
     \ "at" : "done",
     \ "duration_less_than": 1000
@@ -93,7 +148,7 @@ let g:ctrlsf_mapping = {
     \ "popenf"  : "P",
     \ "quit"    : "q",
     \ "next"    : "<Tab>",
-    \ "prev"    : "<BS>",
+    \ "prev"    : "<S-Tab>",
     \ "nfile"   : "<C-N>",
     \ "pfile"   : "<C-P>",
     \ "pquit"   : "q",
@@ -107,7 +162,7 @@ nmap ]g <Plug>(GitGutterNextHunk)
 nmap [g <Plug>(GitGutterPrevHunk)
 nmap gh <Plug>(GitGutterPreviewHunk)
 nmap ga :GitGutterAll<CR>
-" Toggle focus on the floating window
+" Focus on floating window
 nmap gf <C-w><C-w>
 " Use <Esc> to close the floating window when it isn't focused
 let g:gitgutter_close_preview_on_escape = 1
@@ -184,6 +239,13 @@ let g:coc_global_extensions = [
     \ 'coc-json', 
     \ ]
 
+nmap <leader>ca <Plug>(coc-codeaction-cursor)
+nmap <leader>cd <Plug>(coc-definition)
+
+" Use `:CocDiagnostics` to get all diagnostics of current buffer in location list.
+nmap <silent> [c <Plug>(coc-diagnostic-prev)
+nmap <silent> ]c <Plug>(coc-diagnostic-next)
+
 " All remaining CoC config is from https://github.com/neoclide/coc.nvim#example-vim-configuration
 
 " TextEdit might fail if hidden is not set.
@@ -232,13 +294,7 @@ endif
 inoremap <silent><expr> <cr> pumvisible() ? coc#_select_confirm()
                               \: "\<C-g>u\<CR>\<c-r>=coc#on_enter()\<CR>"
 
-" Use `[i` and `]i` to navigate diagnostics
-" Use `:CocDiagnostics` to get all diagnostics of current buffer in location list.
-nmap <silent> [i <Plug>(coc-diagnostic-prev)
-nmap <silent> ]i <Plug>(coc-diagnostic-next)
-
 " GoTo code navigation.
-nmap <silent> gd <Plug>(coc-definition)
 nmap <silent> gy <Plug>(coc-type-definition)
 nmap <silent> gi <Plug>(coc-implementation)
 nmap <silent> gr <Plug>(coc-references)

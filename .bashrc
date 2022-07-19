@@ -33,6 +33,9 @@ alias fzf='fzf --preview "bat --color=always --style=numbers --line-range=:500 {
 
 alias ev='nvim $HOME/Repos/dotfiles/.config/nvim/init.vim'
 
+alias venv-activate='. ./venv/bin/activate'
+alias venv-deactivate='deactivate'
+
 alias grep='grep --color=auto'
 
 if [[ "$OSTYPE" == "darwin"* ]];
