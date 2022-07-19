@@ -104,6 +104,7 @@ let g:ctrlsf_mapping = {
 nmap ]g <Plug>(GitGutterNextHunk)
 nmap [g <Plug>(GitGutterPrevHunk)
 nmap gh <Plug>(GitGutterPreviewHunk)
+nmap ga :GitGutterAll<CR>
 " Toggle focus on the floating window
 nmap gf <C-w><C-w>
 " Use <Esc> to close the floating window when it isn't focused
