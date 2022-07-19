@@ -5,6 +5,7 @@ Plug 'xuyuanp/nerdtree-git-plugin'
 Plug 'ryanoasis/vim-devicons'
 Plug 'junegunn/fzf', { 'do': { -> fzf#install() } }
 Plug 'junegunn/fzf.vim'
+Plug 'dyng/ctrlsf.vim'
 Plug 'airblade/vim-gitgutter'
 Plug 'nvim-lua/plenary.nvim' " Required by diffview
 Plug 'sindrets/diffview.nvim'
@@ -50,6 +51,7 @@ nmap <C-e> :NERDTreeToggle<CR>
 nmap <leader>er :NERDTreeFind<CR>
 let NERDTreeShowHidden = 1
 let NERDTreeStatusline = -1
+let NERDTreeMapActivateNode = "<Tab>"
 let g:NERDTreeGitStatusUseNerdFonts = 1
 let g:NERDTreeGitStatusIndicatorMapCustom = {
     \ 'Modified'  :'✎',
@@ -66,6 +68,17 @@ let g:NERDTreeGitStatusIndicatorMapCustom = {
 
 " fzf
 nmap <C-p> :Files<CR>
+
+" CtrlSF
+map <C-s> :CtrlSFToggle<CR>
+map <leader>sn :CtrlSF -ignoredir ".git" -ignoredir "node_modules" -hidden -I -W 
+map <leader>si :CtrlSF -ignoredir ".git" -ignoredir "node_modules" -hidden -I 
+map <leader>sw :CtrlSF -ignoredir ".git" -ignoredir "node_modules" -hidden -W 
+map <leader>sv :CtrlSF -ignoredir ".git" -ignoredir "node_modules" -hidden 
+let g:ctrlsf_auto_focus = {
+    \ "at" : "done",
+    \ "duration_less_than": 1000
+    \ }
 
 " GitGutter
 nmap ]g <Plug>(GitGutterNextHunk)
@@ -272,8 +285,8 @@ endif
 
 " Use CTRL-S for selections ranges.
 " Requires 'textDocument/selectionRange' support of language server.
-nmap <silent> <C-s> <Plug>(coc-range-select)
-xmap <silent> <C-s> <Plug>(coc-range-select)
+" nmap <silent> <C-s> <Plug>(coc-range-select)
+" xmap <silent> <C-s> <Plug>(coc-range-select)
 
 " Add `:Format` command to format current buffer.
 command! -nargs=0 Format :call CocActionAsync('format')
