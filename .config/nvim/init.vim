@@ -13,6 +13,8 @@ Plug 'TimUntersberger/neogit'
 Plug 'preservim/nerdcommenter'
 Plug 'christoomey/vim-tmux-navigator'
 Plug 'nvim-lualine/lualine.nvim'
+Plug 'yuezk/vim-js'
+Plug 'maxmellon/vim-jsx-pretty'
 Plug 'projekt0n/github-nvim-theme'
 call plug#end()
 
