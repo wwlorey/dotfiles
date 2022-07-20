@@ -69,10 +69,10 @@ map <leader>` :split<CR>:terminal<CR>a
 tnoremap <Esc> <C-\><C-n>
 
 " Tabs
-nnoremap <Tab> gt
-nnoremap <S-Tab> gT
-nmap gm :tabmove +<CR>
-nmap gn :tabmove -<CR>
+nmap . gt
+nmap , gT
+nmap g. :tabmove +<CR>
+nmap g, :tabmove -<CR>
 nmap g1 1gt
 nmap g2 2gt
 nmap g3 3gt
