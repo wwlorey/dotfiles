@@ -131,8 +131,10 @@ let g:fzf_action = {
 
 " CtrlSF
 map <C-s> :CtrlSFToggle<CR>
-map <leader>se :CtrlSF -hidden -I -W 
+map <leader>sf :CtrlSF -hidden -I -W 
 map <leader>sc <Plug>CtrlSFCwordExec
+map <leader>sv <Plug>CtrlSFVwordExec
+let g:ctrlsf_confirm_save = 0
 let g:ctrlsf_ignore_dir = ['.git', 'node_modules']
 let g:ctrlsf_auto_focus = {
     \ "at" : "done",
@@ -170,14 +172,16 @@ let g:gitgutter_close_preview_on_escape = 1
 
 " Diffview
 nmap <C-d> :DiffviewOpen<CR>
-nmap dc :DiffviewClose<CR>
+nmap <leader>dc :DiffviewClose<CR>
 lua << EOF
 local actions = require("diffview.actions")
 require'diffview'.setup {
     use_icons = false,
     keymaps = {
         file_panel = {
-            ["s"] = actions.toggle_stage_entry
+            ["s"] = actions.toggle_stage_entry,
+            -- Disable the old mapping for toggle_stage_entry
+            ["-"] = false
         }
     }
 }
