@@ -69,19 +69,19 @@ map <leader>` :split<CR>:terminal<CR>a
 tnoremap <Esc> <C-\><C-n>
 
 " Tabs
-nmap . gt
-nmap , gT
-nmap g. :tabmove +<CR>
-nmap g, :tabmove -<CR>
-nmap g1 1gt
-nmap g2 2gt
-nmap g3 3gt
-nmap g4 4gt
-nmap g5 5gt
-nmap g6 6gt
-nmap g7 7gt
-nmap g8 8gt
-nmap g9 9gt
+nmap = gt
+nmap - gT
+nmap + :tabmove +<CR>
+nmap _ :tabmove -<CR>
+nmap <leader>1 1gt
+nmap <leader>2 2gt
+nmap <leader>3 3gt
+nmap <leader>4 4gt
+nmap <leader>5 5gt
+nmap <leader>6 6gt
+nmap <leader>7 7gt
+nmap <leader>8 8gt
+nmap <leader>9 9gt
 
 " Natural split behavior
 set splitbelow
@@ -92,6 +92,7 @@ nmap <leader>V :vsplit<CR><C-^>
 
 " Open new split/tab with the current buffer's contents
 nmap <leader>v :vsplit<CR>
+nmap <leader>h :split<CR>
 nmap <leader>t :tabnew<CR><C-^>
 
 " https://vi.stackexchange.com/questions/1983/how-can-i-get-vim-to-stop-putting-comments-in-front-of-new-lines
@@ -123,7 +124,7 @@ let g:NERDTreeGitStatusIndicatorMapCustom = {
 " fzf
 map <C-p> :Files<CR>
 let g:fzf_action = {
-    \ 'tab': 'tab split',
+    \ 'ctrl-n': 'tab split',
     \ 'ctrl-h': 'split',
     \ 'ctrl-v': 'vsplit' 
     \}
@@ -171,8 +172,14 @@ let g:gitgutter_close_preview_on_escape = 1
 nmap <C-d> :DiffviewOpen<CR>
 nmap dc :DiffviewClose<CR>
 lua << EOF
+local actions = require("diffview.actions")
 require'diffview'.setup {
-    use_icons = false
+    use_icons = false,
+    keymaps = {
+        file_panel = {
+            ["s"] = actions.toggle_stage_entry
+        }
+    }
 }
 EOF
 
