@@ -93,7 +93,7 @@ nmap <leader>V :vsplit<CR><C-^>
 " Open new split/tab with the current buffer's contents
 nmap <leader>v :vsplit<CR>
 nmap <leader>h :split<CR>
-nmap <leader>t :tabnew<CR><C-^>
+nmap <C-t> :tabnew<CR><C-^>
 
 " https://vi.stackexchange.com/questions/1983/how-can-i-get-vim-to-stop-putting-comments-in-front-of-new-lines
 au FileType * set fo-=c fo-=r fo-=o
@@ -124,7 +124,7 @@ let g:NERDTreeGitStatusIndicatorMapCustom = {
 " fzf
 map <C-p> :Files<CR>
 let g:fzf_action = {
-    \ 'ctrl-n': 'tab split',
+    \ 'ctrl-t': 'tab split',
     \ 'ctrl-h': 'split',
     \ 'ctrl-v': 'vsplit' 
     \}
