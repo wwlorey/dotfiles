@@ -7,15 +7,15 @@ Plug 'junegunn/fzf', { 'do': { -> fzf#install() } }
 Plug 'junegunn/fzf.vim'
 Plug 'dyng/ctrlsf.vim'
 Plug 'airblade/vim-gitgutter'
-Plug 'nvim-lua/plenary.nvim' " Required by diffview
-Plug 'sindrets/diffview.nvim'
-Plug 'TimUntersberger/neogit'
+Plug 'tpope/vim-fugitive'
+Plug 'tpope/vim-rhubarb'
 Plug 'preservim/nerdcommenter'
 Plug 'christoomey/vim-tmux-navigator'
 Plug 'nvim-lualine/lualine.nvim'
 Plug 'tpope/vim-sleuth'
 Plug 'yuezk/vim-js'
 Plug 'maxmellon/vim-jsx-pretty'
+Plug 'ap/vim-css-color'
 Plug 'projekt0n/github-nvim-theme'
 call plug#end()
 
@@ -51,8 +51,9 @@ set mouse=a
 set number
 
 " Default tab/shift width
-set tabstop=4
-set shiftwidth=4
+" TODO: Auto-detect tab width
+set tabstop=2
+set shiftwidth=2
 
 " Insert the appropriate number of spaces when <Tab> is pressed
 set expandtab
@@ -82,18 +83,14 @@ nmap <leader>6 6gt
 nmap <leader>7 7gt
 nmap <leader>8 8gt
 nmap <leader>9 9gt
+nmap <C-t> :tabnew<CR>
 
 " Natural split behavior
 set splitbelow
 set splitright
 
 " Open previously opened buffer in a new split
-nmap <leader>V :vsplit<CR><C-^>
-
-" Open new split/tab with the current buffer's contents
-nmap <leader>v :vsplit<CR>
-nmap <leader>h :split<CR>
-nmap <C-t> :tabnew<CR><C-^>
+nmap <leader>v :vsplit<CR><C-^>
 
 " https://vi.stackexchange.com/questions/1983/how-can-i-get-vim-to-stop-putting-comments-in-front-of-new-lines
 au FileType * set fo-=c fo-=r fo-=o
@@ -131,7 +128,8 @@ let g:fzf_action = {
 
 " CtrlSF
 map <C-s> :CtrlSFToggle<CR>
-map <leader>sf :CtrlSF -hidden -I -W 
+" Flags: -W (match word), -I (ignorecase)
+map <leader>sf :CtrlSF -hidden -I 
 map <leader>sc <Plug>CtrlSFCwordExec
 map <leader>sv <Plug>CtrlSFVwordExec
 let g:ctrlsf_confirm_save = 0
@@ -170,33 +168,6 @@ nmap gf <C-w><C-w>
 " Use <Esc> to close the floating window when it isn't focused
 let g:gitgutter_close_preview_on_escape = 1
 
-" Diffview
-nmap <C-d> :DiffviewOpen<CR>
-nmap <leader>dc :DiffviewClose<CR>
-lua << EOF
-local actions = require("diffview.actions")
-require'diffview'.setup {
-    use_icons = false,
-    keymaps = {
-        file_panel = {
-            ["s"] = actions.toggle_stage_entry,
-            -- Disable the old mapping for toggle_stage_entry
-            ["-"] = false
-        }
-    }
-}
-EOF
-
-" Neogit
-nmap <C-g> :Neogit<CR>
-lua << EOF
-require'neogit'.setup {
-    integrations = { 
-        diffview = true 
-    }
-}
-EOF
-
 " NERDCommenter
 " https://vi.stackexchange.com/questions/26611/is-it-possible-to-map-control-forward-slash-with-vim
 nmap <C-_> <Plug>NERDCommenterToggle
@@ -231,9 +202,18 @@ require'lualine'.setup {
     lualine_y = {},
     lualine_z = {}
   },
-  tabline = {},
+  tabline = {
+    -- Show relative file path
+    lualine_a = {{'filename', path = 1}},
+    lualine_b = {},
+    lualine_c = {},
+    lualine_x = {},
+    lualine_y = {},
+    -- Show file name in tab
+    lualine_z = {{'tabs', mode = 1}}
+  },
   extensions = {'man', 'nerdtree'}
-\ }
+}
 EOF
 
 " Theme
@@ -248,6 +228,7 @@ let g:coc_global_extensions = [
     \ 'coc-eslint', 
     \ 'coc-prettier', 
     \ 'coc-json', 
+    \ 'coc-styled-components',
     \ ]
 
 nmap <leader>ca <Plug>(coc-codeaction-cursor)
@@ -256,6 +237,17 @@ nmap <leader>cd <Plug>(coc-definition)
 " Use `:CocDiagnostics` to get all diagnostics of current buffer in location list.
 nmap <silent> [c <Plug>(coc-diagnostic-prev)
 nmap <silent> ]c <Plug>(coc-diagnostic-next)
+
+" Show documentation in preview window.
+nnoremap <silent> <leader>. :call ShowDocumentation()<CR>
+
+function! ShowDocumentation()
+  if CocAction('hasProvider', 'hover')
+    call CocActionAsync('doHover')
+      else
+    call feedkeys('K', 'in')
+  endif
+endfunction
 
 " All remaining CoC config is from https://github.com/neoclide/coc.nvim#example-vim-configuration
 
@@ -309,17 +301,6 @@ inoremap <silent><expr> <cr> pumvisible() ? coc#_select_confirm()
 nmap <silent> gy <Plug>(coc-type-definition)
 nmap <silent> gi <Plug>(coc-implementation)
 nmap <silent> gr <Plug>(coc-references)
-
-" Use K to show documentation in preview window.
-nnoremap <silent> K :call ShowDocumentation()<CR>
-
-function! ShowDocumentation()
-  if CocAction('hasProvider', 'hover')
-    call CocActionAsync('doHover')
-  else
-    call feedkeys('K', 'in')
-  endif
-endfunction
 
 " Highlight the symbol and its references when holding the cursor.
 autocmd CursorHold * silent call CocActionAsync('highlight')
@@ -398,7 +379,7 @@ nnoremap <silent><nowait> <space>a  :<C-u>CocList diagnostics<cr>
 " Manage extensions.
 nnoremap <silent><nowait> <space>ex  :<C-u>CocList extensions<cr>
 " Show commands.
-nnoremap <silent><nowait> <space>c  :<C-u>CocList commands<cr>
+nnoremap <silent><nowait> <space>co  :<C-u>CocList commands<cr>
 " Find symbol of current document.
 nnoremap <silent><nowait> <space>o  :<C-u>CocList outline<cr>
 " Search workspace symbols.
