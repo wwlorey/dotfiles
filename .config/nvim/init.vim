@@ -168,6 +168,26 @@ nmap gf <C-w><C-w>
 " Use <Esc> to close the floating window when it isn't focused
 let g:gitgutter_close_preview_on_escape = 1
 
+" fugitive
+" Git aliases from .bashrc
+cnoreabbrev ga G add
+cnoreabbrev gaa G add --all
+cnoreabbrev gb G branch
+cnoreabbrev gbc G branch --show-current
+cnoreabbrev gc G checkout
+cnoreabbrev gcb G checkout -b
+cnoreabbrev gcm G commit -m
+cnoreabbrev gd G diff
+cnoreabbrev gds G diff --staged
+cnoreabbrev gl G log --graph
+cnoreabbrev gpul G pull
+cnoreabbrev gpus G push
+cnoreabbrev gpusi !git-push-init
+cnoreabbrev gs G status
+cnoreabbrev gsh G stash
+cnoreabbrev gshp G stash pop
+cnoreabbrev gsmui G submodule update --init
+
 " commentary
 " https://vi.stackexchange.com/questions/26611/is-it-possible-to-map-control-forward-slash-with-vim
 nmap <C-_> :Commentary<CR>
