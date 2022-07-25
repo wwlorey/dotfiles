@@ -9,7 +9,7 @@ Plug 'dyng/ctrlsf.vim'
 Plug 'airblade/vim-gitgutter'
 Plug 'tpope/vim-fugitive'
 Plug 'tpope/vim-rhubarb'
-Plug 'preservim/nerdcommenter'
+Plug 'tpope/vim-commentary'
 Plug 'christoomey/vim-tmux-navigator'
 Plug 'nvim-lualine/lualine.nvim'
 Plug 'tpope/vim-sleuth'
@@ -168,11 +168,11 @@ nmap gf <C-w><C-w>
 " Use <Esc> to close the floating window when it isn't focused
 let g:gitgutter_close_preview_on_escape = 1
 
-" NERDCommenter
+" commentary
 " https://vi.stackexchange.com/questions/26611/is-it-possible-to-map-control-forward-slash-with-vim
-nmap <C-_> <Plug>NERDCommenterToggle
-vmap <C-_> <Plug>NERDCommenterToggle
-let g:NERDSpaceDelims = 1
+nmap <C-_> :Commentary<CR>
+vmap <C-_> :Commentary<CR>
+autocmd FileType javascriptreact setlocal commentstring=/*\ %s\ */
 
 " Lualine
 lua << EOF
