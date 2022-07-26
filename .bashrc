@@ -21,6 +21,7 @@ alias gpus='git push'
 alias gpusi='git-push-init'
 alias gs='git status'
 alias gsh='git stash'
+alias gshl='git stash list'
 alias gshp='git stash pop'
 alias gsmui='git submodule update --init'
 

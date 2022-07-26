@@ -74,10 +74,12 @@ map <leader>` :split<CR>:terminal<CR>a
 tnoremap <Esc> <C-\><C-n>
 
 " Tabs
-nmap = gt
-nmap - gT
-nmap + :tabmove +<CR>
-nmap _ :tabmove -<CR>
+" Option+l and Option+h to switch tabs
+nmap ¬ gt
+nmap ˙ gT
+" Option+L and Option+H to move tabs
+nmap Ò :tabmove +<CR>
+nmap Ó :tabmove -<CR>
 nmap <leader>1 1gt
 nmap <leader>2 2gt
 nmap <leader>3 3gt
@@ -101,6 +103,10 @@ au FileType * set fo-=c fo-=r fo-=o
 
 " Copy configuration to home directory and source the vim config
 nmap <leader>so :!save-config<CR>:so $VIMRC<CR>
+
+" Save this session
+nmap <leader>ms :mksession! ~/Downloads/session.vim<CR>
+nmap <leader>mn :mksession 
 
 " NERDTree
 map <C-e> :NERDTreeToggle<CR>
@@ -191,6 +197,7 @@ cnoreabbrev gpus G push
 cnoreabbrev gpusi !git-push-init
 cnoreabbrev gs G status
 cnoreabbrev gsh G stash
+cnoreabbrev gshl G stash list
 cnoreabbrev gshp G stash pop
 cnoreabbrev gsmui G submodule update --init
 
