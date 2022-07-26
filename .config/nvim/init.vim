@@ -65,6 +65,10 @@ set spell
 set ignorecase
 set smartcase
 
+" Copy filename, path
+nmap <leader>cf :let @*=expand("%")<CR>
+nmap <leader>cp :let @*=expand("%:p")<CR>
+
 " Integrated terminal
 map <leader>` :split<CR>:terminal<CR>a
 tnoremap <Esc> <C-\><C-n>
@@ -128,8 +132,10 @@ let g:fzf_action = {
 
 " CtrlSF
 map <C-s> :CtrlSFToggle<CR>
-" Flags: -W (match word), -I (ignorecase)
-map <leader>sf :CtrlSF -hidden -I 
+" flags:
+"   -W (match word)
+"   -I (ignore case)
+map <leader>sf :CtrlSF -hidden 
 map <leader>sc <Plug>CtrlSFCwordExec
 map <leader>sv <Plug>CtrlSFVwordExec
 let g:ctrlsf_confirm_save = 0
@@ -228,9 +234,8 @@ require'lualine'.setup {
     lualine_b = {},
     lualine_c = {},
     lualine_x = {},
-    lualine_y = {},
-    -- Show file name in tab
-    lualine_z = {{'tabs', mode = 1}}
+    lualine_y = {'windows'},
+    lualine_z = {{'tabs'}}
   },
   extensions = {'man', 'nerdtree'}
 }
