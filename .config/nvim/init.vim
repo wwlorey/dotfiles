@@ -74,21 +74,8 @@ map <leader>` :split<CR>:terminal<CR>a
 tnoremap <Esc> <C-\><C-n>
 
 " Tabs
-" Option+l and Option+h to switch tabs
-nmap ¬ gt
-nmap ˙ gT
-" Option+L and Option+H to move tabs
-nmap Ò :tabmove +<CR>
-nmap Ó :tabmove -<CR>
-nmap <leader>1 1gt
-nmap <leader>2 2gt
-nmap <leader>3 3gt
-nmap <leader>4 4gt
-nmap <leader>5 5gt
-nmap <leader>6 6gt
-nmap <leader>7 7gt
-nmap <leader>8 8gt
-nmap <leader>9 9gt
+nmap <leader>gt :tabmove +<CR>
+nmap <leader>gT :tabmove -<CR>
 nmap <C-t> :tabnew<CR>
 
 " Natural split behavior
@@ -115,6 +102,8 @@ let NERDTreeShowHidden = 1
 let NERDTreeStatusline = -1
 let NERDTreeMapActivateNode = "<Tab>"
 let g:NERDTreeGitStatusUseNerdFonts = 1
+" Change current woring directory when NERDTree root dir is changed
+let g:NERDTreeChDirMode = 2
 let g:NERDTreeGitStatusIndicatorMapCustom = {
     \ 'Modified'  :'✎',
     \ 'Staged'    :'＋',
@@ -181,6 +170,8 @@ nmap gf <C-w><C-w>
 let g:gitgutter_close_preview_on_escape = 1
 
 " fugitive
+" Open full-screen fugitive-summary in a new tab
+nmap <C-g> :tabnew<CR>:0G<CR>
 " Git aliases from .bashrc
 cnoreabbrev ga G add
 cnoreabbrev gaa G add --all
