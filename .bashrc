@@ -37,6 +37,8 @@ alias ev='nvim $HOME/Repos/dotfiles/.config/nvim/init.vim'
 alias venv-activate='. ./venv/bin/activate'
 alias venv-deactivate='deactivate'
 
+alias nls='npx lint-staged'
+
 alias grep='grep --color=auto'
 
 if [[ "$OSTYPE" == "darwin"* ]];

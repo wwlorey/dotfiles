@@ -70,7 +70,9 @@ nmap <leader>cf :let @*=expand("%")<CR>
 nmap <leader>cp :let @*=expand("%:p")<CR>
 
 " Integrated terminal
-map <leader>` :split<CR>:terminal<CR>a
+" Open the terminal in a new horizontal split and enter insert mode
+map <leader>` :split<CR>:terminal<CR>i
+" Use escape to close the terminal
 tnoremap <Esc> <C-\><C-n>
 
 " Tabs
@@ -82,7 +84,7 @@ nmap <C-t> :tabnew<CR>
 set splitbelow
 set splitright
 
-" Open previously opened buffer in a new split
+" Open previously opened buffer in a new vertical split
 nmap <leader>v :vsplit<CR><C-^>
 
 " https://vi.stackexchange.com/questions/1983/how-can-i-get-vim-to-stop-putting-comments-in-front-of-new-lines
@@ -101,7 +103,11 @@ map <leader>er :NERDTreeFind<CR>
 let NERDTreeShowHidden = 1
 let NERDTreeStatusline = -1
 let NERDTreeMapActivateNode = "<Tab>"
+let NERDTreeMapOpenInTab = "<C-t>"
+let NERDTreeMapOpenVSplit = "<C-v>"
+let NERDTreeMapOpenSplit = "<C-h>"
 let g:NERDTreeGitStatusUseNerdFonts = 1
+let g:NERDTreeGitStatusConcealBrackets = 1
 " Change current woring directory when NERDTree root dir is changed
 let g:NERDTreeChDirMode = 2
 let g:NERDTreeGitStatusIndicatorMapCustom = {
@@ -142,9 +148,9 @@ let g:ctrlsf_auto_focus = {
 let g:ctrlsf_mapping = {
     \ "open"    : ["<CR>", "o"],
     \ "openb"   : "O",
-    \ "split"   : "<C-O>",
-    \ "vsplit"  : "",
-    \ "tab"     : "t",
+    \ "split"   : "<C-H>",
+    \ "vsplit"  : "<C-V>",
+    \ "tab"     : "<C-T>",
     \ "tabb"    : "T",
     \ "popen"   : "p",
     \ "popenf"  : "P",
