@@ -69,9 +69,14 @@ set smartcase
 nmap <leader>cf :let @*=expand("%")<CR>
 nmap <leader>cp :let @*=expand("%:p")<CR>
 
+" Quit out of two files
+nmap <leader>qq :q<CR>:q<CR>
+
 " Integrated terminal
 " Open the terminal in a new horizontal split and enter insert mode
 map <leader>` :split<CR>:terminal<CR>i
+" Open the terminal in a new tab and enter insert mode
+map <leader>~ :tabnew<CR>:terminal<CR>i
 " Use escape to close the terminal
 tnoremap <Esc> <C-\><C-n>
 
@@ -79,13 +84,16 @@ tnoremap <Esc> <C-\><C-n>
 nmap <leader>gt :tabmove +<CR>
 nmap <leader>gT :tabmove -<CR>
 nmap <C-t> :tabnew<CR>
+" Quit all buffers in the current tab
+nmap <leader>qt :windo bd<CR>
 
 " Natural split behavior
 set splitbelow
 set splitright
 
-" Open previously opened buffer in a new vertical split
+" Open previously opened buffer in new split
 nmap <leader>v :vsplit<CR><C-^>
+nmap <leader>h :split<CR><C-^>
 
 " https://vi.stackexchange.com/questions/1983/how-can-i-get-vim-to-stop-putting-comments-in-front-of-new-lines
 au FileType * set fo-=c fo-=r fo-=o
@@ -163,6 +171,7 @@ let g:ctrlsf_mapping = {
     \ "loclist" : "",
     \ "chgmode" : "M",
     \ "stop"    : "<C-C>",
+    \ "fzf"     : "<C-P>",
 \ }
 
 " GitGutter
@@ -188,6 +197,7 @@ cnoreabbrev gcb G checkout -b
 cnoreabbrev gcm G commit -m
 cnoreabbrev gd G diff
 cnoreabbrev gds G diff --staged
+cnoreabbrev gdss G diff --staged --stat
 cnoreabbrev gl G log --graph
 cnoreabbrev gpul G pull
 cnoreabbrev gpus G push
