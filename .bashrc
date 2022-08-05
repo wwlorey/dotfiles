@@ -40,6 +40,9 @@ alias venv-deactivate='deactivate'
 
 alias nls='npx lint-staged'
 
+alias python=python3
+alias pip=pip3
+
 alias grep='grep --color=auto'
 
 if [[ "$OSTYPE" == "darwin"* ]];
@@ -59,9 +62,8 @@ fi
 set -o vi
 
 # Load nvm
-[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"                       # M1 Mac
+[ -s "/usr/local/opt/nvm/nvm.sh" ] && \. "/usr/local/opt/nvm/nvm.sh"  # Intel Mac
 # Load nvm bash_completion
-if [ -f "$NVM_DIR/bash_completion" ]; then
-    [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
-fi
-
+[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
+[ -s "/usr/local/opt/nvm/etc/bash_completion.d/nvm" ] && \. "/usr/local/opt/nvm/etc/bash_completion.d/nvm"
