@@ -1,27 +1,60 @@
 #!/bin/bash
 
-if [ -z "$1" ]
+dryRun=''
+path=''
+rsyncOptions=(--delete --archive --progress --verbose --exclude={.Xauthority,/.bash*,.cache,.cargo,/.config,.lesshst,/.local,.mozilla,.NERDTreeBookmarks,.node-gyp,.npm,.nvm,.texlive,.viminfo,/.vscode,.xsession*,.zcompdump,/.zprofile,/.zsh*} --delete-excluded)
+
+printHelp() {
+  echo "Usage: backup [OPTION]...
+Backup the home directory to the provided path using rsync.
+
+Options
+  -d, --dry-run       perform a dry-run of the backup and print the results
+  -p, --path          backup destination path (expected to include the string 'thinkpad-backup')
+"
+}
+
+while [ $# -gt 0 ] ; do
+  case $1 in
+    -d | --dry-run) dryRun=1 ;;
+    -p | --path) path=$2 ;;
+    -h | --help) printHelp && exit 1
+  esac
+  shift
+done
+
+if [ ! $path ]
 then
 	echo "Error: No destination provided for backup."
 	exit 1
+elif [[ ! "$path" =~ thinkpad-backup ]]
+then
+	echo "Unexpected backup destination \"$path\". Path is expected to include \"thinkpad-backup\"."
+	exit 1
 fi
 
-# Save list of installed packages
+echo "Saving list of installed packages..."
 pacman -Q > ~/.packages
 
-# Backup the home directory
-backup-dry-run "$1"
-
-echo && read -p "Continue with backup? (y/n) " continue
-if [[ $continue == "y" || $continue == "Y" ]]
+if [ $dryRun ]
 then
-	read -p "Are you sure? (y/n) " continue
-	if [[ $continue == "y" || $continue == "Y" ]]
-	then
-		sudo rsync --delete --archive --progress --verbose --exclude={.cache,.viminfo,.config,.nvm,.texlive,.npm,.node-gyp,.cargo,.mozilla,.local,.vscode} ~/ "$1"
-		exit 0
-	fi
+  echo "Starting backup dry-run..."
+  sudo rsync --dry-run "${rsyncOptions[@]}" ~/ "$path"
+  exit 0
+else
+  read -p "Continue with backup? (y/n) " continue
+  if [[ $continue == "y" || $continue == "Y" ]]
+  then
+    read -p "Are you sure? (y/n) " continue
+    if [[ $continue == "y" || $continue == "Y" ]]
+    then
+    echo "Starting backup..."
+      sudo rsync "${rsyncOptions[@]}" ~/ "$path"
+      exit 0
+    fi
+  fi
 fi
 
 echo "Backup cancelled."
 exit 1
+

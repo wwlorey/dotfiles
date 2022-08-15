@@ -1,0 +1,4 @@
+shell:
+  program: /bin/zsh
+  args:
+    - --login # source .bash_profile at shell startup

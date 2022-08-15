@@ -289,7 +289,7 @@ function! ShowDocumentation()
   endif
 endfunction
 
-" All remaining CoC config is from https://github.com/neoclide/coc.nvim#example-vim-configuration
+" Most remaining CoC config is from https://github.com/neoclide/coc.nvim#example-vim-configuration
 
 " TextEdit might fail if hidden is not set.
 set hidden
@@ -311,19 +311,23 @@ set shortmess+=c
 " Always show the signcolumn, otherwise it would shift the text each time
 set signcolumn=yes
 
-" Use tab for trigger completion with characters ahead and navigate.
-" NOTE: Use command ':verbose imap <tab>' to make sure tab is not mapped by
-" other plugin before putting this into your config.
-inoremap <silent><expr> <TAB>
-      \ pumvisible() ? "\<C-n>" :
-      \ CheckBackspace() ? "\<TAB>" :
-      \ coc#refresh()
-inoremap <expr><S-TAB> pumvisible() ? "\<C-p>" : "\<C-h>"
-
-function! CheckBackspace() abort
+function! s:check_back_space() abort
   let col = col('.') - 1
-  return !col || getline('.')[col - 1]  =~# '\s'
+  return !col || getline('.')[col - 1]  =~ '\s'
 endfunction
+
+" coc-completion https://github.com/neoclide/coc.nvim/pull/3862
+inoremap <silent><expr> <CR> coc#pum#visible() ? coc#pum#confirm() : "\<C-g>u\<CR>\<c-r>=coc#on_enter()\<CR>"
+inoremap <silent><expr> <C-x><C-z> coc#pum#visible() ? coc#pum#stop() : "\<C-x>\<C-z>"
+inoremap <silent><expr> <C-j> coc#pum#visible() ? coc#pum#next(1) : "\<C-j>"
+inoremap <silent><expr> <C-k> coc#pum#visible() ? coc#pum#prev(1) : "\<C-k>"
+" Insert <tab> when previous text is space, refresh completion if not.
+inoremap <silent><expr> <TAB>
+  \ coc#pum#visible() ? coc#pum#next(1):
+  \ <SID>check_back_space() ? "\<Tab>" :
+  \ coc#refresh()
+inoremap <expr><S-TAB> coc#pum#visible() ? coc#pum#prev(1) : "\<C-h>"
+inoremap <silent><expr> <c-space> coc#refresh()
 
 " Use <c-space> to trigger completion.
 if has('nvim')
@@ -331,11 +335,6 @@ if has('nvim')
 else
   inoremap <silent><expr> <c-@> coc#refresh()
 endif
-
-" Make <CR> auto-select the first completion item and notify coc.nvim to
-" format on enter, <cr> could be remapped by other vim plugin
-inoremap <silent><expr> <cr> pumvisible() ? coc#_select_confirm()
-                              \: "\<C-g>u\<CR>\<c-r>=coc#on_enter()\<CR>"
 
 " GoTo code navigation.
 nmap <silent> gy <Plug>(coc-type-definition)
