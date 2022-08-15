@@ -65,8 +65,9 @@ set spell
 set ignorecase
 set smartcase
 
-" Copy filename, path
-nmap <leader>cf :let @*=expand("%")<CR>
+" Copy filename
+nmap <leader>cn :let @*=expand("%")<CR>
+" Copy file path
 nmap <leader>cp :let @*=expand("%:p")<CR>
 
 " Quit out of two files
