@@ -18,9 +18,11 @@ alias gdi='git diff --ignore-space-change'
 alias gds='git diff --staged'
 alias gdss='git diff --staged --stat'
 alias gl='git log --graph'
+alias glp='git log --patch'
 alias gpul='git pull'
 alias gpus='git push'
 alias gpusi='git-push-init'
+alias grh='git reset --hard'
 alias gs='git status'
 alias gsh='git stash'
 alias gshl='git stash list'
@@ -28,13 +30,18 @@ alias gshp='git stash pop'
 alias gsmui='git submodule update --init'
 
 # Ask for consent & be verbose
+# These aliases can be ignored by prepending "\" (i.e. "\rm")
 alias rm='rm -iv'
 alias cp='cp -iv'
 alias mv='mv -iv'
 
 alias fzf='fzf --preview "bat --color=always --style=numbers --line-range=:500 {}"'
 
+alias v='nvim'
 alias ev='nvim $HOME/Repos/dotfiles/.config/nvim/init.vim'
+
+alias t='tmux'
+alias et='nvim $HOME/Repos/dotfiles/.config/tmux/tmux.conf'
 
 alias venv-activate='. ./venv/bin/activate'
 alias venv-deactivate='deactivate'
@@ -43,6 +50,7 @@ alias nls='npx lint-staged'
 
 alias python=python3
 alias pip=pip3
+alias migrate='./manage.py migrate'
 
 alias grep='grep --color=auto'
 

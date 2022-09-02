@@ -65,6 +65,9 @@ set spell
 set ignorecase
 set smartcase
 
+" Don't show the mode because it's already in the status line.
+set noshowmode
+
 " Copy filename
 nmap <leader>cn :let @*=expand("%")<CR>
 " Copy file path
@@ -166,8 +169,8 @@ let g:ctrlsf_mapping = {
     \ "quit"    : "q",
     \ "next"    : "<Tab>",
     \ "prev"    : "<S-Tab>",
-    \ "nfile"   : "<C-N>",
-    \ "pfile"   : "<C-P>",
+    \ "nfile"   : "}",
+    \ "pfile"   : "{",
     \ "pquit"   : "q",
     \ "loclist" : "",
     \ "chgmode" : "M",
@@ -197,12 +200,15 @@ cnoreabbrev gc G checkout
 cnoreabbrev gcb G checkout -b
 cnoreabbrev gcm G commit -m
 cnoreabbrev gd G diff
+cnoreabbrev gdi G diff --ignore-space-change
 cnoreabbrev gds G diff --staged
 cnoreabbrev gdss G diff --staged --stat
 cnoreabbrev gl G log --graph
+cnoreabbrev glp G log --patch
 cnoreabbrev gpul G pull
 cnoreabbrev gpus G push
 cnoreabbrev gpusi !git-push-init
+cnoreabbrev grh G reset --hard
 cnoreabbrev gs G status
 cnoreabbrev gsh G stash
 cnoreabbrev gshl G stash list
@@ -263,7 +269,6 @@ colorscheme github_dark
 " CoC
 let g:coc_global_extensions = [
     \ 'coc-snippets',
-    \ 'coc-pairs',
     \ 'coc-tsserver',
     \ 'coc-eslint', 
     \ 'coc-prettier', 
