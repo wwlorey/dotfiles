@@ -36,6 +36,8 @@ fi
 echo "Saving list of installed packages..."
 pacman -Q > ~/.packages
 
+backup-secret
+
 if [ $dryRun ]
 then
   echo "Starting backup dry-run..."
