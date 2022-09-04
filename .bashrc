@@ -42,6 +42,7 @@ alias ev='nvim $HOME/Repos/dotfiles/.config/nvim/init.vim'
 
 alias t='tmux'
 alias et='nvim $HOME/Repos/dotfiles/.config/tmux/tmux.conf'
+alias ta='tmux attach'
 
 alias venv-activate='. ./venv/bin/activate'
 alias venv-deactivate='deactivate'
