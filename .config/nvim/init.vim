@@ -10,6 +10,8 @@ Plug 'airblade/vim-gitgutter'
 Plug 'tpope/vim-fugitive'
 Plug 'tpope/vim-rhubarb'
 Plug 'tpope/vim-commentary'
+Plug 'tpope/vim-surround'
+Plug 'tpope/vim-repeat'
 Plug 'christoomey/vim-tmux-navigator'
 Plug 'nvim-lualine/lualine.nvim'
 Plug 'tpope/vim-sleuth'
@@ -145,9 +147,6 @@ let g:fzf_action = {
 
 " CtrlSF
 map <C-s> :CtrlSFToggle<CR>
-" flags:
-"   -W (match word)
-"   -I (ignore case)
 map <leader>sf :CtrlSF -hidden 
 map <leader>sc <Plug>CtrlSFCwordExec
 map <leader>sv <Plug>CtrlSFVwordExec
@@ -216,9 +215,6 @@ cnoreabbrev gshp G stash pop
 cnoreabbrev gsmui G submodule update --init
 
 " commentary
-" https://vi.stackexchange.com/questions/26611/is-it-possible-to-map-control-forward-slash-with-vim
-nmap <C-_> :Commentary<CR>
-vmap <C-_> :Commentary<CR>
 autocmd FileType javascriptreact setlocal commentstring=/*\ %s\ */
 
 " Lualine
@@ -274,6 +270,7 @@ let g:coc_global_extensions = [
     \ 'coc-prettier', 
     \ 'coc-json', 
     \ 'coc-styled-components',
+    \ 'coc-pyright',
     \ ]
 
 nmap <leader>ca <Plug>(coc-codeaction-cursor)
