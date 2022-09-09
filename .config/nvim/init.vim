@@ -122,6 +122,8 @@ let NERDTreeMapOpenVSplit = "<C-v>"
 let NERDTreeMapOpenSplit = "<C-h>"
 let g:NERDTreeGitStatusUseNerdFonts = 1
 let g:NERDTreeGitStatusConcealBrackets = 1
+" Hide help prompt
+let NERDTreeMinimalUI = 1
 " Change current woring directory when NERDTree root dir is changed
 let g:NERDTreeChDirMode = 2
 let g:NERDTreeGitStatusIndicatorMapCustom = {
