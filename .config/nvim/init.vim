@@ -261,6 +261,8 @@ EOF
 " Theme
 " colorscheme github_light
 colorscheme github_dark
+" https://vi.stackexchange.com/questions/7112/tmux-messing-with-vim-highlighting
+set t_Co=256
 
 " CoC
 let g:coc_global_extensions = [
