@@ -5,7 +5,7 @@ dotfilesDir="$HOME/Repos/dotfiles"
 if [[ -d "$dotfilesDir" ]]
 then
     cd "$dotfilesDir"
-    rsync -avr --exclude=.git* . ~/
+    rsync -avr --exclude={.git*,README.md} . ~/
 else
     echo "'$dotfilesDir' does not exist."
 fi
