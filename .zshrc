@@ -69,8 +69,8 @@ zle -N zle-keymap-select
 
 # Edit current line in $EDITOR
 autoload edit-command-line; zle -N edit-command-line
-bindkey '^l' edit-command-line
-bindkey -M vicmd '^l' edit-command-line
+bindkey '^e' edit-command-line
+bindkey -M vicmd '^e' edit-command-line
 
 # Directory stack
 setopt AUTO_PUSHD
