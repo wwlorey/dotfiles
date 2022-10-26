@@ -1,0 +1,22 @@
+#!/bin/bash
+
+# This script kills all connections to the given PostgreSQL database.
+
+if ! [[ $1 ]]
+then
+  echo Must provide database name.
+  exit 1
+fi
+
+# Query source: https://stackoverflow.com/questions/5108876/kill-a-postgresql-session-connection
+psql $1 --command "\
+  SELECT \
+    pg_terminate_backend(pid) \
+  FROM \
+    pg_stat_activity \
+  WHERE \
+    -- Don't kill this connection.
+    pid <> pg_backend_pid() \
+    -- Don't kill the connections to any other databases.
+    AND datname = '$1';"
+
