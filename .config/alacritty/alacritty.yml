@@ -6,6 +6,7 @@ shell:
 font:
   normal:
     family: FiraCode Nerd Font
+  size: 11
 
 # GitHub Dark Alacritty Colors
 # source: https://github.com/projekt0n/github-theme-contrib

@@ -1,0 +1,11 @@
+#!/bin/bash
+
+if [[ $1 ]]
+then
+  city=$1
+else
+  read -p "Enter city: " city
+fi
+
+curl wttr.in/$city
+
