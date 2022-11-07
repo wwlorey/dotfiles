@@ -1,0 +1,7 @@
+#!/bin/bash
+
+CURRENT_BRANCH=$(git branch --show-current)
+
+git branch --format="%(refname:short)" | # Don't show an asterisk next to the current branch
+  fzf --preview="git diff --color $CURRENT_BRANCH {}" |
+  xargs git checkout
