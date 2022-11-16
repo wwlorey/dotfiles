@@ -36,8 +36,6 @@ alias rm='rm -iv'
 alias cp='cp -iv'
 alias mv='mv -iv'
 
-alias fzf='fzf --preview "bat --color=always --style=numbers --line-range=:500 {}"'
-
 alias v='nvim'
 alias ev='nvim $HOME/Repos/dotfiles/.config/nvim/init.vim'
 
