@@ -1,5 +1,4 @@
 call plug#begin('~/.config/nvim/plugged')
-Plug 'airblade/vim-gitgutter'
 Plug 'ap/vim-css-color'
 Plug 'christoomey/vim-tmux-navigator'
 Plug 'dyng/ctrlsf.vim'
@@ -105,6 +104,9 @@ nmap <leader>mn :mksession
 " Open help in a new tab
 cnoreabbrev th tab help
 
+" Hide intro message on startup
+set shortmess+=I
+
 
 " NERDTREE
 
@@ -168,22 +170,11 @@ let g:ctrlsf_mapping = {
 \ }
 
 
-" GITGUTTER
-
-nmap ]g <Plug>(GitGutterNextHunk)
-nmap [g <Plug>(GitGutterPrevHunk)
-nmap gh <Plug>(GitGutterPreviewHunk)
-nmap ga :GitGutterAll<CR>
-" Focus on floating window
-nmap gf <C-w><C-w>
-" Use <Esc> to close the floating window when it isn't focused
-let g:gitgutter_close_preview_on_escape = 1
-
-
 " FUGITIVE
 
-" Open full-screen fugitive-summary in a new tab
-nmap <C-g> :tabnew<CR>:0G<CR>
+" Open full screen fugitive summary
+nmap <C-g> :0G<CR>
+
 " Git aliases from .bashrc
 cnoreabbrev ga G add
 cnoreabbrev gaa G add --all
@@ -201,7 +192,6 @@ cnoreabbrev glp G log --patch
 cnoreabbrev gpul G pull
 cnoreabbrev gpus G push
 cnoreabbrev gpusi !git-push-init
-cnoreabbrev grh G reset --hard
 cnoreabbrev gs G status
 cnoreabbrev gsh G stash
 cnoreabbrev gshl G stash list
@@ -220,7 +210,7 @@ autocmd FileType javascriptreact setlocal commentstring=/*\ %s\ */
 set showtabline=2
 
 " Quit the current tab
-nmap <leader>qt :windo bd<CR>
+cnoreabbrev qt windo bd
 
 nmap <leader>gt :tabmove +<CR>
 nmap <leader>gT :tabmove -<CR>
@@ -302,7 +292,7 @@ let g:python_highlight_all = 1
 
 " LINTING
 
-augroup Stellar
+augroup StellarLinting
   " Clear this group's autocmds to prevent them from piling up
   " each time this file is sourced.
   autocmd!
