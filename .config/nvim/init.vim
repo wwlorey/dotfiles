@@ -110,18 +110,26 @@ set shortmess+=I
 
 " NERDTREE
 
-map <C-e> :NERDTreeToggle<CR>
-map <leader>er :NERDTreeFind<CR>
+nmap <C-e> :NERDTreeToggle<CR>
+nmap <leader>er :NERDTreeFind<CR>
+
+" Set a bookmark for the current buffer. Must be called from within a buffer.
+nmap <leader>bs :NERDTreeFind<CR>:Bookmark<CR>
+nmap <leader>bc :NERDTree<CR>:ClearAllBookmarks<CR>
+
 let NERDTreeShowHidden = 1
 let NERDTreeStatusline = -1
 let NERDTreeMapActivateNode = "<Tab>"
 let NERDTreeMapOpenInTab = "<C-t>"
 let NERDTreeMapOpenVSplit = "<C-v>"
 let NERDTreeMapOpenSplit = "<C-h>"
+
 " Hide help prompt
 let NERDTreeMinimalUI = 1
+
 " Change current working directory when NERDTree root dir is changed
 let g:NERDTreeChDirMode = 2
+
 " Workaround for https://github.com/preservim/nerdtree/issues/1321
 let g:NERDTreeMinimalMenu=1
 
