@@ -2,6 +2,8 @@
 . $HOME/.zsh/git-prompt
 . $HOME/.zsh/fzf.zsh
 
+alias sz='source ~/.zshrc'
+
 # Set command prompt and truncate username
 PS1='%F{yellow}%4>>%n%<<%f%F{blue}@%f%F{red}%m%f %B%1~%b %B%F{blue}>%f%b '
 

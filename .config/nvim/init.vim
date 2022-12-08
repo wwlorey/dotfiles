@@ -71,9 +71,9 @@ set smartcase
 set noshowmode
 
 " Copy filename
-nmap <leader>cn :let @*=expand("%")<CR>
+nmap <leader>cn :let @+=expand("%")<CR>
 " Copy file path
-nmap <leader>cp :let @*=expand("%:p")<CR>
+nmap <leader>cp :let @+=expand("%:p")<CR>
 
 " Quit out of two files
 nmap <leader>qq :q<CR>:q<CR>
