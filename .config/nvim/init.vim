@@ -1,25 +1,23 @@
 call plug#begin('~/.config/nvim/plugged')
-Plug 'neoclide/coc.nvim', {'branch': 'release'}
-Plug 'preservim/nerdtree'
-Plug 'xuyuanp/nerdtree-git-plugin'
-Plug 'ryanoasis/vim-devicons'
-Plug 'junegunn/fzf', { 'do': { -> fzf#install() } }
-Plug 'junegunn/fzf.vim'
-Plug 'dyng/ctrlsf.vim'
-Plug 'airblade/vim-gitgutter'
-Plug 'tpope/vim-fugitive'
-Plug 'tpope/vim-rhubarb'
-Plug 'tpope/vim-commentary'
-Plug 'tpope/vim-surround'
-Plug 'tpope/vim-repeat'
-Plug 'christoomey/vim-tmux-navigator'
-Plug 'nvim-lualine/lualine.nvim'
-Plug 'tpope/vim-sleuth'
-Plug 'yuezk/vim-js'
-Plug 'maxmellon/vim-jsx-pretty'
 Plug 'ap/vim-css-color'
+Plug 'christoomey/vim-tmux-navigator'
+Plug 'dyng/ctrlsf.vim'
+Plug 'junegunn/fzf'
+Plug 'maxmellon/vim-jsx-pretty'
+Plug 'preservim/nerdtree'
 Plug 'projekt0n/github-nvim-theme'
+Plug 'tpope/vim-commentary'
+Plug 'tpope/vim-fugitive'
+Plug 'tpope/vim-repeat'
+Plug 'tpope/vim-rhubarb'
+Plug 'tpope/vim-sleuth'
+Plug 'tpope/vim-surround'
+Plug 'vim-python/python-syntax'
+Plug 'yuezk/vim-js'
 call plug#end()
+
+
+" GENERAL CONFIGURATION
 
 let mapleader = " "
 inoremap jk <Esc>
@@ -70,13 +68,12 @@ set smartcase
 " Don't show the mode because it's already in the status line.
 set noshowmode
 
-" Copy filename
-nmap <leader>cn :let @+=expand("%")<CR>
+" Copy file name
+nmap <leader>cn :let @+=expand("%:t")<CR>
+" Copy relative file path
+nmap <leader>cr :let @+=expand("%")<CR>
 " Copy file path
 nmap <leader>cp :let @+=expand("%:p")<CR>
-
-" Quit out of two files
-nmap <leader>qq :q<CR>:q<CR>
 
 " Integrated terminal
 " Open the terminal in a new horizontal split and enter insert mode
@@ -85,13 +82,6 @@ map <leader>` :split<CR>:terminal<CR>i
 map <leader>~ :tabnew<CR>:terminal<CR>i
 " Use escape to close the terminal
 tnoremap <Esc> <C-\><C-n>
-
-" Tabs
-nmap <leader>gt :tabmove +<CR>
-nmap <leader>gT :tabmove -<CR>
-nmap <C-t> :tabnew<CR>
-" Quit all buffers in the current tab
-nmap <leader>qt :windo bd<CR>
 
 " Natural split behavior
 set splitbelow
@@ -111,43 +101,51 @@ nmap <leader>so :!save-config<CR>:so $VIMRC<CR>
 nmap <leader>ms :mksession! ~/Downloads/session.vim<CR>
 nmap <leader>mn :mksession 
 
-" NERDTree
-map <C-e> :NERDTreeToggle<CR>
-map <leader>er :NERDTreeFind<CR>
+" Open help in a new tab
+cnoreabbrev th tab help
+
+" Hide intro message on startup
+set shortmess+=I
+
+
+" NERDTREE
+
+nmap <C-e> :NERDTreeToggle<CR>
+nmap <leader>er :NERDTreeFind<CR>
+
+" Set a bookmark for the current buffer. Must be called from within a buffer.
+nmap <leader>bs :NERDTreeFind<CR>:Bookmark<CR>
+nmap <leader>bc :NERDTree<CR>:ClearAllBookmarks<CR>
+
 let NERDTreeShowHidden = 1
 let NERDTreeStatusline = -1
 let NERDTreeMapActivateNode = "<Tab>"
 let NERDTreeMapOpenInTab = "<C-t>"
 let NERDTreeMapOpenVSplit = "<C-v>"
 let NERDTreeMapOpenSplit = "<C-h>"
-let g:NERDTreeGitStatusUseNerdFonts = 1
-let g:NERDTreeGitStatusConcealBrackets = 1
+
 " Hide help prompt
 let NERDTreeMinimalUI = 1
-" Change current woring directory when NERDTree root dir is changed
-let g:NERDTreeChDirMode = 2
-let g:NERDTreeGitStatusIndicatorMapCustom = {
-    \ 'Modified'  :'✎',
-    \ 'Staged'    :'＋',
-    \ 'Untracked' :'✭',
-    \ 'Renamed'   :'➡',
-    \ 'Unmerged'  :'▵',
-    \ 'Deleted'   :'𝗫',
-    \ 'Dirty'     :'✱',
-    \ 'Ignored'   :'🙈',
-    \ 'Clean'     :'✔',
-    \ 'Unknown'   :'?',
-    \ }
 
-" fzf
-map <C-p> :Files<CR>
+" Change current working directory when NERDTree root dir is changed
+let g:NERDTreeChDirMode = 2
+
+" Workaround for https://github.com/preservim/nerdtree/issues/1321
+let g:NERDTreeMinimalMenu=1
+
+
+" FZF
+
+map <C-p> :FZF<CR>
 let g:fzf_action = {
     \ 'ctrl-t': 'tab split',
     \ 'ctrl-h': 'split',
     \ 'ctrl-v': 'vsplit' 
     \}
 
-" CtrlSF
+
+" CTRLSF
+
 map <C-s> :CtrlSFToggle<CR>
 map <leader>sf :CtrlSF -hidden 
 map <leader>sc <Plug>CtrlSFCwordExec
@@ -179,19 +177,12 @@ let g:ctrlsf_mapping = {
     \ "fzf"     : "<C-P>",
 \ }
 
-" GitGutter
-nmap ]g <Plug>(GitGutterNextHunk)
-nmap [g <Plug>(GitGutterPrevHunk)
-nmap gh <Plug>(GitGutterPreviewHunk)
-nmap ga :GitGutterAll<CR>
-" Focus on floating window
-nmap gf <C-w><C-w>
-" Use <Esc> to close the floating window when it isn't focused
-let g:gitgutter_close_preview_on_escape = 1
 
-" fugitive
-" Open full-screen fugitive-summary in a new tab
-nmap <C-g> :tabnew<CR>:0G<CR>
+" FUGITIVE
+
+" Open full screen fugitive summary
+nmap <C-g> :0G<CR>
+
 " Git aliases from .bashrc
 cnoreabbrev ga G add
 cnoreabbrev gaa G add --all
@@ -209,230 +200,115 @@ cnoreabbrev glp G log --patch
 cnoreabbrev gpul G pull
 cnoreabbrev gpus G push
 cnoreabbrev gpusi !git-push-init
-cnoreabbrev grh G reset --hard
 cnoreabbrev gs G status
 cnoreabbrev gsh G stash
 cnoreabbrev gshl G stash list
 cnoreabbrev gshp G stash pop
 cnoreabbrev gsmui G submodule update --init
 
-" commentary
+
+" COMMENTARY
+
 autocmd FileType javascriptreact setlocal commentstring=/*\ %s\ */
 
-" Lualine
-lua << EOF
-require'lualine'.setup {
-  options = {
-    icons_enabled = true,
-    theme = 'auto',
-    component_separators = { left = '', right = ''},
-    section_separators = { left = '', right = ''},
-    disabled_filetypes = {},
-    always_divide_middle = true,
-    globalstatus = false,
-  },
-  sections = {
-    lualine_a = {'mode'},
-    lualine_b = {'branch', 'diff', { 'diagnostics', sources={'nvim_lsp', 'coc'}}},
-    lualine_c = {'filename'},
-    lualine_x = {'filetype'},
-    lualine_y = {'progress'},
-    lualine_z = {'location'}
-  },
-  inactive_sections = {
-    lualine_a = {},
-    lualine_b = {},
-    lualine_c = {'filename'},
-    lualine_x = {'location'},
-    lualine_y = {},
-    lualine_z = {}
-  },
-  tabline = {
-    -- Show relative file path
-    lualine_a = {{'filename', path = 1}},
-    lualine_b = {},
-    lualine_c = {},
-    lualine_x = {},
-    lualine_y = {'windows'},
-    lualine_z = {{'tabs'}}
-  },
-  extensions = {'man', 'nerdtree'}
-}
-EOF
 
-" Theme
+" TABS
+
+" Always show tabline
+set showtabline=2
+
+" Quit the current tab
+cnoreabbrev qt windo bd
+
+nmap <leader>gt :tabmove +<CR>
+nmap <leader>gT :tabmove -<CR>
+nmap <C-t> :tabnew<CR>
+
+function GetTabLine()
+  let tabLine = ''
+  let thisTabNumber = tabpagenr()
+  let thisBufferName = expand('%:t')
+
+  " Write buffer names
+  for bufferNumber in tabpagebuflist(thisTabNumber)
+    let bufferName = fnamemodify(bufname(bufferNumber), ':t')
+
+    " Highlight the current buffer
+    if bufferName != '' && bufferName == thisBufferName
+      let tabLine ..= '%#TabLineSel#'
+    else
+      let tabLine ..= '%#TabLine#'
+    endif
+
+    let tabLine ..= ' '..bufferName..' '
+  endfor
+
+  let tabLine ..= '%#TabLineFill#'         " Reset tab fill
+  let tabLine ..= '%='                     " Horizontal fill
+
+  " Write tab numbers
+  for tabNumber in range(1, tabpagenr('$'))
+    " Highlight the current tab
+    if tabNumber == thisTabNumber
+      let tabLine ..= '%#TabLineSel#'
+    else
+      let tabLine ..= '%#TabLine#'
+    endif
+    
+    let tabLine ..= '%'..tabNumber..'T'    " Set the tab page number to handle mouse clicks
+    let tabLine ..= ' '..tabNumber..' '
+  endfor
+
+  let tabLine ..= '%#TabLineFill#'         " Reset tab fill
+  let tabLine ..= '%T'                     " Reset clickable tab page number
+
+  return tabLine
+endfunction
+
+set tabline=%!GetTabLine()
+
+
+" STATUSLINE
+
+function GetStatusLine()
+  let statusLine = ''
+  let statusLine ..= ' %f'        " Relative path to file in current buffer
+  let statusLine ..= ' %m'        " Modified flag
+  let statusLine ..= '%1*'        " Begin User1 highlight group
+  let statusLine ..= '%='         " Horizontal fill
+  let statusLine ..= '%*'         " End User1 highlight group
+  let statusLine ..= ' %l/%L:%c'  " <current line>/<total lines>:<current column>
+  let statusLine ..= '  %Y '      " File type in current buffer
+  return statusLine
+endfunction
+
+set statusline=%!GetStatusLine()
+
+
+" THEME
+
 " colorscheme github_light
 colorscheme github_dark
 " https://vi.stackexchange.com/questions/7112/tmux-messing-with-vim-highlighting
 set t_Co=256
 
-" CoC
-let g:coc_global_extensions = [
-    \ 'coc-snippets',
-    \ 'coc-tsserver',
-    \ 'coc-eslint', 
-    \ 'coc-prettier', 
-    \ 'coc-json', 
-    \ 'coc-styled-components',
-    \ 'coc-pyright',
-    \ ]
 
-nmap <leader>ca <Plug>(coc-codeaction-cursor)
-nmap <leader>cd <Plug>(coc-definition)
+" SYNTAX HIGHLIGHTING
 
-" Use `:CocDiagnostics` to get all diagnostics of current buffer in location list.
-nmap <silent> [c <Plug>(coc-diagnostic-prev)
-nmap <silent> ]c <Plug>(coc-diagnostic-next)
+let g:python_highlight_all = 1
 
-" Show documentation in preview window.
-nnoremap <silent> <leader>. :call ShowDocumentation()<CR>
 
-function! ShowDocumentation()
-  if CocAction('hasProvider', 'hover')
-    call CocActionAsync('doHover')
-      else
-    call feedkeys('K', 'in')
-  endif
-endfunction
+" LINTING
 
-" Most remaining CoC config is from https://github.com/neoclide/coc.nvim#example-vim-configuration
-
-" TextEdit might fail if hidden is not set.
-set hidden
-
-" Some servers have issues with backup files, see #649.
-set nobackup
-set nowritebackup
-
-" Give more space for displaying messages.
-set cmdheight=2
-
-" Having longer updatetime (default is 4000 ms = 4 s) leads to noticeable
-" delays and poor user experience.
-set updatetime=300
-
-" Don't pass messages to |ins-completion-menu|.
-set shortmess+=c
-
-" Always show the signcolumn, otherwise it would shift the text each time
-set signcolumn=yes
-
-function! s:check_back_space() abort
-  let col = col('.') - 1
-  return !col || getline('.')[col - 1]  =~ '\s'
-endfunction
-
-" coc-completion https://github.com/neoclide/coc.nvim/pull/3862
-inoremap <silent><expr> <CR> coc#pum#visible() ? coc#pum#confirm() : "\<C-g>u\<CR>\<c-r>=coc#on_enter()\<CR>"
-inoremap <silent><expr> <C-x><C-z> coc#pum#visible() ? coc#pum#stop() : "\<C-x>\<C-z>"
-inoremap <silent><expr> <C-j> coc#pum#visible() ? coc#pum#next(1) : "\<C-j>"
-inoremap <silent><expr> <C-k> coc#pum#visible() ? coc#pum#prev(1) : "\<C-k>"
-" Insert <tab> when previous text is space, refresh completion if not.
-inoremap <silent><expr> <TAB>
-  \ coc#pum#visible() ? coc#pum#next(1):
-  \ <SID>check_back_space() ? "\<Tab>" :
-  \ coc#refresh()
-inoremap <expr><S-TAB> coc#pum#visible() ? coc#pum#prev(1) : "\<C-h>"
-inoremap <silent><expr> <c-space> coc#refresh()
-
-" Use <c-space> to trigger completion.
-if has('nvim')
-  inoremap <silent><expr> <c-space> coc#refresh()
-else
-  inoremap <silent><expr> <c-@> coc#refresh()
-endif
-
-" GoTo code navigation.
-nmap <silent> gy <Plug>(coc-type-definition)
-nmap <silent> gi <Plug>(coc-implementation)
-nmap <silent> gr <Plug>(coc-references)
-
-" Highlight the symbol and its references when holding the cursor.
-autocmd CursorHold * silent call CocActionAsync('highlight')
-
-" Symbol renaming.
-nmap <F2> <Plug>(coc-rename)
-
-" Formatting selected code.
-xmap <leader>f  <Plug>(coc-format-selected)
-nmap <leader>f  <Plug>(coc-format-selected)
-
-augroup mygroup
+augroup StellarLinting
+  " Clear this group's autocmds to prevent them from piling up
+  " each time this file is sourced.
   autocmd!
-  " Setup formatexpr specified filetype(s).
-  autocmd FileType typescript,json setl formatexpr=CocAction('formatSelected')
-  " Update signature help on jump placeholder.
-  autocmd User CocJumpPlaceholder call CocActionAsync('showSignatureHelp')
-augroup end
 
-" Applying codeAction to the selected region.
-" Example: `<leader>aap` for current paragraph
-xmap <leader>a  <Plug>(coc-codeaction-selected)
-nmap <leader>a  <Plug>(coc-codeaction-selected)
+  autocmd BufWritePost **/stellar/**/*.js,*.jsx silent !prettier --write "%"
+  autocmd BufWritePost **/stellar/**/*.py       silent !autoflake --in-place --remove-all-unused-imports "%"
+  " Default configuration: ~/.config/pycodestyle
+  autocmd BufWritePost **/stellar/**/*.py       silent !autopep8 --in-place "%"
 
-" Remap keys for applying codeAction to the current buffer.
-nmap <leader>ac  <Plug>(coc-codeaction)
-" Apply AutoFix to problem on the current line.
-nmap <leader>qf  <Plug>(coc-fix-current)
-
-" Run the Code Lens action on the current line.
-nmap <leader>cl  <Plug>(coc-codelens-action)
-
-" Map function and class text objects
-" NOTE: Requires 'textDocument.documentSymbol' support from the language server.
-xmap if <Plug>(coc-funcobj-i)
-omap if <Plug>(coc-funcobj-i)
-xmap af <Plug>(coc-funcobj-a)
-omap af <Plug>(coc-funcobj-a)
-xmap ic <Plug>(coc-classobj-i)
-omap ic <Plug>(coc-classobj-i)
-xmap ac <Plug>(coc-classobj-a)
-omap ac <Plug>(coc-classobj-a)
-
-" Remap <C-f> and <C-b> for scroll float windows/popups.
-if has('nvim-0.4.0') || has('patch-8.2.0750')
-  nnoremap <silent><nowait><expr> <C-f> coc#float#has_scroll() ? coc#float#scroll(1) : "\<C-f>"
-  nnoremap <silent><nowait><expr> <C-b> coc#float#has_scroll() ? coc#float#scroll(0) : "\<C-b>"
-  inoremap <silent><nowait><expr> <C-f> coc#float#has_scroll() ? "\<c-r>=coc#float#scroll(1)\<cr>" : "\<Right>"
-  inoremap <silent><nowait><expr> <C-b> coc#float#has_scroll() ? "\<c-r>=coc#float#scroll(0)\<cr>" : "\<Left>"
-  vnoremap <silent><nowait><expr> <C-f> coc#float#has_scroll() ? coc#float#scroll(1) : "\<C-f>"
-  vnoremap <silent><nowait><expr> <C-b> coc#float#has_scroll() ? coc#float#scroll(0) : "\<C-b>"
-endif
-
-" Use CTRL-S for selections ranges.
-" Requires 'textDocument/selectionRange' support of language server.
-" nmap <silent> <C-s> <Plug>(coc-range-select)
-" xmap <silent> <C-s> <Plug>(coc-range-select)
-
-" Add `:Format` command to format current buffer.
-command! -nargs=0 Format :call CocActionAsync('format')
-
-" Add `:Fold` command to fold current buffer.
-command! -nargs=? Fold :call     CocAction('fold', <f-args>)
-
-" Add `:OR` command for organize imports of the current buffer.
-command! -nargs=0 OR   :call     CocActionAsync('runCommand', 'editor.action.organizeImport')
-
-" Add (Neo)Vim's native statusline support.
-" NOTE: Please see `:h coc-status` for integrations with external plugins that
-" provide custom statusline: lightline.vim, vim-airline.
-" set statusline^=%{coc#status()}%{get(b:,'coc_current_function','')}
-
-" Mappings for CoCList
-" Show all diagnostics.
-nnoremap <silent><nowait> <space>a  :<C-u>CocList diagnostics<cr>
-" Manage extensions.
-nnoremap <silent><nowait> <space>ex  :<C-u>CocList extensions<cr>
-" Show commands.
-nnoremap <silent><nowait> <space>co  :<C-u>CocList commands<cr>
-" Find symbol of current document.
-nnoremap <silent><nowait> <space>o  :<C-u>CocList outline<cr>
-" Search workspace symbols.
-nnoremap <silent><nowait> <space>sy  :<C-u>CocList -I symbols<cr>
-" Do default action for next item.
-nnoremap <silent><nowait> <space>j  :<C-u>CocNext<CR>
-" Do default action for previous item.
-nnoremap <silent><nowait> <space>k  :<C-u>CocPrev<CR>
-" Resume latest coc list.
-nnoremap <silent><nowait> <space>p  :<C-u>CocListResume<CR>
+augroup END
 

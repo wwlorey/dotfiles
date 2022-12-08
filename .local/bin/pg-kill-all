@@ -4,7 +4,7 @@
 
 if ! [[ $1 ]]
 then
-  echo Must provide database name.
+  echo Please provide database name.
   exit 1
 fi
 

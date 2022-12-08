@@ -39,9 +39,6 @@ bindkey "^?" backward-delete-char
 # Quickly switch between vi modes
 export KEYTIMEOUT=1
 
-# Set fzf to use ripgrep if available
-which rg > /dev/null && export FZF_DEFAULT_COMMAND='rg --files --hidden -g "!**/.git/**"'
-
 # fzf bindings
 bindkey -s '^f' 'cd "$(dirname "$(fzf)")"\n'
 bindkey -s '^p' 'fzf | xargs -r $EDITOR\n'

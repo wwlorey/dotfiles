@@ -12,6 +12,7 @@ alias gb='git branch'
 alias gbc='git branch --show-current'
 alias gc='git checkout'
 alias gcb='git checkout -b'
+alias gcf='git-checkout-fuzzy'
 alias gcm='git commit -m'
 alias gd='git diff'
 alias gdi='git diff --ignore-space-change'
@@ -22,7 +23,6 @@ alias glp='git log --patch'
 alias gpul='git pull'
 alias gpus='git push'
 alias gpusi='git-push-init'
-alias grh='git reset --hard'
 alias gs='git status'
 alias gsh='git stash'
 alias gshl='git stash list'
@@ -34,8 +34,6 @@ alias gsmui='git submodule update --init'
 alias rm='rm -iv'
 alias cp='cp -iv'
 alias mv='mv -iv'
-
-alias fzf='fzf --preview "bat --color=always --style=numbers --line-range=:500 {}"'
 
 alias v='nvim'
 alias ev='nvim $HOME/Repos/dotfiles/.config/nvim/init.vim'
@@ -50,10 +48,6 @@ alias venv-activate='. ./venv/bin/activate'
 alias venv-deactivate='deactivate'
 
 alias nls='npx lint-staged'
-
-alias python=python3
-alias pip=pip3
-alias migrate='./manage.py migrate'
 
 alias grep='grep --color=auto'
 
