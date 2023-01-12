@@ -43,6 +43,8 @@ alias t='tmux'
 alias et='nvim $HOME/Repos/dotfiles/.config/tmux/tmux.conf'
 alias ta='tmux attach'
 
+alias hs='hugo server --noHTTPCache'
+
 alias venv-activate='. ./venv/bin/activate'
 alias venv-deactivate='deactivate'
 

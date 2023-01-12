@@ -69,11 +69,11 @@ set smartcase
 set noshowmode
 
 " Copy file name
-nmap <leader>cn :let @*=expand("%:t")<CR>
+nmap <leader>cn :let @+=expand("%:t")<CR>
 " Copy relative file path
-nmap <leader>cr :let @*=expand("%")<CR>
+nmap <leader>cr :let @+=expand("%")<CR>
 " Copy file path
-nmap <leader>cp :let @*=expand("%:p")<CR>
+nmap <leader>cp :let @+=expand("%:p")<CR>
 
 " Integrated terminal
 " Open the terminal in a new horizontal split and enter insert mode

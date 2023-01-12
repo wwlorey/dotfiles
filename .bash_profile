@@ -1,4 +1,6 @@
-export PATH="$PATH:$HOME/.local/bin"
+SCRIPTS_DIR=$HOME/.local/bin
+
+export PATH="$PATH:$SCRIPTS_DIR"
 export EDITOR=nvim
 export VISUAL=nvim
 export BROWSER=brave
