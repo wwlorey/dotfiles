@@ -91,6 +91,9 @@ set splitright
 nmap <leader>v :vsplit<CR><C-^>
 nmap <leader>h :split<CR><C-^>
 
+" Find & replace
+nmap <leader>r :%s/
+
 " https://vi.stackexchange.com/questions/1983/how-can-i-get-vim-to-stop-putting-comments-in-front-of-new-lines
 au FileType * set fo-=c fo-=r fo-=o
 
@@ -98,7 +101,8 @@ au FileType * set fo-=c fo-=r fo-=o
 nmap <leader>so :!save-config<CR>:so $VIMRC<CR>
 
 " Save this session
-nmap <leader>ms :mksession! ~/Downloads/session.vim<CR>
+" Use -S to open a session
+nmap <leader>ms :mksession! ~/Scratch/session.vim<CR>
 nmap <leader>mn :mksession 
 
 " Open help in a new tab
