@@ -2,6 +2,7 @@ call plug#begin('~/.config/nvim/plugged')
 Plug 'ap/vim-css-color'
 Plug 'christoomey/vim-tmux-navigator'
 Plug 'dyng/ctrlsf.vim'
+Plug 'github/copilot.vim'
 Plug 'junegunn/fzf'
 Plug 'maxmellon/vim-jsx-pretty'
 Plug 'preservim/nerdtree'
@@ -180,6 +181,16 @@ let g:ctrlsf_mapping = {
     \ "stop"    : "<C-C>",
     \ "fzf"     : "<C-P>",
 \ }
+
+
+" GITHUB COPILOT
+
+map <C-c> :Copilot panel<CR>
+
+" Avoid the ALT key for Copilot mappings because it doesn't play nice with Mac
+inoremap <C-[> <Plug>(copilot-previous)
+inoremap <C-]> <Plug>(copilot-next)
+inoremap <C-\> <Plug>(copilot-dismiss)
 
 
 " FUGITIVE
