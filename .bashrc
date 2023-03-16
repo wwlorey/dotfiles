@@ -19,6 +19,7 @@ alias gdi='git diff --ignore-space-change'
 alias gds='git diff --staged'
 alias gdss='git diff --staged --stat'
 alias gfuz='git-checkout-fuzzy'
+alias gkm='git checkout HEAD -- latest_migrations.manifest' # git kill migrations
 alias gl='git log --graph'
 alias glp='git log --patch'
 alias gpul='git pull'
