@@ -27,6 +27,7 @@ alias gpus='git push'
 alias gpusi='git-push-init'
 alias gs='git status'
 alias gsh='git stash'
+alias gshk='git stash --keep-index'
 alias gshl='git stash list'
 alias gshp='git stash pop'
 alias gsmui='git submodule update --init'
@@ -43,6 +44,8 @@ alias ev='nvim $HOME/Repos/dotfiles/.config/nvim/init.vim'
 alias t='tmux'
 alias et='nvim $HOME/Repos/dotfiles/.config/tmux/tmux.conf'
 alias ta='tmux attach'
+
+alias eb='nvim $HOME/Repos/dotfiles/.bashrc'
 
 alias hs='hugo server --noHTTPCache'
 
