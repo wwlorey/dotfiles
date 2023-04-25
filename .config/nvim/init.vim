@@ -92,8 +92,10 @@ set splitright
 nmap <leader>v :vsplit<CR><C-^>
 nmap <leader>h :split<CR><C-^>
 
-" Find & replace
+" Find & replace in entire file
 nmap <leader>r :%s/
+" Find & replace in visual selection
+vmap <leader>r :s/\%V
 
 " https://vi.stackexchange.com/questions/1983/how-can-i-get-vim-to-stop-putting-comments-in-front-of-new-lines
 au FileType * set fo-=c fo-=r fo-=o
