@@ -187,7 +187,7 @@ let g:ctrlsf_mapping = {
 
 " GITHUB COPILOT
 
-map <C-c> :Copilot panel<CR>
+nmap <leader>co :Copilot panel<CR>
 
 " Avoid the ALT key for Copilot mappings because it doesn't play nice with Mac
 inoremap <C-[> <Plug>(copilot-previous)
