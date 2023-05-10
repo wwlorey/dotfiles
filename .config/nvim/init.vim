@@ -24,6 +24,9 @@ let mapleader = " "
 inoremap jk <Esc>
 set encoding=utf-8
 
+" Fix the escape key's behavior in insert mode
+inoremap <Esc> <C-c>
+
 " Use jk to traverse virtual lines (lines that wrap)
 noremap <silent> <expr> j (v:count == 0 ? 'gj' : 'j')
 noremap <silent> <expr> k (v:count == 0 ? 'gk' : 'k')
