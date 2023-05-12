@@ -43,6 +43,10 @@ export KEYTIMEOUT=1
 bindkey -s '^f' 'cd "$(dirname "$(fzf)")"\n'
 bindkey -s '^p' 'fzf | xargs -r $EDITOR\n'
 
+# nvim bindings
+# Open fugitive
+bindkey -s '^g' 'echo "" | nvim - +"0G"\n'
+
 # Change the cursor depending on the vi mode
 # Vim control sequences: https://ttssh2.osdn.jp/manual/4/en/usage/tips/vim.html
 cursorBlock='\e[2 q'

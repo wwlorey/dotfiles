@@ -46,6 +46,7 @@ alias et='nvim $HOME/Repos/dotfiles/.config/tmux/tmux.conf'
 alias ta='tmux attach'
 
 alias eb='nvim $HOME/Repos/dotfiles/.bashrc'
+alias ez='nvim $HOME/Repos/dotfiles/.zshrc'
 
 alias hs='hugo server --noHTTPCache'
 
