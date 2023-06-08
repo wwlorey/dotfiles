@@ -99,6 +99,8 @@ nmap <leader>h :split<CR><C-^>
 nmap <leader>r :%s/
 " Find & replace in visual selection
 vmap <leader>r :s/\%V
+" Find '/' and replace with '.' in entire file
+nmap <leader>sr :%s/\//\./g<CR>
 
 " https://vi.stackexchange.com/questions/1983/how-can-i-get-vim-to-stop-putting-comments-in-front-of-new-lines
 au FileType * set fo-=c fo-=r fo-=o
