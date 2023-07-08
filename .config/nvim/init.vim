@@ -117,6 +117,9 @@ cnoreabbrev th tab help
 " Hide intro message on startup
 set shortmess+=I
 
+" Insert an en dash with trailing space
+imap <C-n> – 
+
 
 " NERDTREE
 
