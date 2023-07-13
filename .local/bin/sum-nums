@@ -1,0 +1,22 @@
+#!/bin/bash
+
+# Calculate the sum of numbers.
+sum_numbers() {
+    local sum=0
+
+    # Print all the numbers summed so the work may be checked.
+    # Start with "0" for easy insertion of +'s
+    echo -n "0"
+    for number in "$@"; do
+        echo -n " + $number"
+        sum=$(bc -l <<< "$sum + $number")
+    done
+
+    echo
+    echo "sum: $sum"
+}
+
+# Read the list of numbers from command-line arguments.
+numbers=("$@")
+sum_numbers "${numbers[@]}"
+

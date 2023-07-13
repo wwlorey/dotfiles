@@ -103,6 +103,8 @@ vmap <leader>r :s/\%V
 nmap <leader>sr :%s/\//\./g<CR>
 " Find '/' and replace with '.' in visual selection
 vmap <leader>sr :s/\%V\//\./g<CR>
+" Remove non-numbers from the visual selection
+vmap <leader>nr :s/\%V[^0-9.]//g<CR>
 
 " https://vi.stackexchange.com/questions/1983/how-can-i-get-vim-to-stop-putting-comments-in-front-of-new-lines
 au FileType * set fo-=c fo-=r fo-=o
