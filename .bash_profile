@@ -4,7 +4,6 @@ export PATH="$PATH:$SCRIPTS_DIR"
 export EDITOR=nvim
 export VISUAL=nvim
 export BROWSER=brave
-export NVM_DIR=$HOME/.nvm
 export BAT_THEME=OneHalfDark
 export VIMRC=$HOME/.config/nvim/init.vim
 

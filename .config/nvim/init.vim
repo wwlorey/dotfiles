@@ -326,18 +326,3 @@ set t_Co=256
 
 let g:python_highlight_all = 1
 
-
-" LINTING
-
-augroup StellarLinting
-  " Clear this group's autocmds to prevent them from piling up
-  " each time this file is sourced.
-  autocmd!
-
-  autocmd BufWritePost **/stellar/**/*.js,*.jsx silent !prettier --write "%"
-  autocmd BufWritePost **/stellar/**/*.py       silent !autoflake --in-place --remove-all-unused-imports "%"
-  " Default configuration: ~/.config/pycodestyle
-  autocmd BufWritePost **/stellar/**/*.py       silent !autopep8 --in-place "%"
-
-augroup END
-

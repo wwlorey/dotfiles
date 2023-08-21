@@ -19,7 +19,6 @@ alias gdi='git diff --ignore-space-change'
 alias gds='git diff --staged'
 alias gdss='git diff --staged --stat'
 alias gfuz='git-checkout-fuzzy'
-alias gkm='git checkout HEAD -- latest_migrations.manifest' # git kill migrations
 alias gl='git log --graph'
 alias glp='git log --patch'
 alias gpul='git pull'
@@ -50,18 +49,13 @@ alias ez='nvim $HOME/Repos/dotfiles/.zshrc'
 
 alias hs='hugo server --noHTTPCache'
 
-alias venv-activate='. ./venv/bin/activate'
-alias venv-deactivate='deactivate'
-
-alias nls='npx lint-staged'
-
 alias grep='grep --color=auto'
 
 if [[ "$OSTYPE" == "darwin"* ]];
 then
 	alias ls='ls -G'
 
-    alias brave='/Applications/Brave\ Browser.app/Contents/MacOS/Brave\ Browser'
+	alias brave='/Applications/Brave\ Browser.app/Contents/MacOS/Brave\ Browser'
 else
 	alias ls='ls --color=auto'
 	alias diff='diff --color=auto'
@@ -76,9 +70,3 @@ if [[ $TERM == alacritty ]]; then TERM=xterm-256color; fi
 # Use vi-style command line editing
 set -o vi
 
-# Load nvm
-[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"                       # M1 Mac
-[ -s "/usr/local/opt/nvm/nvm.sh" ] && \. "/usr/local/opt/nvm/nvm.sh"  # Intel Mac
-# Load nvm bash_completion
-[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
-[ -s "/usr/local/opt/nvm/etc/bash_completion.d/nvm" ] && \. "/usr/local/opt/nvm/etc/bash_completion.d/nvm"
