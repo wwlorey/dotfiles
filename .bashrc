@@ -49,6 +49,9 @@ alias ez='nvim $HOME/Repos/dotfiles/.zshrc'
 
 alias hs='hugo server --noHTTPCache'
 
+# Convert document to PDF
+alias pdf='unoconv -f pdf'
+
 alias grep='grep --color=auto'
 
 if [[ "$OSTYPE" == "darwin"* ]];
