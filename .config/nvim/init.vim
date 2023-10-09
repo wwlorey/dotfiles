@@ -6,6 +6,7 @@ Plug 'github/copilot.vim'
 Plug 'junegunn/fzf'
 Plug 'maxmellon/vim-jsx-pretty'
 Plug 'preservim/nerdtree'
+Plug 'preservim/vimux'
 Plug 'wwlorey/github-nvim-theme'
 Plug 'tpope/vim-commentary'
 Plug 'tpope/vim-fugitive'
@@ -317,6 +318,25 @@ function GetStatusLine()
 endfunction
 
 set statusline=%!GetStatusLine()
+
+
+" VIMUX
+
+" Open a horizontal tmux runner.
+let g:VimuxOrientation = "h"
+
+" Set the size of tmux runner (percentage of screen height or width).
+let g:VimuxHeight = "25"
+
+" Run `build` in the directory of the currently open file.
+map <leader>b<space> :call VimuxRunCommand('clear; cd "' . expand('%:p:h') . '"; ./build')<CR>
+map <leader>bb       :call VimuxRunCommand('clear; cd "' . expand('%:p:h') . '"; ./build -b')<CR>
+
+" Open the PDF associated with the currently open file.
+map <leader>op :call VimuxRunCommand('clear; open "' . expand('%:p:r') . '.pdf"')<CR>
+
+" Close the tmux runner.
+map <leader>qv :VimuxCloseRunner<CR>
 
 
 " THEME
