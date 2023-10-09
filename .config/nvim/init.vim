@@ -126,6 +126,11 @@ set shortmess+=I
 " Insert an en dash with trailing space
 imap <C-n> – 
 
+" Prevent auto-indentation in LaTeX files.
+" This was particularly a problem when it came to auto-indenting after a bracket completion.
+" https://vi.stackexchange.com/a/20561
+let g:tex_noindent_env=''
+
 
 " NERDTREE
 

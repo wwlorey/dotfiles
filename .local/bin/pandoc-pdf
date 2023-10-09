@@ -1,9 +1,0 @@
-#!/bin/bash
-
-if ! [[ $1 ]]
-then
-  echo "Please provide document name (without file extension)."
-  exit 1
-fi
-
-pandoc -o $1.pdf $1.md -V colorlinks=true -V linkcolor=blue

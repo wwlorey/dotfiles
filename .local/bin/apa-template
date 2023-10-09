@@ -1,0 +1,48 @@
+#!/bin/bash
+
+
+printHelp() {
+  echo "Usage: apa-template [OPTION]... directory
+Generates an APA7 template from \`truman-apa7-latex-template\` at the given directory path.
+NOTE: this script will create a new directory for you and does not allow the use of an existing directory.
+
+Options
+  -s, --simple       remove the bibliography file when instantiating the template
+"
+}
+
+while getopts "sh" opt; do
+  case $1 in
+    -s | --simple) simple=1 ;;
+    -h | --help) printHelp && exit 1 ;;
+    ?) printHelp && exit 1 ;;
+  esac
+  shift
+done
+
+dir=$1
+
+if ! [[ $dir ]]
+then
+  echo Please provide directory name.
+  exit 1
+fi
+
+if [ -d $dir ]; then
+  echo "\"$dir\" directory already exists."
+  exit 1
+fi
+
+file=$(basename $dir)
+
+cp -r ~/Repos/truman-apa7-latex-template $1
+cd $1
+rm -rf .git *.bcf *.blg *.log *.pdf *.xml *.bbl *.aux README.md LICENSE
+if [ $simple ]; then
+  rm -rf *.bib
+fi
+mv truman-apa7-template.tex $file.tex
+git init >> /dev/null
+git add --all >> /dev/null
+git commit -m "init" >> /dev/null
+echo "APA7 template created in \"$1\"."

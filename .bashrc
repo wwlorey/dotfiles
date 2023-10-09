@@ -31,6 +31,8 @@ alias gshl='git stash list'
 alias gshp='git stash pop'
 alias gsmui='git submodule update --init'
 
+alias r='ranger'
+
 # Ask for consent & be verbose
 # These aliases can be ignored by prepending "\" (i.e. "\rm")
 alias rm='rm -iv'
@@ -48,9 +50,6 @@ alias eb='nvim $HOME/Repos/dotfiles/.bashrc'
 alias ez='nvim $HOME/Repos/dotfiles/.zshrc'
 
 alias hs='hugo server --noHTTPCache'
-
-# Convert document to PDF
-alias pdf='unoconv -f pdf'
 
 alias grep='grep --color=auto'
 

@@ -1,0 +1,30 @@
+#!/bin/bash
+
+if ! [[ $1 ]]
+then
+  echo "Please provide filename(s)."
+  exit 1
+fi
+
+if ! [[ $1 =~ (.*)?\.(.*) ]]
+then
+  echo "Please provide filename(s) with extension(s)."
+  exit 1
+fi
+
+extension1="${1##*.}"
+
+if [[ $extension1 == 'md' || $extension1 == 'MD' ]]
+then
+  echo "[PANDOC] Converting markdown (first/only file provided)..."
+
+  mdFile=$1
+  pdfFile="${mdFile%.*}.pdf"
+
+  pandoc -o $pdfFile $mdFile -V colorlinks=true -V linkcolor=blue
+else
+  echo "[UNOCONV] Converting docx/pptx (all files provided)..."
+
+  unoconv -f pdf "$@"
+fi
+
