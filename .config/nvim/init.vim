@@ -332,6 +332,9 @@ let g:VimuxHeight = "25"
 map <leader>b<space> :call VimuxRunCommand('clear; cd "' . expand('%:p:h') . '"; ./build')<CR>
 map <leader>bb       :call VimuxRunCommand('clear; cd "' . expand('%:p:h') . '"; ./build -b')<CR>
 
+" Run `pdf` on the currently open file.
+map <leader>p<space> :call VimuxRunCommand('clear; cd "' . expand('%:p:h') . '"; pdf "' . expand('%:p') . '"')<CR>
+
 " Open the PDF associated with the currently open file.
 map <leader>op :call VimuxRunCommand('clear; open "' . expand('%:p:r') . '.pdf"')<CR>
 
