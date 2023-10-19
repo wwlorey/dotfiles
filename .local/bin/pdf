@@ -21,7 +21,7 @@ then
   mdFile=$1
   pdfFile="${mdFile%.*}.pdf"
 
-  pandoc -o $pdfFile $mdFile -V colorlinks=true -V linkcolor=blue
+  pandoc -o "$pdfFile" "$mdFile" -V colorlinks=true -V linkcolor=blue
 else
   echo "[UNOCONV] Converting docx/pptx (all files provided)..."
 
