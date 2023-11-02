@@ -7,18 +7,24 @@ Generates an APA7 template from \`truman-apa7-latex-template\` at the given dire
 NOTE: this script will create a new directory for you and does not allow the use of an existing directory.
 
 Options
-  -s, --simple       remove the bibliography file when instantiating the template
+  -e, --exclude-bib   exclude the bibliography file when instantiating the template
+  -s, --simple        instantiate a simplified template (no title page, abstract, or bibliography)
 "
 }
 
-while getopts "sh" opt; do
+while getopts "esh" opt; do
   case $1 in
+    -e | --exclude-bib) excludeBib=1 ;;
     -s | --simple) simple=1 ;;
     -h | --help) printHelp && exit 1 ;;
     ?) printHelp && exit 1 ;;
   esac
   shift
 done
+
+if [ $simple ]; then
+  excludeBib=1
+fi
 
 dir=$1
 
@@ -38,11 +44,22 @@ file=$(basename $dir)
 cp -r ~/Repos/truman-apa7-latex-template $1
 cd $1
 rm -rf .git *.bcf *.blg *.log *.pdf *.xml *.bbl *.aux README.md LICENSE
-if [ $simple ]; then
+
+if [ $excludeBib ]; then
   rm -rf *.bib
 fi
+
+# Load the appropriate tex file into truman-apa7-template.tex, removing the unneeded one.
+if [ $simple ]; then
+  mv -f truman-apa7-template-SIMPLE.tex truman-apa7-template.tex
+else
+  rm -rf truman-apa7-template-SIMPLE.tex
+fi
+
 mv truman-apa7-template.tex $file.tex
 git init >> /dev/null
 git add --all >> /dev/null
 git commit -m "init" >> /dev/null
+
 echo "APA7 template created in \"$1\"."
+
