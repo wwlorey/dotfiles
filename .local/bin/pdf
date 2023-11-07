@@ -16,14 +16,14 @@ extension1="${1##*.}"
 
 if [[ $extension1 == 'md' || $extension1 == 'MD' ]]
 then
-  echo "[PANDOC] Converting markdown (first/only file provided)..."
+  echo "[pandoc] Converting markdown (first/only file provided)..."
 
   mdFile=$1
   pdfFile="${mdFile%.*}.pdf"
 
   pandoc -o "$pdfFile" "$mdFile" -V colorlinks=true -V linkcolor=blue
 else
-  echo "[UNOCONV] Converting docx/pptx (all files provided)..."
+  echo "[unoconv] Converting docx/pptx (all files provided)..."
 
   unoconv -f pdf "$@"
 fi
