@@ -336,7 +336,7 @@ map <leader>bb       :call VimuxRunCommand('clear; cd "' . expand('%:p:h') . '";
 map <leader>p<space> :call VimuxRunCommand('clear; cd "' . expand('%:p:h') . '"; pdf "' . expand('%:p') . '"')<CR>
 
 " Open the PDF associated with the currently open file.
-map <leader>op :call VimuxRunCommand('clear; open "' . expand('%:p:r') . '.pdf"')<CR>
+map <leader>op :call VimuxRunCommand('clear; cd "' . expand('%:p:h') . '"; open "' . expand('%:p:r') . '.pdf"')<CR>
 
 " Open the tmux runner in the currently open file's directory and bring focus to it.
 " This could break with multiple vertical tmux panes open.
