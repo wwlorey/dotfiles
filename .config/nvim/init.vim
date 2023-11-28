@@ -3,6 +3,7 @@ Plug 'ap/vim-css-color'
 Plug 'christoomey/vim-tmux-navigator'
 Plug 'dyng/ctrlsf.vim'
 Plug 'github/copilot.vim'
+Plug 'francoiscabrol/ranger.vim'
 Plug 'junegunn/fzf'
 Plug 'maxmellon/vim-jsx-pretty'
 Plug 'preservim/nerdtree'
@@ -28,9 +29,11 @@ set encoding=utf-8
 " Fix the escape key's behavior in insert mode
 inoremap <Esc> <C-c>
 
-" Use jk to traverse virtual lines (lines that wrap)
+" Natural traversal of virtual lines (lines that wrap)
 noremap <silent> <expr> j (v:count == 0 ? 'gj' : 'j')
 noremap <silent> <expr> k (v:count == 0 ? 'gk' : 'k')
+noremap <silent> <expr> 0 (v:count == 0 ? 'g0' : '0')
+noremap <silent> <expr> $ (v:count == 0 ? 'g$' : '$')
 
 " Paste from clipboard
 cnoremap <C-v> <C-r>*
@@ -97,15 +100,15 @@ nmap <leader>v :vsplit<CR><C-^>
 nmap <leader>h :split<CR><C-^>
 
 " Find & replace in entire file
-nmap <leader>r :%s/
+nmap <leader>sr :%s/
 " Find & replace in visual selection
-vmap <leader>r :s/\%V
+vmap <leader>sr :s/\%V
 " Find '/' and replace with '.' in entire file
-nmap <leader>sr :%s/\//\./g<CR>
+nmap <leader>ss :%s/\//\./g<CR>
 " Find '/' and replace with '.' in visual selection
-vmap <leader>sr :s/\%V\//\./g<CR>
+vmap <leader>ss :s/\%V\//\./g<CR>
 " Remove non-numbers from the visual selection
-vmap <leader>nr :s/\%V[^0-9.]//g<CR>
+vmap <leader>sn :s/\%V[^0-9.]//g<CR>
 
 " https://vi.stackexchange.com/questions/1983/how-can-i-get-vim-to-stop-putting-comments-in-front-of-new-lines
 au FileType * set fo-=c fo-=r fo-=o
@@ -131,6 +134,9 @@ imap <C-n> –
 " This was particularly a problem when it came to auto-indenting after a bracket completion.
 " https://vi.stackexchange.com/a/20561
 let g:tex_noindent_env=''
+
+" Close the tmux runner (if it's open) when quitting all.
+cnoreabbrev qa VimuxCloseRunner<CR>:qa<CR>
 
 
 " NERDTREE
@@ -245,6 +251,12 @@ cnoreabbrev gsmui G submodule update --init
 " COMMENTARY
 
 autocmd FileType javascriptreact setlocal commentstring=/*\ %s\ */
+
+
+" RANGER
+
+let g:ranger_map_keys = 0
+map <leader>r :Ranger<CR>
 
 
 " TABS
