@@ -7,7 +7,7 @@ export BROWSER=brave
 export BAT_THEME=OneHalfDark
 export VIMRC=$HOME/.config/nvim/init.vim
 
-source init-openai
+which init-openai > /dev/null && source init-openai
 
 # Set fzf to use ripgrep and bat if available
 which rg > /dev/null && export FZF_DEFAULT_COMMAND='rg --files --hidden -g "!**/.git/**"'
