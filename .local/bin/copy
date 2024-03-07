@@ -1,0 +1,47 @@
+#!/bin/bash
+
+printHelp() {
+  echo "Usage: copy src dest
+Copies the contents of \`src\` directory to a new directory: \`dest\`. Intermediary LaTeX build files and git history are excluded in the copy. A new git repository is initialized.
+"
+}
+
+while getopts "h" opt; do
+  case $1 in
+    -h) printHelp && exit 1 ;;
+  esac
+  shift
+done
+
+src=$1
+dest=$2
+
+if ! [[ $src ]]
+then
+  echo Please provide src directory name.
+  exit 1
+fi
+
+if ! [[ $dest ]]
+then
+  echo Please provide dest directory name.
+  exit 1
+fi
+
+if [ -d $dest ]; then
+  echo "Destination directory \"$dest\" already exists."
+  exit 1
+fi
+
+cp -r $src $dest
+cd $dest
+rm -rf .git *.bcf *.blg *.log *.pdf *.xml *.bbl *.aux
+
+if test -f "$src.tex"; then
+  mv "$src.tex" "$dest.tex"
+fi
+
+git init >> /dev/null
+git add --all >> /dev/null
+git commit -m "init" >> /dev/null
+
