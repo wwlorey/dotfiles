@@ -34,12 +34,15 @@ if [ -d $dest ]; then
 fi
 
 cp -r $src $dest
+
+oldTexFileName="$(basename $src).tex"
+if test -f "$dest/$oldTexFileName"; then
+  newTexFileName="$(basename $dest).tex"
+  mv "$dest/$oldTexFileName" "$dest/$newTexFileName"
+fi
+
 cd $dest
 rm -rf .git *.bcf *.blg *.log *.pdf *.xml *.bbl *.aux
-
-if test -f "$src.tex"; then
-  mv "$src.tex" "$dest.tex"
-fi
 
 git init >> /dev/null
 git add --all >> /dev/null
