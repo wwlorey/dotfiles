@@ -370,11 +370,10 @@ set t_Co=256
 
 let g:python_highlight_all = 1
 
-" https://stackoverflow.com/a/30552423
-augroup highlight_keywords
-  au!
-  au Syntax * syn match HighlightKeywords /\v<(NOTE|TODO)/
-    \ containedin=.*Comment,vimCommentTitle
+" https://vi.stackexchange.com/questions/15505/highlight-whole-todo-comment-line
+augroup highlightKeywords
+  autocmd!
+  autocmd Syntax * syntax match highlightKeywords /\v\_.<(NOTE|TODO):/hs=s+1 containedin=ALL
 augroup END
-hi def link HighlightKeywords Todo
+highlight link highlightKeywords Todo
 
