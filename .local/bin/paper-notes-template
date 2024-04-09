@@ -1,0 +1,41 @@
+#!/bin/bash
+
+printHelp() {
+  echo "Usage: paper-notes-template fileName
+Generates a template for recording research paper notes with the given fileName."
+}
+
+while getopts "h" opt; do
+  case $1 in
+    -h | --help) printHelp && exit 1 ;;
+    ?) printHelp && exit 1 ;;
+  esac
+  shift
+done
+
+fileName=$1
+
+if ! [[ $fileName ]]
+then
+  echo Please provide file name.
+  exit 1
+fi
+
+if [ -f $fileName ]; then
+  echo "\"$fileName\" already exists."
+  exit 1
+fi
+
+echo "---
+title: Notes on *PAPER_TITLE*
+author: |
+  | PAPER_AUTHORS (Paper; PAPER_DATE)
+  | William Lorey (Notes)
+date: NOTES_DATE
+---
+
+
+" >> $fileName
+
+echo "Paper notes template created in \"$fileName\"."
+
