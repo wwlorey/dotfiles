@@ -27,7 +27,7 @@ if [ -f $fileName ]; then
 fi
 
 echo "---
-title: Notes on *PAPER_TITLE*
+title: \"Notes on *PAPER_TITLE*\"
 author: |
   | PAPER_AUTHORS (Paper; PAPER_DATE)
   | William Lorey (Notes)

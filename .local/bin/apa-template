@@ -8,7 +8,7 @@ NOTE: this script will create a new directory for you and does not allow the use
 
 Options
   -e, --exclude-bib   exclude the bibliography file when instantiating the template
-  -s, --simple        instantiate a simplified template (no title page, abstract, or bibliography)
+  -s, --simple        instantiate a simplified template (no title page, abstract, bibliography, or bibliography file)
 "
 }
 
