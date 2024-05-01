@@ -337,21 +337,21 @@ set statusline=%!GetStatusLine()
 " Open a horizontal tmux runner.
 let g:VimuxOrientation = "h"
 
-" Set the size of tmux runner (percentage of screen height or width).
-let g:VimuxHeight = "25"
-
 " Run `build` in the directory of the currently open file.
 map <leader>b<space> :call VimuxRunCommand('clear; cd "' . expand('%:p:h') . '"; ./build')<CR>
 map <leader>bb       :call VimuxRunCommand('clear; cd "' . expand('%:p:h') . '"; ./build -b')<CR>
 
+" Run `build` from the parent directory with a relative path to the currently open file (for use with https://github.com/wwlorey/williamlorey.com).
+map <leader>bw       :call VimuxRunCommand('clear; cd "' . expand('%:p:h') . '"; cd ..; ./build -f "' . expand('%:h') . '/' . expand('%:t') . '"')<CR>
+
 " Run `pdf` on the currently open file.
 map <leader>p<space> :call VimuxRunCommand('clear; cd "' . expand('%:p:h') . '"; pdf "' . expand('%:p') . '"')<CR>
 
-" Run `brave` on the currently open file.
-map <leader>ob :call VimuxRunCommand('clear; cd "' . expand('%:p:h') . '"; brave "' . expand('%:p:r') . '.pdf"')<CR>
+" Run `open` on the currently open file as a PDF.
+map <leader>op :call VimuxRunCommand('clear; cd "' . expand('%:p:h') . '"; open "' . expand('%:p:r') . '.pdf"')<CR>
 
-" Run `open` (Mac's Preview) on the currently open file.
-map <leader>oo :call VimuxRunCommand('clear; cd "' . expand('%:p:h') . '"; open "' . expand('%:p:r') . '.pdf"')<CR>
+" Run `open` on the currently open file as HTML.
+map <leader>oh :call VimuxRunCommand('clear; cd "' . expand('%:p:h') . '"; open "' . expand('%:p:r') . '.html"')<CR>
 
 " Open the tmux runner in the currently open file's directory and bring focus to it.
 " This could break with multiple vertical tmux panes open.
