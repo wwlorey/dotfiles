@@ -145,14 +145,16 @@ autocmd FileType tex inoremap ;1 \section{}<CR><++><Esc>?}<CR>i
 autocmd FileType tex inoremap ;2 \subsection{}<CR><++><Esc>?}<CR>i
 autocmd FileType tex inoremap ;3 \subsubsection{.}<CR><++><Esc>?\.}<CR>i
 " Citations
-autocmd FileType tex inoremap ;p \parencite{}<++><Esc>?}<CR>i
-autocmd FileType tex inoremap ;t \textcite{}<++><Esc>?}<CR>i
+autocmd FileType tex inoremap ;pc \parencite{}<++><Esc>?}<CR>i
+autocmd FileType tex inoremap ;Pc \parencite[]{<++>}<++><Esc>?]<CR>i
+autocmd FileType tex inoremap ;tc \textcite{}<++><Esc>?}<CR>i
+autocmd FileType tex inoremap ;Tc \textcite[]{<++>}<++><Esc>?]<CR>i
 " General text styling
 autocmd FileType tex inoremap ;i \textit{}<++><Esc>?}<CR>i
 autocmd FileType tex inoremap ;b \textbf{}<++><Esc>?}<CR>i
 
 " Seek and remove for editing the next instance of a guide.
-inoremap <Space><Space> <Esc>/<++><CR>"_c4l
+inoremap ;<Space> <Esc>/<++><CR>"_c4l
 
 
 " NERDTREE
