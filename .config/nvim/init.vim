@@ -141,7 +141,7 @@ autocmd FileType html,markdown inoremap ;* <p style="text-align: center;">⁂</p
 " LaTeX: Insert section headers
 autocmd FileType tex inoremap ;1 \section{}<Esc>i
 autocmd FileType tex inoremap ;2 \subsection{}<Esc>i
-autocmd FileType tex inoremap ;3 \subsubsection{}<Esc>i
+autocmd FileType tex inoremap ;3 \subsubsection{.}<Esc>hi
 
 
 " NERDTREE
