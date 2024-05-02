@@ -135,8 +135,13 @@ let g:tex_noindent_env=''
 " Close the tmux runner (if it's open) when quitting all.
 cnoreabbrev qa VimuxCloseRunner<CR>:qa<CR>
 
-" Insert an asterism
-nmap <leader>as i<p style="text-align: center;">⁂</p><CR><Esc>
+" HTML, Markdown: insert asterism
+autocmd FileType html,markdown inoremap ;* <p style="text-align: center;">⁂</p><CR><CR>
+
+" LaTeX: Insert section headers
+autocmd FileType tex inoremap ;1 \section{}<Esc>i
+autocmd FileType tex inoremap ;2 \subsection{}<Esc>i
+autocmd FileType tex inoremap ;3 \subsubsection{}<Esc>i
 
 
 " NERDTREE
