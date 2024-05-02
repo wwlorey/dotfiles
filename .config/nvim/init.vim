@@ -135,13 +135,24 @@ let g:tex_noindent_env=''
 " Close the tmux runner (if it's open) when quitting all.
 cnoreabbrev qa VimuxCloseRunner<CR>:qa<CR>
 
-" HTML, Markdown: insert asterism
+" HTML, Markdown insertions
+" Asterism
 autocmd FileType html,markdown inoremap ;* <p style="text-align: center;">⁂</p><CR><CR>
 
-" LaTeX: Insert section headers
-autocmd FileType tex inoremap ;1 \section{}<Esc>i
-autocmd FileType tex inoremap ;2 \subsection{}<Esc>i
-autocmd FileType tex inoremap ;3 \subsubsection{.}<Esc>hi
+" LaTeX insertions. Guides are inserted as is useful.
+" Section headers
+autocmd FileType tex inoremap ;1 \section{}<CR><++><Esc>?}<CR>i
+autocmd FileType tex inoremap ;2 \subsection{}<CR><++><Esc>?}<CR>i
+autocmd FileType tex inoremap ;3 \subsubsection{.}<CR><++><Esc>?\.}<CR>i
+" Citations
+autocmd FileType tex inoremap ;p \parencite{}<++><Esc>?}<CR>i
+autocmd FileType tex inoremap ;t \textcite{}<++><Esc>?}<CR>i
+" General text styling
+autocmd FileType tex inoremap ;i \textit{}<++><Esc>?}<CR>i
+autocmd FileType tex inoremap ;b \textbf{}<++><Esc>?}<CR>i
+
+" Seek and remove for editing the next instance of a guide.
+inoremap <Space><Space> <Esc>/<++><CR>"_c4l
 
 
 " NERDTREE
