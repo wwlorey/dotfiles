@@ -11,7 +11,6 @@ which init-openai > /dev/null && source init-openai
 
 # Set fzf to use ripgrep and bat if available
 which rg > /dev/null && export FZF_DEFAULT_COMMAND='rg --files --hidden -g "!**/.git/**"'
-bindOpen="--bind 'enter:execute(~/.local/bin/fzf-smart {})'"
-which bat > /dev/null &&
-	export FZF_DEFAULT_OPTS="$bindOpen --preview='bat --color=always --style=numbers --line-range=:500 {}'" || 
-	export FZF_DEFAULT_OPTS="$bindOpen --preview='cat {}'"
+which bat > /dev/null && 
+	export FZF_DEFAULT_OPTS='--preview="bat --color=always --style=numbers --line-range=:500 {}"' || 
+	export FZF_DEFAULT_OPTS='--preview="cat {}"'

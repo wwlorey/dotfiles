@@ -41,7 +41,7 @@ export KEYTIMEOUT=1
 
 # fzf bindings
 bindkey -s '^f' 'cd "$(dirname "$(fzf)")"\n'
-bindkey -s '^p' 'fzf | xargs -r $EDITOR\n'
+bindkey -s '^p' 'fzf-wrapper\n'
 
 # nvim bindings
 # Open fugitive

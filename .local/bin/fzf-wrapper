@@ -1,0 +1,13 @@
+#!/bin/bash
+
+fzfSelection=$(fzf)
+
+if [[ "$fzfSelection" ]]; then
+  fileType=$(file --mime-type -b "$fzfSelection")
+
+  if [[ $fileType == "application/pdf" ]]; then
+      open "$fzfSelection"
+  else
+      $EDITOR "$fzfSelection"
+  fi
+fi
