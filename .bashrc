@@ -69,7 +69,7 @@ else
 fi
 
 # https://vi.stackexchange.com/questions/7112/tmux-messing-with-vim-highlighting
-if [[ $TERM == alacritty ]]; then TERM=xterm-256color; fi
+if [[ $TERM == alacritty ]]; then export TERM=xterm-256color; fi
 
 # Use vi-style command line editing
 set -o vi
