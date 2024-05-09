@@ -77,17 +77,17 @@ set smartcase
 set noshowmode
 
 " Copy file name
-nmap <leader>cn :let @+=expand("%:t")<CR>
+nmap <Leader>cn :let @+=expand("%:t")<CR>
 " Copy relative file path
-nmap <leader>cr :let @+=expand("%")<CR>
+nmap <Leader>cr :let @+=expand("%")<CR>
 " Copy file path
-nmap <leader>cp :let @+=expand("%:p")<CR>
+nmap <Leader>cp :let @+=expand("%:p")<CR>
 
 " Integrated terminal
 " Open the terminal in a new horizontal split and enter insert mode
-map <leader>` :split<CR>:terminal<CR>i
+map <Leader>` :split<CR>:terminal<CR>i
 " Open the terminal in a new tab and enter insert mode
-map <leader>~ :tabnew<CR>:terminal<CR>i
+map <Leader>~ :tabnew<CR>:terminal<CR>i
 " Use escape to close the terminal
 tnoremap <Esc> <C-\><C-n>
 
@@ -96,30 +96,30 @@ set splitbelow
 set splitright
 
 " Open previously opened buffer in new split
-nmap <leader>v :vsplit<CR><C-^>
-nmap <leader>h :split<CR><C-^>
+nmap <Leader>v :vsplit<CR><C-^>
+nmap <Leader>h :split<CR><C-^>
 
 " Find & replace in entire file
-nmap <leader>sr :%s/
+nmap <Leader>sr :%s/
 " Find & replace in visual selection
-vmap <leader>sr :s/\%V
+vmap <Leader>sr :s/\%V
 " Find '/' and replace with '.' in entire file
-nmap <leader>ss :%s/\//\./g<CR>
+nmap <Leader>ss :%s/\//\./g<CR>
 " Find '/' and replace with '.' in visual selection
-vmap <leader>ss :s/\%V\//\./g<CR>
+vmap <Leader>ss :s/\%V\//\./g<CR>
 " Remove non-numbers from the visual selection
-vmap <leader>sn :s/\%V[^0-9.]//g<CR>
+vmap <Leader>sn :s/\%V[^0-9.]//g<CR>
 
 " https://vi.stackexchange.com/questions/1983/how-can-i-get-vim-to-stop-putting-comments-in-front-of-new-lines
 au FileType * set fo-=c fo-=r fo-=o
 
 " Copy configuration to home directory and source the vim config
-nmap <leader>so :!save-config<CR>:so $VIMRC<CR>
+nmap <Leader>so :!save-config<CR>:so $VIMRC<CR>
 
 " Save this session
 " Use -S to open a session
-nmap <leader>ms :mksession! ~/Scratch/session.vim<CR>
-nmap <leader>mn :mksession 
+nmap <Leader>ms :mksession! ~/Scratch/session.vim<CR>
+nmap <Leader>mn :mksession
 
 " Open help in a new tab
 cnoreabbrev th tab help
@@ -153,6 +153,9 @@ autocmd FileType tex inoremap ;Tc \textcite[]{<++>}<++><Esc>?]<CR>i
 autocmd FileType tex inoremap ;i \textit{}<++><Esc>?}<CR>i
 autocmd FileType tex inoremap ;b \textbf{}<++><Esc>?}<CR>i
 autocmd FileType tex inoremap ;f \footnote{}<++><Esc>?}<CR>i
+autocmd FileType tex inoremap ;ul \begin{itemize}<CR>\item <CR>\end{itemize}<CR><CR><++><Esc>?item<Space><CR>A
+autocmd FileType tex inoremap ;ol \begin{enumerate}<CR>\item <CR>\end{enumerate}<CR><CR><++><Esc>?item<Space><CR>A
+autocmd FileType tex inoremap ;li \item<Space>
 
 " Seek and remove for editing the next instance of a guide.
 inoremap ;g <Esc>/<++><CR>"_c4l
@@ -161,11 +164,11 @@ inoremap ;g <Esc>/<++><CR>"_c4l
 " NERDTREE
 
 nmap <C-e> :NERDTreeToggle<CR>
-nmap <leader>er :NERDTreeFind<CR>
+nmap <Leader>er :NERDTreeFind<CR>
 
 " Set a bookmark for the current buffer. Must be called from within a buffer.
-nmap <leader>bs :NERDTreeFind<CR>:Bookmark<CR>
-nmap <leader>bc :NERDTree<CR>:ClearAllBookmarks<CR>
+nmap <Leader>bs :NERDTreeFind<CR>:Bookmark<CR>
+nmap <Leader>bc :NERDTree<CR>:ClearAllBookmarks<CR>
 
 let NERDTreeShowHidden = 1
 let NERDTreeStatusline = -1
@@ -197,9 +200,9 @@ let g:fzf_action = {
 " CTRLSF
 
 map <C-s> :CtrlSFToggle<CR>
-map <leader>sf :CtrlSF -hidden 
-map <leader>sc <Plug>CtrlSFCwordExec
-map <leader>sv <Plug>CtrlSFVwordExec
+map <Leader>sf :CtrlSF -hidden 
+map <Leader>sc <Plug>CtrlSFCwordExec
+map <Leader>sv <Plug>CtrlSFVwordExec
 let g:ctrlsf_confirm_save = 0
 let g:ctrlsf_ignore_dir = ['.git', 'node_modules']
 let g:ctrlsf_auto_focus = {
@@ -230,7 +233,7 @@ let g:ctrlsf_mapping = {
 
 " GITHUB COPILOT
 
-nmap <leader>co :Copilot panel<CR>
+nmap <Leader>co :Copilot panel<CR>
 
 " Avoid the ALT key for Copilot mappings because it doesn't play nice with Mac
 inoremap <C-[> <Plug>(copilot-previous)
@@ -275,7 +278,7 @@ autocmd FileType javascriptreact setlocal commentstring=/*\ %s\ */
 " RANGER
 
 let g:ranger_map_keys = 0
-map <leader>r :Ranger<CR>
+map <Leader>r :Ranger<CR>
 
 
 " TABS
@@ -286,8 +289,8 @@ set showtabline=2
 " Quit the current tab
 cnoreabbrev qt windo bd
 
-nmap <leader>gt :tabmove +<CR>
-nmap <leader>gT :tabmove -<CR>
+nmap <Leader>gt :tabmove +<CR>
+nmap <Leader>gT :tabmove -<CR>
 nmap <C-t> :tabnew<CR>
 
 function GetTabLine()
@@ -357,27 +360,27 @@ set statusline=%!GetStatusLine()
 let g:VimuxOrientation = "h"
 
 " Run `build` in the directory of the currently open file.
-map <leader>b<space> :call VimuxRunCommand('clear; cd "' . expand('%:p:h') . '"; ./build')<CR>
-map <leader>bb       :call VimuxRunCommand('clear; cd "' . expand('%:p:h') . '"; ./build -b')<CR>
+map <Leader>b<Space> :call VimuxRunCommand('clear; cd "' . expand('%:p:h') . '"; ./build')<CR>
+map <Leader>bb       :call VimuxRunCommand('clear; cd "' . expand('%:p:h') . '"; ./build -b')<CR>
 
 " Run `build` from the parent directory with a relative path to the currently open file (for use with https://github.com/wwlorey/williamlorey.com).
-map <leader>bw       :call VimuxRunCommand('clear; cd "' . expand('%:p:h') . '"; cd ..; ./build -f "' . expand('%:h') . '/' . expand('%:t') . '"')<CR>
+map <Leader>bw       :call VimuxRunCommand('clear; cd "' . expand('%:p:h') . '"; cd ..; ./build -f "' . expand('%:h') . '/' . expand('%:t') . '"')<CR>
 
 " Run `pdf` on the currently open file.
-map <leader>p<space> :call VimuxRunCommand('clear; cd "' . expand('%:p:h') . '"; pdf "' . expand('%:p') . '"')<CR>
+map <Leader>p<Space> :call VimuxRunCommand('clear; cd "' . expand('%:p:h') . '"; pdf "' . expand('%:p') . '"')<CR>
 
 " Run `open` on the currently open file as a PDF.
-map <leader>op :call VimuxRunCommand('clear; cd "' . expand('%:p:h') . '"; open "' . expand('%:p:r') . '.pdf"')<CR>
+map <Leader>op :call VimuxRunCommand('clear; cd "' . expand('%:p:h') . '"; open "' . expand('%:p:r') . '.pdf"')<CR>
 
 " Run `open` on the currently open file as HTML.
-map <leader>oh :call VimuxRunCommand('clear; cd "' . expand('%:p:h') . '"; open "' . expand('%:p:r') . '.html"')<CR>
+map <Leader>oh :call VimuxRunCommand('clear; cd "' . expand('%:p:h') . '"; open "' . expand('%:p:r') . '.html"')<CR>
 
 " Open the tmux runner in the currently open file's directory and bring focus to it.
 " This could break with multiple vertical tmux panes open.
-map <leader>ov :call VimuxRunCommand('clear; cd "' . expand('%:p:h') . '"')<CR><C-l>
+map <Leader>ov :call VimuxRunCommand('clear; cd "' . expand('%:p:h') . '"')<CR><C-l>
 
 " Close the tmux runner.
-map <leader>qv :VimuxCloseRunner<CR>
+map <Leader>qv :VimuxCloseRunner<CR>
 
 
 " THEME
