@@ -135,11 +135,19 @@ let g:tex_noindent_env=''
 " Close the tmux runner (if it's open) when quitting all.
 cnoreabbrev qa VimuxCloseRunner<CR>:qa<CR>
 
-" HTML, Markdown insertions
+
+" AUTO-INSERTIONS
+
+" Guides (i.e. "<++>") are inserted as is useful.
+
+" HTML, Markdown
 " Asterism
 autocmd FileType html,markdown inoremap ;* <p style="text-align: center;">⁂</p><CR><CR>
 
-" LaTeX insertions. Guides are inserted as is useful.
+" Markdown
+autocmd FileType markdown inoremap ;a [](<++>)<Esc>?]<CR>i
+
+" LaTeX
 " Section headers
 autocmd FileType tex inoremap ;1 \section{}<CR><++><Esc>?}<CR>i
 autocmd FileType tex inoremap ;2 \subsection{}<CR><++><Esc>?}<CR>i
