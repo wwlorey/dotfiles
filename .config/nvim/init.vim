@@ -147,8 +147,10 @@ autocmd FileType tex inoremap ;3 \subsubsection{.}<CR><++><Esc>?\.}<CR>i
 " Citations
 autocmd FileType tex inoremap ;pc \parencite{}<++><Esc>?}<CR>i
 autocmd FileType tex inoremap ;Pc \parencite[]{<++>}<++><Esc>?]<CR>i
+autocmd FileType tex inoremap ;PC \parencite[cf.][]{<++>}<++><Esc>?]<CR>i
 autocmd FileType tex inoremap ;tc \textcite{}<++><Esc>?}<CR>i
 autocmd FileType tex inoremap ;Tc \textcite[]{<++>}<++><Esc>?]<CR>i
+autocmd FileType tex inoremap ;TC \textcite[cf.][]{<++>}<++><Esc>?]<CR>i
 " General
 autocmd FileType tex inoremap ;i \textit{}<++><Esc>?}<CR>i
 autocmd FileType tex inoremap ;b \textbf{}<++><Esc>?}<CR>i
@@ -157,6 +159,8 @@ autocmd FileType tex inoremap ;ul \begin{itemize}<CR>\item <CR>\end{itemize}<CR>
 autocmd FileType tex inoremap ;ol \begin{enumerate}<CR>\item <CR>\end{enumerate}<CR><CR><++><Esc>?item<Space><CR>A
 autocmd FileType tex inoremap ;li \item<Space>
 
+" Guide insertion and navigation
+inoremap ;< <++>
 " Seek and remove for editing the next instance of a guide.
 inoremap ;g <Esc>/<++><CR>"_c4l
 
