@@ -169,8 +169,8 @@ autocmd FileType tex inoremap ;li \item<Space>
 
 " Guide insertion and navigation
 inoremap ;< <++>
-" Seek and remove for editing the next instance of a guide.
-inoremap ;g <Esc>/<++><CR>"_c4l
+" Seek and remove for editing the next instance of a guide, and break off a new undo block (`<C-g>u`)
+inoremap ;g <Esc>/<++><CR>"_c4l<C-g>u
 
 
 " NERDTREE
