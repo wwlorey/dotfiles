@@ -33,6 +33,8 @@ alias gsmui='git submodule update --init'
 
 alias r='ranger'
 
+alias n='newsboat'
+
 # Ask for consent & be verbose
 # These aliases can be ignored by prepending "\" (i.e. "\rm")
 alias rm='rm -iv'
