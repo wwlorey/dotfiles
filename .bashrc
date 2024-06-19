@@ -42,14 +42,16 @@ alias cp='cp -iv'
 alias mv='mv -iv'
 
 alias v='nvim'
-alias ev='nvim $HOME/Repos/dotfiles/.config/nvim/init.vim'
+alias ev='$EDITOR $HOME/Repos/dotfiles/.config/nvim/init.vim'
 
 alias t='tmux'
-alias et='nvim $HOME/Repos/dotfiles/.config/tmux/tmux.conf'
+alias et='$EDITOR $HOME/Repos/dotfiles/.config/tmux/tmux.conf'
 alias ta='tmux attach'
 
-alias eb='nvim $HOME/Repos/dotfiles/.bashrc'
-alias ez='nvim $HOME/Repos/dotfiles/.zshrc'
+alias el='$EDITOR $HOME/Repos/dotfiles/.config/lf/lfrc'
+
+alias eb='$EDITOR $HOME/Repos/dotfiles/.bashrc'
+alias ez='$EDITOR $HOME/Repos/dotfiles/.zshrc'
 
 alias hs='hugo server --noHTTPCache'
 

@@ -1,15 +1,15 @@
 call plug#begin('~/.config/nvim/plugged')
 Plug 'ap/vim-css-color'
+Plug 'bullets-vim/bullets.vim'
 Plug 'christoomey/vim-tmux-navigator'
 Plug 'dyng/ctrlsf.vim'
-Plug 'github/copilot.vim'
 Plug 'francoiscabrol/ranger.vim'
+Plug 'github/copilot.vim'
 Plug 'iggredible/totitle-vim'
 Plug 'junegunn/fzf'
 Plug 'maxmellon/vim-jsx-pretty'
 Plug 'preservim/nerdtree'
 Plug 'preservim/vimux'
-Plug 'wwlorey/github-nvim-theme'
 Plug 'tpope/vim-commentary'
 Plug 'tpope/vim-fugitive'
 Plug 'tpope/vim-repeat'
@@ -17,6 +17,7 @@ Plug 'tpope/vim-rhubarb'
 Plug 'tpope/vim-sleuth'
 Plug 'tpope/vim-surround'
 Plug 'vim-python/python-syntax'
+Plug 'wwlorey/github-nvim-theme'
 Plug 'yuezk/vim-js'
 call plug#end()
 
@@ -26,6 +27,11 @@ call plug#end()
 let mapleader = " "
 inoremap jk <Esc>
 set encoding=utf-8
+
+" If multiple files are provided as arguments, open the buffered files in tabs.
+if argc() > 1
+  tab all
+endif
 
 " Fix the escape key's behavior in insert mode
 inoremap <Esc> <C-c>
@@ -394,6 +400,16 @@ map <Leader>ov :call VimuxRunCommand('clear; cd "' . expand('%:p:h') . '"')<CR><
 
 " Close the tmux runner.
 map <Leader>qv :VimuxCloseRunner<CR>
+
+
+" TOTITLE
+
+" The default mapping (`gt`) overwrites forward tab movement (`:tabn`).
+let g:totitle_default_keys = 0
+
+nnoremap <expr> <Leader>t ToTitle()
+xnoremap <expr> <Leader>t ToTitle()
+nnoremap <expr> <Leader>tt ToTitle() .. '_'
 
 
 " THEME
