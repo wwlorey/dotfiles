@@ -1,0 +1,55 @@
+# Source: https://www.josean.com/posts/yabai-setup
+
+# change window focus within space
+alt - j : yabai -m window --focus south
+alt - k : yabai -m window --focus north
+alt - h : yabai -m window --focus west
+alt - l : yabai -m window --focus east
+
+
+# rotate layout clockwise
+cmd + ctrl - r : yabai -m space --rotate 270
+
+# flip along y-axis
+cmd + ctrl + shift - v : yabai -m space --mirror y-axis
+
+# flip along x-axis
+cmd + ctrl + shift - h : yabai -m space --mirror x-axis
+
+# toggle window float
+cmd + ctrl - t : yabai -m window --toggle float --grid 4:4:1:1:2:2
+
+
+# maximize a window
+cmd + ctrl - f : yabai -m window --toggle zoom-fullscreen
+
+# balance out tree of windows (resize to occupy same area)
+cmd + ctrl - b : yabai -m space --balance
+
+
+# swap windows
+shift + alt - j : yabai -m window --swap south
+shift + alt - k : yabai -m window --swap north
+shift + alt - h : yabai -m window --swap west
+shift + alt - l : yabai -m window --swap east
+
+
+# move window and split
+shift + ctrl - j : yabai -m window --warp south
+shift + ctrl - k : yabai -m window --warp north
+shift + ctrl - h : yabai -m window --warp west
+shift + ctrl - l : yabai -m window --warp east
+
+
+# move window to prev and next space
+cmd + ctrl - left : yabai -m window --space prev;
+cmd + ctrl - right : yabai -m window --space next;
+
+
+# move window to space #
+cmd + ctrl - 1 : yabai -m window --space 1;
+cmd + ctrl - 2 : yabai -m window --space 2;
+cmd + ctrl - 3 : yabai -m window --space 3;
+cmd + ctrl - 4 : yabai -m window --space 4;
+cmd + ctrl - 5 : yabai -m window --space 5;
+cmd + ctrl - 6 : yabai -m window --space 6;
