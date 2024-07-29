@@ -11,10 +11,10 @@ alt - l : yabai -m window --focus east
 cmd + ctrl - r : yabai -m space --rotate 270
 
 # flip along y-axis
-cmd + ctrl + shift - v : yabai -m space --mirror y-axis
+cmd + ctrl - v : yabai -m space --mirror y-axis
 
 # flip along x-axis
-cmd + ctrl + shift - h : yabai -m space --mirror x-axis
+cmd + ctrl - h : yabai -m space --mirror x-axis
 
 # toggle window float
 cmd + ctrl - t : yabai -m window --toggle float --grid 4:4:1:1:2:2
