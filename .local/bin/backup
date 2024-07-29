@@ -2,7 +2,7 @@
 
 dryRun=''
 path=''
-rsyncOptions=(--delete --archive --progress --verbose --exclude={.Xauthority,/.bash*,.cache,.cargo,/.config,.lesshst,/.local,.mozilla,.NERDTreeBookmarks,.node-gyp,.npm,.nvm,.texlive,.viminfo,/.vscode,.xsession*,.zcompdump,/.zprofile,/.zsh*} --delete-excluded)
+rsyncOptions=(--delete --archive --progress --verbose --exclude={.Xauthority,/.bash*,.cache,.cargo,/.config,.lesshst,/.local,.mozilla,.NERDTreeBookmarks,.node-gyp,.npm,.nvm,.rustup,.texlive,.viminfo,/.vscode,.xsession*,.zcompdump,/.zprofile,/.zsh*} --delete-excluded)
 
 printHelp() {
   echo "Usage: backup [OPTION]...
