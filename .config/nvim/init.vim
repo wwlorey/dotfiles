@@ -173,6 +173,8 @@ autocmd FileType tex inoremap ;f \footnote{}<++><Esc>?}<CR>i
 autocmd FileType tex inoremap ;ul \begin{itemize}<CR>\item <CR>\end{itemize}<CR><CR><++><Esc>?item<Space><CR>A
 autocmd FileType tex inoremap ;ol \begin{enumerate}<CR>\item <CR>\end{enumerate}<CR><CR><++><Esc>?item<Space><CR>A
 autocmd FileType tex inoremap ;li \item<Space>
+autocmd FileType tex inoremap ;q “”<++><Esc>?”<CR>i
+autocmd FileType tex inoremap ;su \textsuperscript{}<++><Esc>?}<CR>i
 
 " Guide insertion and navigation
 inoremap ;< <++>

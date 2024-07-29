@@ -2,7 +2,7 @@
 
 set -C -f -u
 #IFS=$'\n'
-IFS="$(printf '%b_' '\n')"; IFS="${IFS%_}"
+# IFS="$(printf '%b_' '\n')"; IFS="${IFS%_}"
 
 # ANSI color codes are supported.
 # STDIN is disabled, so interactive scripts won't work properly
@@ -24,9 +24,9 @@ HEIGHT="${2}"
 #FILE_EXTENSION_LOWER=$(echo ${FILE_EXTENSION} | tr '[:upper:]' '[:lower:]')
 
 # Settings
-HIGHLIGHT_SIZE_MAX=262143  # 256KiB
-HIGHLIGHT_TABWIDTH=8
-HIGHLIGHT_STYLE='pablo'
+# HIGHLIGHT_SIZE_MAX=262143  # 256KiB
+# HIGHLIGHT_TABWIDTH=8
+# HIGHLIGHT_STYLE='pablo'
 
 
 handle_mime() {
@@ -46,12 +46,15 @@ handle_mime() {
             highlight --replace-tabs="${HIGHLIGHT_TABWIDTH}" --out-format="${highlight_format}" \
                 --style="${HIGHLIGHT_STYLE}" --force -- "${FILE_PATH}" ;;
 	application/zip) atool --list -- "${FILE_PATH}" ;;
-        image/*) chafa --fill=block --symbols=block -c 256 -s 80x"${HEIGHT}" "${FILE_PATH}" || exit 1;;
+        # image/*) chafa --fill=block --fit-width --symbols=block --colors 256 -s 80x"${HEIGHT}" "${FILE_PATH}" || exit 1;;
+        image/*) chafa --fill=block --fit-width --symbols=block --colors 256 "${FILE_PATH}" || exit 1;;
         video/* | audio/*|application/octet-stream) mediainfo "${FILE_PATH}" || exit 1;;
         */pdf) pdftotext -l 10 -nopgbrk -q -- "${FILE_PATH}" - | head -n 30 ;;
         *opendocument*) odt2txt "${FILE_PATH}" ;;
     esac
 }
+
+# image/*) chafa --fill=block --symbols=block -c 256 -s 80x"${HEIGHT}" "${FILE_PATH}" || exit 1;;
 
 MIMETYPE="$( file --dereference --brief --mime-type -- "${FILE_PATH}" )"
 handle_mime "${MIMETYPE}"
