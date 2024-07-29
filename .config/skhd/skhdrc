@@ -17,7 +17,8 @@ cmd + ctrl - v : yabai -m space --mirror y-axis
 cmd + ctrl - h : yabai -m space --mirror x-axis
 
 # toggle window float
-cmd + ctrl - t : yabai -m window --toggle float --grid 4:4:1:1:2:2
+# <rows>:<cols>:<start-x>:<start-y>:<width>:<height>
+cmd + ctrl - t : yabai -m window --toggle float --grid 9:9:2:1:5:7
 
 
 # maximize a window
