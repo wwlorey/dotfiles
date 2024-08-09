@@ -409,6 +409,8 @@ map <Leader>qv :VimuxCloseRunner<CR>
 " The default mapping (`gt`) overwrites forward tab movement (`:tabn`).
 let g:totitle_default_keys = 0
 
+" Source: https://github.com/iggredible/totitle-vim?tab=readme-ov-file#key-bindings
+" Note: ToTitle() does not work on UPPERCASE TEXT.
 nnoremap <expr> <Leader>t ToTitle()
 xnoremap <expr> <Leader>t ToTitle()
 nnoremap <expr> <Leader>tt ToTitle() .. '_'

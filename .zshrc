@@ -40,9 +40,9 @@ bindkey "^?" backward-delete-char
 export KEYTIMEOUT=1
 
 # fzf bindings
-# bindkey -s '^f' 'cd "$(dirname "$(fzf)")"\n'
 bindkey -s '^p' 'fzf-wrapper\n'
-bindkey -s '^f' 'cd $HOME && fzf-wrapper && cd +1 &> /dev/null\n'
+bindkey -s '^f' 'cd "$HOME" && fzf-wrapper && cd +1 &> /dev/null\n'
+bindkey -s 'ƒ' 'cd "$HOME" && cd "$(dirname \"$(fzf)\")"\n'
 
 # nvim bindings
 # Open fugitive

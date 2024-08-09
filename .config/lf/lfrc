@@ -5,6 +5,8 @@ set period 1
 
 set hiddenfiles ".*:*.aux:*.log:*.bbl:*.bcf:*.blg:*.run.xml"
 
+set mouse true
+
 # Vars that depend on environmental variables
 $lf -remote "send $id set previewer ${XDG_CONFIG_HOME:-$HOME/.config}/lf/scope"
 
@@ -38,5 +40,4 @@ map m moveto $f
 map A rename      # End of filename
 map c push A<c-u> # New filename
 map I push A<c-a> # Beginning of filename
-
 
