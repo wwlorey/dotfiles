@@ -84,6 +84,7 @@ setopt PUSHD_IGNORE_DUPS
 setopt PUSHD_SILENT
 alias ds='dirs -v'
 for index ({1..9}) alias "$index"="cd +${index}"; unset index
+alias 0="cd \"$HOME\""
 
 . $HOME/.zsh/plugins/fast-syntax-highlighting/fast-syntax-highlighting.plugin.zsh
 . $HOME/.zsh/plugins/zsh-bd/bd.zsh
