@@ -40,7 +40,9 @@ bindkey "^?" backward-delete-char
 export KEYTIMEOUT=1
 
 # fzf bindings
+# (π = alt+p; ƒ = alt+f)
 bindkey -s '^p' 'fzf-wrapper\n'
+bindkey -s 'π' 'cd "$(dirname \"$(fzf)\")"\n'
 bindkey -s '^f' 'cd "$HOME" && fzf-wrapper && cd +1 &> /dev/null\n'
 bindkey -s 'ƒ' 'cd "$HOME" && cd "$(dirname \"$(fzf)\")"\n'
 
