@@ -38,6 +38,6 @@ cmd moveto ${{
 map m moveto $f
 
 map A rename      # End of filename
-map c push A<c-u> # New filename
+map C push A<c-u> # New filename
 map I push A<c-a> # Beginning of filename
 
