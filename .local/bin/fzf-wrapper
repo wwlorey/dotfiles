@@ -5,7 +5,7 @@ fzfSelection=$(fzf)
 if [[ "$fzfSelection" ]]; then
   fileType=$(file --mime-type -b "$fzfSelection")
 
-  if [[ "$fileType" == "application/pdf" || "$fileType" =~ ^image/* || "$fileType" =~ ^application/vnd.oasis.opendocument.* || "$fileType" =~ ^application/vnd.openxmlformats-officedocument.* ]]; then
+  if [[ "$fileType" == "application/pdf" || "$fileType" =~ ^image/* || "$fileType" =~ ^application/vnd.oasis.opendocument.* || "$fileType" =~ ^application/vnd.openxmlformats-officedocument.* || "$fzfSelection" == *.drawio ]]; then
       open "$fzfSelection"
   else
       $EDITOR "$fzfSelection"
