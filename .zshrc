@@ -45,6 +45,7 @@ bindkey -s '^p' 'fzf-wrapper\n'
 bindkey -s 'π' 'cd "$(dirname \"$(fzf)\")"\n'
 bindkey -s '^f' 'dir=$(pwd) && cd "$HOME" && fzf-wrapper && cd $dir && unset dir\n'
 bindkey -s 'ƒ' 'cd "$HOME" && cd "$(dirname \"$(fzf)\")"\n'
+bindkey -s '^F' 'cd "$HOME" && lf "$(fzf)"\n'
 
 # nvim bindings
 # Open fugitive
