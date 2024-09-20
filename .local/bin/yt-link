@@ -1,0 +1,15 @@
+#!/bin/bash
+
+if [ -z "$1" ]; then
+  echo "Given a YouTube URL, produces a Markdown link with the video title and copies it to the clipboard. (Usage: yt-link <URL>)"
+  exit 1
+fi
+
+URL="$1"
+
+HTML=$(curl -s "$URL")
+TITLE=$(echo "$HTML" | grep -o '<title>.*</title>' | sed -e 's/<title>//' -e 's/ - YouTube<\/title>//')
+LINK="[$TITLE]($URL)"
+
+echo -n "$LINK" | pbcopy
+echo "$LINK"
