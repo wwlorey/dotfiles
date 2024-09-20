@@ -1,0 +1,12 @@
+#!/bin/bash
+
+if ! [[ $2 ]]
+then
+  echo "Provide (1) the filename, minus the extension, and (2) the video stream URL."
+  exit 1
+fi
+
+FILENAME="$1"
+URL="$2"
+
+ffmpeg -i "$URL" "$FILENAME".mp4
