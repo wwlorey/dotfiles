@@ -58,6 +58,8 @@ alias es='$EDITOR $HOME/Repos/dotfiles/.config/skhd/skhdrc'
 
 alias hs='hugo server --noHTTPCache'
 
+alias lv='link-vid'
+
 alias grep='grep --color=auto'
 
 if [[ "$OSTYPE" == "darwin"* ]];
