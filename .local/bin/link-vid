@@ -1,7 +1,7 @@
 #!/bin/bash
 
 if [ -z "$1" ]; then
-  echo "Given a video URL (tested with Daily Wire and YouTube), produces a Markdown link with the video title and copies it to the clipboard. (Usage: link-yt <URL>)"
+  echo "Given a video URL (tested with Daily Wire and YouTube), produces a Markdown link with the video title and copies it to the clipboard. (Usage: link-vid <URL>)"
   exit 1
 fi
 
