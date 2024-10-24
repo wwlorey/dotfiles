@@ -20,7 +20,8 @@ cmd + ctrl - h : yabai -m space --mirror x-axis
 # toggle window float
 # <rows>:<cols>:<start-x>:<start-y>:<width>:<height>
 cmd + ctrl - t : yabai -m window --toggle float --grid 9:9:2:1:5:7
-
+# toggle skinny window
+cmd + ctrl - s : yabai -m window --toggle float --grid 10:10:2:0:6:10
 
 # maximize a window
 cmd + ctrl - f : yabai -m window --toggle zoom-fullscreen
