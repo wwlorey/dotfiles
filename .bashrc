@@ -13,6 +13,7 @@ alias gbc='git branch --show-current'
 alias gc='git checkout'
 alias gcb='git checkout -b'
 alias gcm='git commit -m'
+alias gcmp='git commit -m prog'
 alias gcp='git cherry-pick'
 alias gd='git diff'
 alias gdi='git diff --ignore-space-change'
@@ -61,6 +62,8 @@ alias hs='hugo server --noHTTPCache'
 alias lv='link-vid'
 
 alias grep='grep --color=auto'
+
+alias bibcache='rm -rf $(biber --cache)'
 
 if [[ "$OSTYPE" == "darwin"* ]];
 then
