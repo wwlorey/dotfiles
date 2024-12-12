@@ -65,6 +65,8 @@ alias grep='grep --color=auto'
 
 alias bibcache='rm -rf $(biber --cache)'
 
+alias w='work'
+
 if [[ "$OSTYPE" == "darwin"* ]];
 then
 	alias ls='ls -G'
