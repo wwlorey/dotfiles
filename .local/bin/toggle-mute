@@ -1,0 +1,11 @@
+#!/bin/bash
+
+# Source: https://gist.github.com/geolaw/246322b626b0b2b29d46dfa8f8e3e2c1
+
+isMuted=$(osascript -e "output muted of (get volume settings)")
+
+if  [ "$isMuted" == "true" ]; then
+  osascript -e "set volume without output muted"
+else
+  osascript -e "set volume with output muted"
+fi

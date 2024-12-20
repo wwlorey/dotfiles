@@ -1,0 +1,21 @@
+#!/bin/bash
+
+# Source: https://gist.github.com/geolaw/246322b626b0b2b29d46dfa8f8e3e2c1
+
+DEFAULT_INCREMENT=5
+
+if [ "$2" != "" ]; then
+    increment=$2
+else
+    increment=$DEFAULT_INCREMENT
+fi
+
+currentVol=$(osascript -e 'output volume of (get volume settings)')
+
+if [ "$1" == "up" ]; then
+    ((currentVol=currentVol+$increment))
+else
+    ((currentVol=currentVol-$increment))
+fi
+
+osascript -e "set volume output volume $currentVol"
