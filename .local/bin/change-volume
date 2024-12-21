@@ -13,9 +13,12 @@ fi
 currentVol=$(osascript -e 'output volume of (get volume settings)')
 
 if [ "$1" == "up" ]; then
+    emoji="🔊"
     ((currentVol=currentVol+$increment))
 else
+    emoji="🔉"
     ((currentVol=currentVol-$increment))
 fi
 
+osascript -e "display notification \"Volume $1\" with title \"$emoji\""
 osascript -e "set volume output volume $currentVol"
