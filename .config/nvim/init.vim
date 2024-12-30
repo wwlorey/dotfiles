@@ -254,9 +254,13 @@ let g:ctrlsf_mapping = {
 
 " GITHUB COPILOT
 
+" Do not automatically suggest
+let g:copilot_filetypes = { '*': v:false }
+
 nmap <Leader>co :Copilot panel<CR>
 
-" Avoid the ALT key for Copilot mappings because it doesn't play nice with Mac
+" Avoid the default ALT key for Copilot mappings because it doesn't play nice with Mac
+inoremap <C-s> <Plug>(copilot-suggest)
 inoremap <C-[> <Plug>(copilot-previous)
 inoremap <C-]> <Plug>(copilot-next)
 inoremap <C-\> <Plug>(copilot-dismiss)
