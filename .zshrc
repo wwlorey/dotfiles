@@ -48,6 +48,8 @@ bindkey -s '^f' 'dir=$(pwd) && cd "$HOME" && fzf-wrapper && cd $dir && unset dir
 bindkey -s 'ƒ' 'cd "$HOME" && cd "$(dirname \"$(fzf)\")"\n'
 # Ï = alt+F
 bindkey -s 'Ï' 'cd "$HOME" && cd "$(dirname \"$(fzf)\")" && lf\n'
+# ˝ = alt+G
+bindkey -s '˝' 'cd "$HOME/Graduate School/semester-files/2025-spring" && lf\n'
 
 # nvim bindings
 # Open fugitive
