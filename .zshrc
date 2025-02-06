@@ -55,6 +55,9 @@ bindkey -s '˝' 'cd "$HOME/Graduate School/semester-files/2025-spring" && lf\n'
 # Open fugitive
 bindkey -s '^g' 'echo "" | nvim - +"0G"\n'
 
+# Go $HOME and clear terminal
+bindkey -s 'º' '0\nc\n'
+
 # Change the cursor depending on the vi mode
 # Vim control sequences: https://ttssh2.osdn.jp/manual/4/en/usage/tips/vim.html
 cursorBlock='\e[2 q'
