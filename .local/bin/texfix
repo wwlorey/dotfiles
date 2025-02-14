@@ -1,0 +1,8 @@
+#!/bin/bash
+
+# This script aims to remedy occasional issues in compiling biber bibliography references in LaTeX.
+
+sudo tlmgr update --self
+sudo tlmgr update --all
+
+# TODO: It could be required to remove the auto-generated LaTeX compilation files (i.e. *.aux, *.bbl, etc.)

@@ -67,6 +67,7 @@ alias bibcache='rm -rf $(biber --cache)'
 
 alias w='work'
 alias b='buy'
+alias k='keep'
 
 if [[ "$OSTYPE" == "darwin"* ]];
 then
