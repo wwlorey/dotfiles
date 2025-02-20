@@ -49,11 +49,8 @@ bindkey -s 'ƒ' 'cd "$HOME" && cd "$(dirname \"$(fzf)\")"\n'
 # Ï = alt+F
 bindkey -s 'Ï' 'cd "$HOME" && cd "$(dirname \"$(fzf)\")" && lf\n'
 # ˝ = alt+G
-bindkey -s '˝' 'cd "$HOME/Graduate School/semester-files/2025-spring" && lf\n'
-
-# nvim bindings
-# Open fugitive
-bindkey -s '^g' 'echo "" | nvim - +"0G"\n'
+bindkey -s '˝'  'cd "$HOME/Graduate School/semester-files/2025-spring" && lf\n'
+bindkey -s '^g' 'cd "$HOME/Graduate School/semester-files/2025-spring"\n'
 
 # Go $HOME and clear terminal
 bindkey -s 'º' '0\nc\n'
