@@ -51,8 +51,11 @@ bindkey -s 'Ï' 'cd "$HOME" && cd "$(dirname \"$(fzf)\")" && lf\n'
 # ˝ = alt+G
 bindkey -s '˝'  'cd "$HOME/Graduate School/semester-files/2025-spring" && lf\n'
 bindkey -s '^g' 'cd "$HOME/Graduate School/semester-files/2025-spring"\n'
+# Í = alt+S
+bindkey -s 'Í'  'cd "$HOME/Sync" && lf\n'
 
 # Go $HOME and clear terminal
+# º = alt+0
 bindkey -s 'º' '0\nc\n'
 
 # Change the cursor depending on the vi mode
