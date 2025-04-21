@@ -1,12 +1,16 @@
 #!/bin/bash
 
-dotfilesDir="$HOME/Repos/dotfiles"
+dirs=("$HOME/Repos/dotfiles" "$HOME/Sync/.dotfiles")
 
-if [[ -d "$dotfilesDir" ]]
-then
-    cd "$dotfilesDir"
-    rsync -avr --exclude={.git*,README.md} . ~/
-else
-    echo "'$dotfilesDir' does not exist."
-fi
+for dir in "${dirs[@]}";
+do
+    if [[ -d "$dir" ]]
+    then
+        cd "$dir"
+        echo "---$dir---"
+        rsync --archive --verbose --recursive --exclude={.git*,README.md} . ~/
+    else
+        echo "'$dir' does not exist."
+    fi
+done 
 
