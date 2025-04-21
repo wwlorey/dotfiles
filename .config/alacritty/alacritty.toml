@@ -1,6 +1,6 @@
-[shell]
-args = ["--login"]
-program = "/bin/zsh"
+[terminal]
+shell.program = "/bin/zsh"
+shell.args = ["--login"]
 
 [font]
 size = 11
