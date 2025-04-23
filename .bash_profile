@@ -9,11 +9,13 @@ export VIMRC=$HOME/.config/nvim/init.vim
 
 which init-openai > /dev/null && source init-openai
 
-# Set fzf to use ripgrep and bat if available
-which rg > /dev/null && export FZF_DEFAULT_COMMAND='rg --files --hidden -g "!**/.git/**"'
+# fzf: use fd and bat if available
+which fd > /dev/null &&
+  export FZF_DEFAULT_COMMAND='fd --type file --hidden --exclude .git' ||
+  echo "Note: fd not installed."
 which bat > /dev/null && 
 	export FZF_DEFAULT_OPTS='--preview="bat --color=always --style=numbers --line-range=:500 {}"' || 
-	export FZF_DEFAULT_OPTS='--preview="cat {}"'
+	echo "Note: bat not installed." && export FZF_DEFAULT_OPTS='--preview="cat {}"'
 
 eval "$(/opt/homebrew/bin/brew shellenv)"
 
