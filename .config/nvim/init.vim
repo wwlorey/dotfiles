@@ -306,6 +306,12 @@ let g:ranger_map_keys = 0
 map <Leader>r :Ranger<CR>
 
 
+" BULLETS
+
+" Fix strangeness in .txt files around not inserting newlines in macros
+let g:bullets_enabled_file_types = ['markdown']
+
+
 " TABS
 
 " Always show tabline

@@ -52,16 +52,18 @@ shift + ctrl - h : yabai -m window --warp west
 shift + ctrl - l : yabai -m window --warp east
 
 
+# These features require disabling System Integrity Protection:
+
 # move window to prev and next space
-cmd + ctrl - left : yabai -m window --space prev;
-cmd + ctrl - right : yabai -m window --space next;
+# cmd + ctrl - left : yabai -m window --space prev;
+# cmd + ctrl - right : yabai -m window --space next;
 
 
 # move window to space #
-cmd + ctrl - 1 : yabai -m window --space 1;
-cmd + ctrl - 2 : yabai -m window --space 2;
-cmd + ctrl - 3 : yabai -m window --space 3;
-cmd + ctrl - 4 : yabai -m window --space 4;
-cmd + ctrl - 5 : yabai -m window --space 5;
-cmd + ctrl - 6 : yabai -m window --space 6;
-cmd + ctrl - 7 : yabai -m window --space 7;
+# cmd + ctrl - 1 : yabai -m window --space 1;
+# cmd + ctrl - 2 : yabai -m window --space 2;
+# cmd + ctrl - 3 : yabai -m window --space 3;
+# cmd + ctrl - 4 : yabai -m window --space 4;
+# cmd + ctrl - 5 : yabai -m window --space 5;
+# cmd + ctrl - 6 : yabai -m window --space 6;
+# cmd + ctrl - 7 : yabai -m window --space 7;

@@ -22,7 +22,7 @@ cmd delete ${{
   printf "%s\n  " "$fx"
   printf "Delete? [y/n] "
   read ans
-  [ $ans = "y" ] && trash-put $fx
+  [ $ans = "y" ] && trash $fx
 }}
 map D delete $f
 
