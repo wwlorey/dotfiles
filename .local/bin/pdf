@@ -22,6 +22,14 @@ then
   pdfFile="${mdFile%.*}.pdf"
 
   pandoc -o "$pdfFile" "$mdFile" -V colorlinks=true -V linkcolor=blue
+elif [[ $extension1 == 'epub' || $extension1 == 'EPUB' ]]
+then
+  echo "[ebook-convert] Converting epub (first/only file provided)..."
+
+  epubFile=$1
+  pdfFile="${epubFile%.*}.pdf"
+
+  ebook-convert $epubFile $pdfFile
 else
   echo "[unoconv] Converting docx/pptx (all files provided)..."
 
