@@ -53,6 +53,8 @@ bindkey -s '˝'  'cd "$HOME/Graduate School/semester-files/2025-spring" && lf\n'
 bindkey -s '^g' 'cd "$HOME/Graduate School/semester-files/2025-spring"\n'
 # Í = alt+S
 bindkey -s 'Í'  'cd "$HOME/Sync" && lf\n'
+# Î = alt+D
+bindkey -s 'Î'  'cd "$HOME/Downloads" && lf\n'
 
 # Go $HOME and clear terminal
 # º = alt+0
