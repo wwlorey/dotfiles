@@ -42,12 +42,12 @@ export KEYTIMEOUT=1
 # fzf bindings
 bindkey -s '^p' 'fzf-wrapper\n'
 # π = alt+p
-bindkey -s 'π' 'cd "$(dirname \"$(fzf)\")"\n'
+bindkey -s 'π'  'cd "$(dirname \"$(fzf)\")"\n'
 bindkey -s '^f' 'dir=$(pwd) && cd "$HOME" && fzf-wrapper && cd $dir && unset dir\n'
 # ƒ = alt+f
-bindkey -s 'ƒ' 'cd "$HOME" && cd "$(dirname \"$(fzf)\")"\n'
+bindkey -s 'ƒ'  'cd "$HOME" && cd "$(dirname \"$(fzf)\")"\n'
 # Ï = alt+F
-bindkey -s 'Ï' 'cd "$HOME" && cd "$(dirname \"$(fzf)\")" && lf\n'
+bindkey -s 'Ï'  'cd "$HOME" && cd "$(dirname \"$(fzf)\")" && lf\n'
 # ˝ = alt+G
 bindkey -s '˝'  'cd "$HOME/Graduate School/semester-files/2025-spring" && lf\n'
 bindkey -s '^g' 'cd "$HOME/Graduate School/semester-files/2025-spring"\n'
