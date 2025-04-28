@@ -13,6 +13,7 @@ alias gbc='git branch --show-current'
 alias gc='git checkout'
 alias gcb='git checkout -b'
 alias gcm='git commit -m'
+alias gcmp='git commit -m prog'
 alias gcp='git cherry-pick'
 alias gd='git diff'
 alias gdi='git diff --ignore-space-change'
@@ -42,18 +43,31 @@ alias cp='cp -iv'
 alias mv='mv -iv'
 
 alias v='nvim'
-alias ev='nvim $HOME/Repos/dotfiles/.config/nvim/init.vim'
+alias ev='$EDITOR $HOME/Repos/dotfiles/.config/nvim/init.vim'
 
 alias t='tmux'
-alias et='nvim $HOME/Repos/dotfiles/.config/tmux/tmux.conf'
+alias et='$EDITOR $HOME/Repos/dotfiles/.config/tmux/tmux.conf'
 alias ta='tmux attach'
 
-alias eb='nvim $HOME/Repos/dotfiles/.bashrc'
-alias ez='nvim $HOME/Repos/dotfiles/.zshrc'
+alias el='$EDITOR $HOME/Repos/dotfiles/.config/lf/lfrc'
+
+alias eb='$EDITOR $HOME/Repos/dotfiles/.bashrc'
+alias ez='$EDITOR $HOME/Repos/dotfiles/.zshrc'
+
+alias ey='$EDITOR $HOME/Repos/dotfiles/.config/yabai/yabairc'
+alias es='$EDITOR $HOME/Repos/dotfiles/.config/skhd/skhdrc'
 
 alias hs='hugo server --noHTTPCache'
 
+alias lv='link-vid'
+
 alias grep='grep --color=auto'
+
+alias bibcache='rm -rf $(biber --cache)'
+
+alias w='work'
+alias b='buy'
+alias k='keep'
 
 if [[ "$OSTYPE" == "darwin"* ]];
 then
@@ -71,7 +85,7 @@ else
 fi
 
 # https://vi.stackexchange.com/questions/7112/tmux-messing-with-vim-highlighting
-if [[ $TERM == alacritty ]]; then TERM=xterm-256color; fi
+if [[ $TERM == alacritty ]]; then export TERM=xterm-256color; fi
 
 # Use vi-style command line editing
 set -o vi

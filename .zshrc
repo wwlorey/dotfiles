@@ -40,12 +40,25 @@ bindkey "^?" backward-delete-char
 export KEYTIMEOUT=1
 
 # fzf bindings
-bindkey -s '^f' 'cd "$(dirname "$(fzf)")"\n'
 bindkey -s '^p' 'fzf-wrapper\n'
+# π = alt+p
+bindkey -s 'π'  'cd "$(dirname \"$(fzf)\")"\n'
+bindkey -s '^f' 'dir=$(pwd) && cd "$HOME" && fzf-wrapper && cd $dir && unset dir\n'
+# ƒ = alt+f
+bindkey -s 'ƒ'  'cd "$HOME" && cd "$(dirname \"$(fzf)\")"\n'
+# Ï = alt+F
+bindkey -s 'Ï'  'cd "$HOME" && cd "$(dirname \"$(fzf)\")" && lf\n'
+# ˝ = alt+G
+bindkey -s '˝'  'cd "$HOME/Graduate School/semester-files/2025-spring" && lf\n'
+bindkey -s '^g' 'cd "$HOME/Graduate School/semester-files/2025-spring"\n'
+# Í = alt+S
+bindkey -s 'Í'  'cd "$HOME/Sync" && lf\n'
+# Î = alt+D
+bindkey -s 'Î'  'cd "$HOME/Downloads" && lf\n'
 
-# nvim bindings
-# Open fugitive
-bindkey -s '^g' 'echo "" | nvim - +"0G"\n'
+# Go $HOME and clear terminal
+# º = alt+0
+bindkey -s 'º' '0\nc\n'
 
 # Change the cursor depending on the vi mode
 # Vim control sequences: https://ttssh2.osdn.jp/manual/4/en/usage/tips/vim.html
@@ -81,6 +94,7 @@ setopt PUSHD_IGNORE_DUPS
 setopt PUSHD_SILENT
 alias ds='dirs -v'
 for index ({1..9}) alias "$index"="cd +${index}"; unset index
+alias 0="cd \"$HOME\""
 
 . $HOME/.zsh/plugins/fast-syntax-highlighting/fast-syntax-highlighting.plugin.zsh
 . $HOME/.zsh/plugins/zsh-bd/bd.zsh

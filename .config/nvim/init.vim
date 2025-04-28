@@ -1,15 +1,15 @@
 call plug#begin('~/.config/nvim/plugged')
 Plug 'ap/vim-css-color'
+Plug 'bullets-vim/bullets.vim'
 Plug 'christoomey/vim-tmux-navigator'
 Plug 'dyng/ctrlsf.vim'
-Plug 'github/copilot.vim'
 Plug 'francoiscabrol/ranger.vim'
+Plug 'github/copilot.vim'
 Plug 'iggredible/totitle-vim'
 Plug 'junegunn/fzf'
 Plug 'maxmellon/vim-jsx-pretty'
 Plug 'preservim/nerdtree'
 Plug 'preservim/vimux'
-Plug 'wwlorey/github-nvim-theme'
 Plug 'tpope/vim-commentary'
 Plug 'tpope/vim-fugitive'
 Plug 'tpope/vim-repeat'
@@ -17,6 +17,7 @@ Plug 'tpope/vim-rhubarb'
 Plug 'tpope/vim-sleuth'
 Plug 'tpope/vim-surround'
 Plug 'vim-python/python-syntax'
+Plug 'wwlorey/github-nvim-theme'
 Plug 'yuezk/vim-js'
 call plug#end()
 
@@ -26,6 +27,11 @@ call plug#end()
 let mapleader = " "
 inoremap jk <Esc>
 set encoding=utf-8
+
+" If multiple files are provided as arguments, open the buffered files in tabs.
+if argc() > 1
+  tab all
+endif
 
 " Fix the escape key's behavior in insert mode
 inoremap <Esc> <C-c>
@@ -167,6 +173,8 @@ autocmd FileType tex inoremap ;f \footnote{}<++><Esc>?}<CR>i
 autocmd FileType tex inoremap ;ul \begin{itemize}<CR>\item <CR>\end{itemize}<CR><CR><++><Esc>?item<Space><CR>A
 autocmd FileType tex inoremap ;ol \begin{enumerate}<CR>\item <CR>\end{enumerate}<CR><CR><++><Esc>?item<Space><CR>A
 autocmd FileType tex inoremap ;li \item<Space>
+autocmd FileType tex inoremap ;q “”<++><Esc>?”<CR>i
+autocmd FileType tex inoremap ;s \textsuperscript{}<++><Esc>?}<CR>i
 
 " Guide insertion and navigation
 inoremap ;< <++>
@@ -246,9 +254,13 @@ let g:ctrlsf_mapping = {
 
 " GITHUB COPILOT
 
+" Do not automatically suggest
+let g:copilot_filetypes = { '*': v:false }
+
 nmap <Leader>co :Copilot panel<CR>
 
-" Avoid the ALT key for Copilot mappings because it doesn't play nice with Mac
+" Avoid the default ALT key for Copilot mappings because it doesn't play nice with Mac
+inoremap <C-s> <Plug>(copilot-suggest)
 inoremap <C-[> <Plug>(copilot-previous)
 inoremap <C-]> <Plug>(copilot-next)
 inoremap <C-\> <Plug>(copilot-dismiss)
@@ -292,6 +304,12 @@ autocmd FileType javascriptreact setlocal commentstring=/*\ %s\ */
 
 let g:ranger_map_keys = 0
 map <Leader>r :Ranger<CR>
+
+
+" BULLETS
+
+" Fix strangeness in .txt files around not inserting newlines in macros
+let g:bullets_enabled_file_types = ['markdown']
 
 
 " TABS
@@ -394,6 +412,18 @@ map <Leader>ov :call VimuxRunCommand('clear; cd "' . expand('%:p:h') . '"')<CR><
 
 " Close the tmux runner.
 map <Leader>qv :VimuxCloseRunner<CR>
+
+
+" TOTITLE
+
+" The default mapping (`gt`) overwrites forward tab movement (`:tabn`).
+let g:totitle_default_keys = 0
+
+" Source: https://github.com/iggredible/totitle-vim?tab=readme-ov-file#key-bindings
+" Note: ToTitle() does not work on UPPERCASE TEXT.
+nnoremap <expr> <Leader>t ToTitle()
+xnoremap <expr> <Leader>t ToTitle()
+nnoremap <expr> <Leader>tt ToTitle() .. '_'
 
 
 " THEME

@@ -28,7 +28,14 @@ then
   exit 1
 fi
 
-if [ -d $dest ]; then
+if ! [ -d $src ]
+then
+  echo "Source directory \"$src\" does not exist."
+  exit 1
+fi
+
+if [ -d $dest ]
+then
   echo "Destination directory \"$dest\" already exists."
   exit 1
 fi

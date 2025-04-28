@@ -1,0 +1,69 @@
+alt - f10 : toggle-mute
+
+ctrl - f11 : change-volume down 2
+ctrl - f12 : change-volume up 2
+
+alt - f11 : change-volume down 5
+alt - f12 : change-volume up 5
+
+
+# Source: https://www.josean.com/posts/yabai-setup
+
+# change window focus within space
+alt - j : yabai -m window --focus south
+alt - k : yabai -m window --focus north
+alt - h : yabai -m window --focus west
+alt - l : yabai -m window --focus east
+
+
+# rotate layout clockwise
+cmd + ctrl - r : yabai -m space --rotate 270
+
+# flip along y-axis
+cmd + ctrl - v : yabai -m space --mirror y-axis
+
+# flip along x-axis
+cmd + ctrl - h : yabai -m space --mirror x-axis
+
+# toggle window float
+# <rows>:<cols>:<start-x>:<start-y>:<width>:<height>
+cmd + ctrl - t : yabai -m window --toggle float --grid 9:9:2:1:5:7
+# toggle skinny window
+cmd + ctrl - s : yabai -m window --toggle float --grid 10:10:2:0:6:10
+
+# maximize a window
+cmd + ctrl - f : yabai -m window --toggle zoom-fullscreen
+
+# balance out tree of windows (resize to occupy same area)
+cmd + ctrl - b : yabai -m space --balance
+
+
+# swap windows
+shift + alt - j : yabai -m window --swap south
+shift + alt - k : yabai -m window --swap north
+shift + alt - h : yabai -m window --swap west
+shift + alt - l : yabai -m window --swap east
+
+
+# move window and split
+shift + ctrl - j : yabai -m window --warp south
+shift + ctrl - k : yabai -m window --warp north
+shift + ctrl - h : yabai -m window --warp west
+shift + ctrl - l : yabai -m window --warp east
+
+
+# These features require disabling System Integrity Protection:
+
+# move window to prev and next space
+# cmd + ctrl - left : yabai -m window --space prev;
+# cmd + ctrl - right : yabai -m window --space next;
+
+
+# move window to space #
+# cmd + ctrl - 1 : yabai -m window --space 1;
+# cmd + ctrl - 2 : yabai -m window --space 2;
+# cmd + ctrl - 3 : yabai -m window --space 3;
+# cmd + ctrl - 4 : yabai -m window --space 4;
+# cmd + ctrl - 5 : yabai -m window --space 5;
+# cmd + ctrl - 6 : yabai -m window --space 6;
+# cmd + ctrl - 7 : yabai -m window --space 7;

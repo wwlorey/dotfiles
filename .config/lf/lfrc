@@ -1,0 +1,43 @@
+set shell zsh
+
+# Periodically check for directory updates
+set period 1
+
+set hiddenfiles ".*:*.aux:*.log:*.bbl:*.bcf:*.blg:*.run.xml"
+
+set mouse true
+
+# Vars that depend on environmental variables
+$lf -remote "send $id set previewer ${XDG_CONFIG_HOME:-$HOME/.config}/lf/scope"
+
+cmd openHandler ${{
+  case $(file --mime-type $f -b) in
+    text/*|application/json) $EDITOR $fx;;
+    *) open $fx;;
+  esac
+}}
+map <enter> openHandler $f
+
+cmd delete ${{
+  printf "%s\n  " "$fx"
+  printf "Delete? [y/n] "
+  read ans
+  [ $ans = "y" ] && trash $fx
+}}
+map D delete $f
+
+cmd moveto ${{
+	destFile="$HOME/$(cd $HOME && fzf)"
+  destPath="$(dirname $destFile)"
+	for x in "$fx"; do
+    echo "$x"
+    echo "$destPath"
+		eval mv -iv \"$x\" \"$destPath\"
+	done
+}}
+map m moveto $f
+
+map A rename      # End of filename
+map C push A<c-u> # New filename
+map I push A<c-a> # Beginning of filename
+
