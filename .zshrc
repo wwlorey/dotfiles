@@ -15,7 +15,9 @@ precmd () { RPROMPT=$(__git_ps1 " (%s)") }
 # Keep track of history
 export HISTSIZE=10000
 export SAVEHIST=10000
+# File must exist for history to be logged.
 export HISTFILE=$HOME/.cache/zsh/history
+setopt append_history
 
 # Automatically cd into typed directory
 setopt autocd
