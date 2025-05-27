@@ -4,7 +4,7 @@ Plug 'bullets-vim/bullets.vim'
 Plug 'christoomey/vim-tmux-navigator'
 Plug 'dyng/ctrlsf.vim'
 Plug 'francoiscabrol/ranger.vim'
-Plug 'github/copilot.vim'
+" Plug 'github/copilot.vim'
 Plug 'iggredible/totitle-vim'
 Plug 'junegunn/fzf'
 Plug 'maxmellon/vim-jsx-pretty'
@@ -465,10 +465,7 @@ highlight link highlightKeywords Todo
 
 lua << EOF
 require("render-markdown").setup({
-  bullet = {
-    -- Don't replace `*` with `•`
-    enabled = false,
-  },
+  enabled = false,
 })
 EOF
 
