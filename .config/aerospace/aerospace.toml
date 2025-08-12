@@ -1,11 +1,40 @@
 start-at-login = true
 
-# https://nikitabobko.github.io/AeroSpace/commands
-after-startup-command = []
-
 
 [key-mapping]
     preset = 'qwerty'
+
+
+[[on-window-detected]]
+    if.app-id = 'org.alacritty'
+    run = 'move-node-to-workspace 1'
+[[on-window-detected]]
+    if.app-id = 'com.apple.Preview'
+    run = 'move-node-to-workspace 2'
+[[on-window-detected]]
+    if.app-id = 'com.brave.Browser'
+    run = 'move-node-to-workspace 3'
+[[on-window-detected]]
+    if.app-id = 'ch.protonmail.desktop'
+    run = 'move-node-to-workspace 4'
+[[on-window-detected]]
+    if.app-id = 'com.apple.mail'
+    run = 'move-node-to-workspace 4'
+[[on-window-detected]]
+    if.app-id = 'org.keepassxc.keepassxc'
+    run = 'move-node-to-workspace 5'
+[[on-window-detected]]
+    if.app-id = 'org.whispersystems.signal-desktop'
+    run = 'move-node-to-workspace 6'
+[[on-window-detected]]
+    if.app-id = 'com.tinyspeck.slackmacgap'
+    run = 'move-node-to-workspace 6'
+[[on-window-detected]]
+    if.app-id = 'com.hnc.Discord'
+    run = 'move-node-to-workspace 6'
+[[on-window-detected]]
+    if.app-id = 'com.makemkv.MakeMKV'
+    run = 'move-node-to-workspace 7'
 
 
 [mode.main.binding]
