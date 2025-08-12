@@ -1,0 +1,70 @@
+start-at-login = true
+
+# https://nikitabobko.github.io/AeroSpace/commands
+after-startup-command = []
+
+
+[key-mapping]
+    preset = 'qwerty'
+
+
+[mode.main.binding]
+    cmd-ctrl-t = 'layout tiles horizontal vertical'
+    cmd-ctrl-a = 'layout accordion horizontal vertical'
+    cmd-alt-f = ['layout floating tiling', 'mode main']
+
+    cmd-ctrl-f = 'fullscreen'
+
+    alt-h = 'focus left'
+    alt-j = 'focus down'
+    alt-k = 'focus up'
+    alt-l = 'focus right'
+
+    alt-shift-h = 'move left'
+    alt-shift-j = 'move down'
+    alt-shift-k = 'move up'
+    alt-shift-l = 'move right'
+
+    ctrl-shift-h = ['join-with left', 'mode main']
+    ctrl-shift-j = ['join-with down', 'mode main']
+    ctrl-shift-k = ['join-with up', 'mode main']
+    ctrl-shift-l = ['join-with right', 'mode main']
+
+    alt-minus = 'resize smart -50'
+    alt-equal = 'resize smart +50'
+
+    ctrl-1 = 'workspace 1'
+    ctrl-2 = 'workspace 2'
+    ctrl-3 = 'workspace 3'
+    ctrl-4 = 'workspace 4'
+    ctrl-5 = 'workspace 5'
+    ctrl-6 = 'workspace 6'
+    ctrl-7 = 'workspace 7'
+
+    cmd-ctrl-1 = 'move-node-to-workspace 1'
+    cmd-ctrl-2 = 'move-node-to-workspace 2'
+    cmd-ctrl-3 = 'move-node-to-workspace 3'
+    cmd-ctrl-4 = 'move-node-to-workspace 4'
+    cmd-ctrl-5 = 'move-node-to-workspace 5'
+    cmd-ctrl-6 = 'move-node-to-workspace 6'
+    cmd-ctrl-7 = 'move-node-to-workspace 7'
+
+    alt-tab = 'workspace-back-and-forth'
+
+    cmd-ctrl-b = ['flatten-workspace-tree', 'mode main'] # balance (reset) layout
+
+    cmd-ctrl-backspace = ['close-all-windows-but-current', 'mode main']
+
+    alt-f10  = 'exec-and-forget ~/.local/bin/toggle-mute'
+    ctrl-f11 = 'exec-and-forget ~/.local/bin/change-volume down 2'
+    ctrl-f12 = 'exec-and-forget ~/.local/bin/change-volume up   2'
+    alt-f11 = 'exec-and-forget ~/.local/bin/change-volume down  5'
+    alt-f12 = 'exec-and-forget ~/.local/bin/change-volume up    5'
+
+    cmd-ctrl-r = 'mode reload-main-mode-config'
+
+
+[mode.reload-main-mode-config.binding]
+    esc = ['reload-config', 'mode main']
+    cmd-ctrl-r = ['reload-config', 'mode main']
+

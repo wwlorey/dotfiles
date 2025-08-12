@@ -17,5 +17,3 @@ which bat > /dev/null &&
 	export FZF_DEFAULT_OPTS='--preview="bat --color=always --style=numbers --line-range=:500 {}"' || 
 	echo "Note: bat not installed." && export FZF_DEFAULT_OPTS='--preview="cat {}"'
 
-yabai --start-service
-skhd --start-service

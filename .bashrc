@@ -54,9 +54,6 @@ alias el='$EDITOR $HOME/Repos/dotfiles/.config/lf/lfrc'
 alias eb='$EDITOR $HOME/Repos/dotfiles/.bashrc'
 alias ez='$EDITOR $HOME/Repos/dotfiles/.zshrc'
 
-alias ey='$EDITOR $HOME/Repos/dotfiles/.config/yabai/yabairc'
-alias es='$EDITOR $HOME/Repos/dotfiles/.config/skhd/skhdrc'
-
 alias hs='hugo server --noHTTPCache'
 
 alias lv='link-vid'
