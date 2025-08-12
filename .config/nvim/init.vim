@@ -157,6 +157,10 @@ let g:tex_noindent_env=''
 " Close the tmux runner (if it's open) when quitting all.
 cnoreabbrev qa VimuxCloseRunner<CR>:qa<CR>
 
+set autoindent
+set smartindent
+filetype plugin indent on
+
 
 " AUTO-INSERTIONS
 
