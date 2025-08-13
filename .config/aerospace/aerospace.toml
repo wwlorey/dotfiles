@@ -1,10 +1,6 @@
 start-at-login = true
 
 
-[key-mapping]
-    preset = 'qwerty'
-
-
 [[on-window-detected]]
     if.app-id = 'org.alacritty'
     run = 'move-node-to-workspace 1'
