@@ -19,21 +19,6 @@ Plug 'tpope/vim-surround'
 Plug 'vim-python/python-syntax'
 Plug 'wwlorey/github-nvim-theme'
 Plug 'yuezk/vim-js'
-
-
-" Avante dependencies
-Plug 'nvim-treesitter/nvim-treesitter'
-Plug 'stevearc/dressing.nvim'
-Plug 'nvim-lua/plenary.nvim'
-Plug 'MunifTanjim/nui.nvim'
-Plug 'MeanderingProgrammer/render-markdown.nvim'
-"   (Optional)
-Plug 'hrsh7th/nvim-cmp'
-Plug 'nvim-tree/nvim-web-devicons' " or Plug 'echasnovski/mini.icons'
-Plug 'HakonHarnes/img-clip.nvim'
-Plug 'zbirenbaum/copilot.lua'
-" NOTE: `make` required (cd ~/.config/nvim/plugged/avante.nvim && make)
-Plug 'yetone/avante.nvim', { 'branch': 'main', 'do': 'make' }
 call plug#end()
 
 
@@ -463,41 +448,4 @@ augroup highlightKeywords
   autocmd Syntax * syntax match highlightKeywords /\v\_.<(NOTE|TODO):/hs=s+1 containedin=ALL
 augroup END
 highlight link highlightKeywords Todo
-
-
-" AVANTE and dependencies
-
-lua << EOF
-require("render-markdown").setup({
-  enabled = false,
-})
-EOF
-
-lua << EOF
-require('avante').setup({
-  provider = "openai",
-  openai = {
-    endpoint = "https://api.openai.com/v1",
-    model = "gpt-4o",
-    timeout = 30000,
-    temperature = 0,
-    max_completion_tokens = 8192,
-  },
-  -- Remove "[<leader>aa: ask, <leader>ae: edit]" hint in visual mode; maybe others too
-  hints = {
-    enabled = false
-  }
-})
-EOF
-
-nnoremap <C-a> :AvanteToggle<CR>
-inoremap <C-a> <ESC>:AvanteToggle<CR>
-vnoremap <C-a> :AvanteEdit<CR>
-
-nnoremap <leader>aa :AvanteAsk<CR>
-nnoremap <leader>ab :AvanteBuild<CR>
-nnoremap <leader>ac :AvanteChat<CR>
-nnoremap <leader>ah :AvanteHistory<CR>
-nnoremap <leader>an :AvanteChatNew<CR>
-nnoremap <leader>as :AvanteStop<CR>
 
