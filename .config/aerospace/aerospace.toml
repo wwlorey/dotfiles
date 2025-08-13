@@ -26,11 +26,11 @@ start-at-login = true
     if.app-id = 'com.tinyspeck.slackmacgap'
     run = 'move-node-to-workspace 6'
 [[on-window-detected]]
-    if.app-id = 'com.hnc.Discord'
-    run = 'move-node-to-workspace 6'
-[[on-window-detected]]
     if.app-id = 'com.makemkv.MakeMKV'
     run = 'move-node-to-workspace 7'
+[[on-window-detected]]
+    if.app-id = 'com.hnc.Discord'
+    run = 'move-node-to-workspace 8'
 
 
 [mode.main.binding]
@@ -65,6 +65,7 @@ start-at-login = true
     ctrl-5 = 'workspace 5'
     ctrl-6 = 'workspace 6'
     ctrl-7 = 'workspace 7'
+    ctrl-8 = 'workspace 8'
 
     cmd-ctrl-1 = 'move-node-to-workspace 1'
     cmd-ctrl-2 = 'move-node-to-workspace 2'
@@ -73,6 +74,7 @@ start-at-login = true
     cmd-ctrl-5 = 'move-node-to-workspace 5'
     cmd-ctrl-6 = 'move-node-to-workspace 6'
     cmd-ctrl-7 = 'move-node-to-workspace 7'
+    cmd-ctrl-8 = 'move-node-to-workspace 8'
 
     alt-tab = 'workspace-back-and-forth'
 
