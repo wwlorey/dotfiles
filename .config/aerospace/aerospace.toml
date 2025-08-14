@@ -72,6 +72,7 @@ start-at-login = true
     ctrl-6 = 'workspace 6'
     ctrl-7 = 'workspace 7'
     ctrl-8 = 'workspace 8'
+    ctrl-9 = 'workspace 9'
 
     cmd-ctrl-1 = 'move-node-to-workspace 1'
     cmd-ctrl-2 = 'move-node-to-workspace 2'
@@ -81,6 +82,7 @@ start-at-login = true
     cmd-ctrl-6 = 'move-node-to-workspace 6'
     cmd-ctrl-7 = 'move-node-to-workspace 7'
     cmd-ctrl-8 = 'move-node-to-workspace 8'
+    cmd-ctrl-9 = 'move-node-to-workspace 9'
 
     alt-tab = 'workspace-back-and-forth'
 
