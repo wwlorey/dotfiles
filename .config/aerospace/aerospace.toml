@@ -33,9 +33,6 @@ start-at-login = true
     run = 'move-node-to-workspace 6'
 [[on-window-detected]]
     if.app-id = 'com.tinyspeck.slackmacgap'
-    run = 'move-node-to-workspace 6'
-[[on-window-detected]]
-    if.app-id = 'com.makemkv.MakeMKV'
     run = 'move-node-to-workspace 7'
 [[on-window-detected]]
     if.app-id = 'com.hnc.Discord'
