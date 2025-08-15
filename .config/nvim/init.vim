@@ -169,7 +169,9 @@ autocmd FileType markdown inoremap ;e > \underline{Ex}:
 autocmd FileType markdown inoremap ;a [](<++>)<Esc>?]<CR>i
 autocmd FileType markdown inoremap ;p ![](<++>)<CR><CR><++><Esc>?]<CR>i
 autocmd FileType markdown inoremap ;r $\rightarrow$
-autocmd FileType markdown inoremap ;d $\Leftrightarrow$
+autocmd FileType markdown inoremap ;R $\Rightarrow$
+autocmd FileType markdown inoremap ;D $\Leftrightarrow$
+autocmd FileType markdown inoremap ;n \newpage
 
 " LaTeX
 " Section headers
