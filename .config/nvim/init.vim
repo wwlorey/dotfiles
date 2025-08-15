@@ -428,6 +428,20 @@ map <Leader>oh :call VimuxRunCommand('clear; cd "' . expand('%:p:h') . '"; open 
 " This could break with multiple vertical tmux panes open.
 map <Leader>ov :call VimuxRunCommand('clear; cd "' . expand('%:p:h') . '"')<CR><C-l>
 
+function! OpenPaneAtProjectRoot()
+  " Run git command from the current file's directory
+  let currentDir = expand('%:p:h')
+  let projectRoot = system('cd "' . currentDir . '" && git rev-parse --show-toplevel 2>/dev/null')
+  if v:shell_error == 0
+    let projectRoot = substitute(projectRoot, '\n', '', '')
+    call VimuxRunCommand('clear; cd "' . projectRoot . '"')
+  else
+    " Not in a git repo: go to current file's directory
+    call VimuxRunCommand('clear; cd "' . currentDir . '"')
+  endif
+endfunction
+map <Leader>oV :call OpenPaneAtProjectRoot()<CR><C-l>
+
 " Close the tmux runner.
 map <Leader>qv :VimuxCloseRunner<CR>
 
