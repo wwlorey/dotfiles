@@ -156,7 +156,20 @@ filetype plugin indent on
 autocmd FileType html,markdown inoremap ;* <p style="text-align: center;">⁂</p><CR><CR>
 
 " Markdown
+" Section headers
+autocmd FileType markdown inoremap ;1 #<CR><CR><++><Esc>?#<CR>a
+autocmd FileType markdown inoremap ;2 ##<CR><CR><++><Esc>?#<CR>a
+autocmd FileType markdown inoremap ;3 ###<CR><CR><++><Esc>?#<CR>a
+autocmd FileType markdown inoremap ;4 ####<CR><CR><++><Esc>?#<CR>a
+" General
+autocmd FileType markdown inoremap ;i **<++><Esc>?*<CR>i
+autocmd FileType markdown inoremap ;b ****<++><Esc>?*<CR>ni
+autocmd FileType markdown inoremap ;u \underline{}<++><Esc>?}<CR>i
+autocmd FileType markdown inoremap ;e > \underline{Ex}:
 autocmd FileType markdown inoremap ;a [](<++>)<Esc>?]<CR>i
+autocmd FileType markdown inoremap ;p ![](<++>)<CR><CR><++><Esc>?]<CR>i
+autocmd FileType markdown inoremap ;r $\rightarrow$
+autocmd FileType markdown inoremap ;d $\Leftrightarrow$
 
 " LaTeX
 " Section headers
@@ -173,6 +186,7 @@ autocmd FileType tex inoremap ;TC \textcite[cf.][]{<++>}<++><Esc>?]<CR>i
 " General
 autocmd FileType tex inoremap ;i \textit{}<++><Esc>?}<CR>i
 autocmd FileType tex inoremap ;b \textbf{}<++><Esc>?}<CR>i
+autocmd FileType tex inoremap ;u \underline{}<++><Esc>?}<CR>i
 autocmd FileType tex inoremap ;f \footnote{}<++><Esc>?}<CR>i
 autocmd FileType tex inoremap ;ul \begin{itemize}<CR>\item <CR>\end{itemize}<CR><CR><++><Esc>?item<Space><CR>A
 autocmd FileType tex inoremap ;ol \begin{enumerate}<CR>\item <CR>\end{enumerate}<CR><CR><++><Esc>?item<Space><CR>A
