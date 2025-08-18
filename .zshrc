@@ -51,8 +51,8 @@ bindkey -s 'ƒ'  'cd "$HOME" && cd "$(dirname \"$(fzf)\")"\n'
 # Ï = alt+F
 bindkey -s 'Ï'  'cd "$HOME" && cd "$(dirname \"$(fzf)\")" && lf\n'
 # ˝ = alt+G
-bindkey -s '˝'  'cd "$HOME/Graduate School/semester-files/2025-summer" && lf\n'
-bindkey -s '^g' 'cd "$HOME/Graduate School/semester-files/2025-summer"\n'
+bindkey -s '˝'  'cd "$HOME/Graduate School/semester-files/2025-fall" && lf\n'
+bindkey -s '^g' 'cd "$HOME/Graduate School/semester-files/2025-fall"\n'
 # Í = alt+S
 bindkey -s 'Í'  'cd "$HOME/Sync" && lf\n'
 # Î = alt+D
