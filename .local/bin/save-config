@@ -14,8 +14,8 @@ do
     fi
 done 
 
-brewPacks="$HOME/Sync/.brew-packages"
-brewCasks="$HOME/Sync/.brew-casks"
+brewPacks="$HOME/Sync/.computer-backup/.brew-packages"
+brewCasks="$HOME/Sync/.computer-backup/.brew-casks"
 
 brew list --installed-on-request > "$brewPacks"
 brew list --cask > "$brewCasks"
