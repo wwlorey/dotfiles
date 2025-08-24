@@ -89,6 +89,9 @@ start-at-login = true
 
     alt-tab = 'workspace-back-and-forth'
 
+    ctrl-right = 'workspace next'
+    ctrl-left = 'workspace prev'
+
     cmd-ctrl-b = ['flatten-workspace-tree', 'mode main'] # balance (reset) layout
 
     cmd-ctrl-backspace = ['close-all-windows-but-current', 'mode main']
