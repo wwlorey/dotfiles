@@ -53,6 +53,8 @@ bindkey -s 'Ï'  'cd "$HOME" && cd "$(dirname \"$(fzf)\")" && lf\n'
 # ˝ = alt+G
 bindkey -s '˝'  'cd "$HOME/Graduate School/semester-files/2025-fall" && lf\n'
 bindkey -s '^g' 'cd "$HOME/Graduate School/semester-files/2025-fall"\n'
+# Ø = alt+O
+bindkey -s 'Ø'  'cd "$HOME/Career/2024-ozarks-counseling-center" && lf\n'
 # Í = alt+S
 bindkey -s 'Í'  'cd "$HOME/Sync" && lf\n'
 # Î = alt+D
