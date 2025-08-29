@@ -5,11 +5,7 @@
 isMuted=$(osascript -e "output muted of (get volume settings)")
 
 if  [ "$isMuted" == "true" ]; then
-  emoji="🔈"
   osascript -e "set volume without output muted"
 else
-  emoji="🔇"
   osascript -e "set volume with output muted"
 fi
-
-osascript -e "display notification \"Mute toggled\" with title \"$emoji\""
