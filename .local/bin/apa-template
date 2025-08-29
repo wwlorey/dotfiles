@@ -53,6 +53,13 @@ else
 fi
 
 cp -r $repo $dir
+
+if ! [[ $dir ]]
+then
+  echo Unable to create directory.
+  exit 1
+fi
+
 cd "$dir"
 rm -rf .git *.bcf *.blg *.log *.pdf *.xml *.bbl *.aux README.md LICENSE
 
