@@ -3,27 +3,31 @@
 
 printHelp() {
   echo "Usage: apa-template [OPTION]... directory
-Generates an APA7 template from \`truman-apa7-latex-template\` at the given directory path.
+Generates an APA7 template from \`truman-apa7-latex-template\` or \`student-apa7-latex-template\` at the given directory path.
 NOTE: this script will create a new directory for you and does not allow the use of an existing directory.
 
 Options
+  -s, --student        use the APA 7 Student template version, otherwise the Truman template will be used
+
+  The following options pertain only to the Truman template:
   -e, --exclude-bib   exclude the bibliography file when instantiating the template
   OR
-  -s, --simple        instantiate a simplified template (no title page, abstract, bibliography, or bibliography file)
+  -b, --basic         instantiate a simplified template (no title page, abstract, bibliography, or bibliography file)
 "
 }
 
-while getopts "esh" opt; do
+while getopts "ebsh" opt; do
   case $1 in
     -e | --exclude-bib) excludeBib=1 ;;
-    -s | --simple) simple=1 ;;
+    -b | --basic) basic=1 ;;
+    -s | --student) student=1 ;;
     -h | --help) printHelp && exit 1 ;;
     ?) printHelp && exit 1 ;;
   esac
   shift
 done
 
-if [ $simple ]; then
+if [ $basic ]; then
   excludeBib=1
 fi
 
@@ -42,25 +46,36 @@ fi
 
 file=$(basename $dir)
 
-cp -r ~/Repos/truman-apa7-latex-template $1
-cd $1
+if [ $student ]; then
+  repo="$HOME/Repos/student-apa7-latex-template/"
+else
+  repo="$HOME/Repos/truman-apa7-latex-template/"
+fi
+
+cp -r $repo $dir
+cd "$dir"
 rm -rf .git *.bcf *.blg *.log *.pdf *.xml *.bbl *.aux README.md LICENSE
 
 if [ $excludeBib ]; then
   rm -rf *.bib
 fi
 
-# Load the appropriate tex file into truman-apa7-template.tex, removing the unneeded one.
-if [ $simple ]; then
-  mv -f truman-apa7-template-SIMPLE.tex truman-apa7-template.tex
+if [ $student ]; then
+  mv student-apa7-template.tex $file.tex
 else
-  rm -rf truman-apa7-template-SIMPLE.tex
+  # Load the appropriate tex file into truman-apa7-template.tex, removing the unneeded one.
+  if [ $basic ]; then
+    mv -f truman-apa7-template-SIMPLE.tex truman-apa7-template.tex
+  else
+    rm -rf truman-apa7-template-SIMPLE.tex
+  fi
+
+  mv truman-apa7-template.tex $file.tex
 fi
 
-mv truman-apa7-template.tex $file.tex
 git init >> /dev/null
 git add --all >> /dev/null
 git commit -m "init" >> /dev/null
 
-echo "APA7 template created in \"$1\"."
+echo "APA7 template created in \"$dir\"."
 
