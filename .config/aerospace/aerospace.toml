@@ -49,6 +49,8 @@ start-at-login = true
 
     cmd-ctrl-f = 'fullscreen'
 
+    cmd-ctrl-shift-f = 'macos-native-fullscreen'
+
     alt-h = 'focus left'
     alt-j = 'focus down'
     alt-k = 'focus up'
