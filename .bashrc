@@ -70,8 +70,6 @@ if [[ "$OSTYPE" == "darwin"* ]];
 then
 	alias ls='ls -G'
 
-	alias brave='/Applications/Brave\ Browser.app/Contents/MacOS/Brave\ Browser'
-
 	alias o='open'
 else
 	alias ls='ls --color=auto'

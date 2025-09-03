@@ -3,7 +3,7 @@ SCRIPTS_DIR=$HOME/.local/bin
 export PATH="$PATH:$SCRIPTS_DIR"
 export EDITOR=nvim
 export VISUAL=nvim
-export BROWSER=brave
+export BROWSER="/Applications/Brave Browser.app/Contents/MacOS/Brave Browser"
 export BAT_THEME=OneHalfDark
 export VIMRC=$HOME/.config/nvim/init.vim
 
