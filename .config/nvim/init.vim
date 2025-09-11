@@ -185,6 +185,8 @@ autocmd FileType tex inoremap ;PC \parencite[cf.][]{<++>}<++><Esc>?]<CR>i
 autocmd FileType tex inoremap ;tc \textcite{}<++><Esc>?}<CR>i
 autocmd FileType tex inoremap ;Tc \textcite[]{<++>}<++><Esc>?]<CR>i
 autocmd FileType tex inoremap ;TC \textcite[cf.][]{<++>}<++><Esc>?]<CR>i
+autocmd FileType tex inoremap ;c \cite{}<++><Esc>?}<CR>i
+autocmd FileType tex inoremap ;C \cite[]{<++>}<++><Esc>?]<CR>i
 " General
 autocmd FileType tex inoremap ;i \textit{}<++><Esc>?}<CR>i
 autocmd FileType tex inoremap ;b \textbf{}<++><Esc>?}<CR>i

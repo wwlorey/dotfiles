@@ -37,3 +37,12 @@ yellow = "0xffea7f"
 [colors.primary]
 background = "0x24292e"
 foreground = "0xd1d5da"
+
+[[hints.enabled]]
+command = "open"
+hyperlinks = true
+mouse.enabled = true
+mouse.mods = "Shift"
+post_processing = true
+persist = false
+regex = "(ipfs:|ipns:|magnet:|mailto:|gemini://|gopher://|https://|http://|news:|file:|git://|ssh:|ftp://)[^\u0000-\u001F\u007F-\u009F<>\"\\s{-}\\^⟨⟩‘]+"
