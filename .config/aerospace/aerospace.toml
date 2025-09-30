@@ -2,14 +2,14 @@ start-at-login = true
 
 
 [[on-window-detected]]
-    if.app-id = 'org.alacritty'
-    run = 'move-node-to-workspace 1'
-[[on-window-detected]]
     if.app-id = 'com.anthropic.claudefordesktop'
-    run = 'move-node-to-workspace 2'
+    run = 'move-node-to-workspace 0'
 [[on-window-detected]]
     if.app-id = 'com.openai.chat'
-    run = 'move-node-to-workspace 2'
+    run = 'move-node-to-workspace 0'
+[[on-window-detected]]
+    if.app-id = 'org.alacritty'
+    run = 'move-node-to-workspace 1'
 [[on-window-detected]]
     if.app-id = 'com.apple.Preview'
     run = 'move-node-to-workspace 2'
@@ -69,6 +69,7 @@ start-at-login = true
     alt-minus = 'resize smart -50'
     alt-equal = 'resize smart +50'
 
+    ctrl-0 = 'workspace 0'
     ctrl-1 = 'workspace 1'
     ctrl-2 = 'workspace 2'
     ctrl-3 = 'workspace 3'
@@ -79,6 +80,7 @@ start-at-login = true
     ctrl-8 = 'workspace 8'
     ctrl-9 = 'workspace 9'
 
+    cmd-ctrl-0 = 'move-node-to-workspace 0'
     cmd-ctrl-1 = 'move-node-to-workspace 1'
     cmd-ctrl-2 = 'move-node-to-workspace 2'
     cmd-ctrl-3 = 'move-node-to-workspace 3'
