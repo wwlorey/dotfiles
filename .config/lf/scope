@@ -25,7 +25,7 @@ handle_mime() {
             highlight --replace-tabs="${HIGHLIGHT_TABWIDTH}" --out-format="${highlight_format}" \
                 --style="${HIGHLIGHT_STYLE}" --force -- "${FILE_PATH}" ;;
 	application/zip) atool --list -- "${FILE_PATH}" ;;
-        image/*) chafa --fill=block --fit-width --symbols=block --colors 256 "${FILE_PATH}" || exit 1;;
+        image/*) chafa --fill=block --symbols=block --colors 256 "${FILE_PATH}" || exit 1;;
         video/* | audio/*|application/octet-stream) mediainfo "${FILE_PATH}" || exit 1;;
         */pdf) pdftotext -l 10 -nopgbrk -q -- "${FILE_PATH}" - | head -n 30 ;;
         *opendocument*) odt2txt "${FILE_PATH}" ;;
