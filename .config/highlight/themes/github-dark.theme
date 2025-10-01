@@ -1,0 +1,47 @@
+
+Description="GitHub Dark"
+
+Categories = {"dark"}
+
+-- Based on GitHub Dark Neovim theme
+-- Source: https://github.com/projekt0n/github-nvim-theme
+
+Default        = { Colour="#e1e4e8" }  -- syntax.func_param
+Canvas         = { Colour="#24292e" }  -- bg
+Number         = { Colour="#79b8ff" }  -- syntax.constant
+Escape         = { Colour="#79b8ff" }  -- syntax.constant
+String         = { Colour="#9ecbff" }  -- syntax.string
+StringPreProc  = { Colour="#9ecbff" }  -- syntax.string
+BlockComment   = { Colour="#6a737d" }  -- syntax.comment
+PreProcessor   = { Colour="#f97583" }  -- syntax.keyword
+LineNum        = { Colour="#444d56" }  -- line_nr
+Operator       = { Colour="#f97583" }  -- syntax.keyword
+LineComment = BlockComment
+Interpolation  = { Colour="#ffab70" }  -- syntax.param
+
+Keywords = {
+  { Colour= "#f97583" },  -- syntax.keyword (keywords like if, for, return, class)
+  { Colour= "#79b8ff" },  -- syntax.variable/constant (types, variables, constants)
+  { Colour= "#79b8ff" },  -- syntax.json_label (type-like elements)
+  { Colour= "#b392f0" },  -- syntax.func (functions/methods)
+  { Colour= "#79b8ff" },  -- syntax.constant (built-in constants)
+  { Colour= "#85e89d" },  -- syntax.tag (HTML/XML tags, special identifiers)
+}
+
+-- LSP based elements:
+
+SemanticTokenTypes = {
+  { Type = 'type', Style = Keywords[2] },
+  { Type = 'class', Style = Keywords[2] },
+  { Type = 'struct', Style = Keywords[2] },
+  { Type = 'interface', Style = Keywords[2] },
+  { Type = 'parameter', Style = Interpolation },
+  { Type = 'variable', Style = Keywords[2] },
+  { Type = 'enumMember', Style = Keywords[5] },
+  { Type = 'function', Style = Keywords[4] },
+  { Type = 'method', Style = Keywords[4] },
+  { Type = 'keyword', Style = Keywords[1] },
+  { Type = 'number', Style = Number },
+  { Type = 'regexp', Style = String },
+  { Type = 'operator', Style = Operator },
+}

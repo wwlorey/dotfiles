@@ -8,13 +8,24 @@ set -o noclobber -o nounset
 FILE_PATH="${1}"         # Full path of the highlighted file
 HEIGHT="${2}"            # Height of preview pane in terminal lines
 
+# Highlight settings
+HIGHLIGHT_SIZE_MAX=${HIGHLIGHT_SIZE_MAX:-262143}  # 256KiB
+HIGHLIGHT_TABWIDTH=${HIGHLIGHT_TABWIDTH:-4}
+HIGHLIGHT_STYLE=${HIGHLIGHT_STYLE:-github-dark}
+
 handle_mime() {
     local mimetype="${1}"
     case "${mimetype}" in
 	text/html) w3m -dump "${FILE_PATH}" ;;
 	text/troff) man ./ "${FILE_PATH}" | col -b ;;
-	text/* | */xml)
-            if [ "$( stat --printf='%s' -- "${FILE_PATH}" )" -gt "${HIGHLIGHT_SIZE_MAX}" ]; then
+	application/zip) atool --list -- "${FILE_PATH}" ;;
+        image/*) chafa --fill=block --symbols=block --colors 256 "${FILE_PATH}" || exit 1;;
+        video/* | audio/*|application/octet-stream) mediainfo "${FILE_PATH}" || exit 1;;
+        */pdf) pdftotext -l 10 -nopgbrk -q -- "${FILE_PATH}" - | head -n 30 ;;
+        *opendocument*) odt2txt "${FILE_PATH}" ;;
+        *)
+            file_size=$(stat -f%z -- "${FILE_PATH}" 2>/dev/null || echo 0)
+            if [ "${file_size}" -gt "${HIGHLIGHT_SIZE_MAX}" ]; then
                 exit 2
             fi
             if [ "$( tput colors )" -ge 256 ]; then
@@ -22,13 +33,14 @@ handle_mime() {
             else
                 local highlight_format='ansi'
             fi
-            highlight --replace-tabs="${HIGHLIGHT_TABWIDTH}" --out-format="${highlight_format}" \
-                --style="${HIGHLIGHT_STYLE}" --force -- "${FILE_PATH}" ;;
-	application/zip) atool --list -- "${FILE_PATH}" ;;
-        image/*) chafa --fill=block --symbols=block --colors 256 "${FILE_PATH}" || exit 1;;
-        video/* | audio/*|application/octet-stream) mediainfo "${FILE_PATH}" || exit 1;;
-        */pdf) pdftotext -l 10 -nopgbrk -q -- "${FILE_PATH}" - | head -n 30 ;;
-        *opendocument*) odt2txt "${FILE_PATH}" ;;
+            if [ -f "$HOME/.config/highlight/themes/${HIGHLIGHT_STYLE}.theme" ]; then
+                highlight --replace-tabs="${HIGHLIGHT_TABWIDTH}" --out-format="${highlight_format}" \
+                    --config-file="$HOME/.config/highlight/themes/${HIGHLIGHT_STYLE}.theme" --force -- "${FILE_PATH}"
+            else
+                highlight --replace-tabs="${HIGHLIGHT_TABWIDTH}" --out-format="${highlight_format}" \
+                    --style="${HIGHLIGHT_STYLE}" --force -- "${FILE_PATH}"
+            fi
+            ;;
     esac
 }
 
