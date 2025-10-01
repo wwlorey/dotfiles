@@ -21,9 +21,13 @@ cmd delete ${{
   printf "%s\n  " "$fx"
   printf "Delete? [y/n] "
   read ans
-  [ $ans = "y" ] && trash $fx
+  if [ $ans = "y" ]; then
+    printf '%s\n' $fx | while IFS= read -r fileName; do
+      trash "$fileName"
+    done
+  fi
 }}
-map D delete $f
+map D delete
 
 cmd moveto ${{
 	destFile="$HOME/$(cd $HOME && fzf)"
