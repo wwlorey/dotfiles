@@ -43,6 +43,9 @@ start-at-login = true
 [[on-window-detected]]
     if.app-id = 'com.hnc.Discord'
     run = 'move-node-to-workspace 8'
+[[on-window-detected]]
+    if.app-id = 'com.makemkv.MakeMKV'
+    run = 'move-node-to-workspace 9'
 
 
 [mode.main.binding]
