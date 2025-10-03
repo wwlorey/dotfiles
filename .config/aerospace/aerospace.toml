@@ -46,6 +46,12 @@ start-at-login = true
 [[on-window-detected]]
     if.app-id = 'com.makemkv.MakeMKV'
     run = 'move-node-to-workspace 9'
+[[on-window-detected]]
+    if.app-id = 'fr.handbrake.HandBrake'
+    run = 'move-node-to-workspace 9'
+[[on-window-detected]]
+    if.app-id = 'ch.sudo.cyberduck'
+    run = 'move-node-to-workspace 9'
 
 
 [mode.main.binding]
