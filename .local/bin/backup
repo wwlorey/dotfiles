@@ -1,47 +1,89 @@
 #!/bin/bash
 
-dryRun=''
-path=''
-rsyncOptions=(--delete --archive --progress --verbose --exclude={.Xauthority,/.bash*,.cache,.cargo,/.config,.lesshst,/.local,.mozilla,.NERDTreeBookmarks,.node-gyp,.npm,.nvm,.texlive,.viminfo,/.vscode,.xsession*,.zcompdump,/.zprofile,/.zsh*} --delete-excluded)
-
 printHelp() {
   echo "Usage: backup [OPTION]...
-Backup the home directory to the provided path using rsync.
+Programmatically mounts backup media and performs the appropriate backup routine based on its contents.
 
 Options
   -d, --dry-run       perform a dry-run of the backup and print the results
-  -p, --path          backup destination path (expected to include the string 'thinkpad-backup')
 "
 }
 
+dryRun=''
 while [ $# -gt 0 ] ; do
   case $1 in
     -d | --dry-run) dryRun=1 ;;
-    -p | --path) path=$2 ;;
     -h | --help) printHelp && exit 1
   esac
   shift
 done
 
-if [ ! $path ]
+unmount () {
+  read -p "Unmount and re-encrypt disk? (y/n) " unmount
+  if [[ $unmount == "y" || $unmount == "Y" ]]
+  then
+    echo "Unmounting and re-encrypting disk."
+    sudo umount "$mapper"
+    sudo cryptsetup luksClose "$diskName"
+  fi
+}
+
+echo -e "\nDetected drives:"
+lsblk -o NAME,SIZE,TYPE,MOUNTPOINTS
+
+doneMounting=n
+while [[ $doneMounting == 'n' ]]
+do
+  read -p "Disk partition: " disk
+  diskName="backup-disk"
+
+  mountPoint="/media/$diskName"
+  mapper="/dev/mapper/$diskName"
+
+  diskIsOpen=$(sudo dmsetup ls | grep "$diskName")
+  if [ ! "$diskIsOpen" ]
+  then
+    sudo cryptsetup luksOpen "/dev/$disk" "$diskName"
+
+    if [ ! -d "$mountPoint" ]
+    then
+      sudo mkdir "$mountPoint"
+    fi
+
+    sudo mount "$mapper" "$mountPoint"
+  else
+    echo "$diskName is already encrypted/mounted."
+    unmount
+  fi
+
+  read -p "Continue? (do so if disk successfully mounted) (y/n) " doneMounting
+done
+
+
+dirListing=$(ls $mountPoint)
+if [[ $dirListing =~ thinkpad- ]]
 then
-	echo "Error: No destination provided for backup."
-	exit 1
-elif [[ ! "$path" =~ thinkpad-backup ]]
+  echo Backing up ThinkPad...
+  src="$HOME/"
+  dest="$mountPoint/thinkpad-backup/"
+
+  echo "Saving list of installed packages..."
+  pacman -Q > ~/.packages
+
+  backup-secret
+elif [[ $dirListing =~ auxiliary- ]]
 then
-	echo "Unexpected backup destination \"$path\". Path is expected to include \"thinkpad-backup\"."
-	exit 1
+  echo Backing up Auxiliary...
+  src="/mnt/Auxiliary/"
+  dest="$mountPoint/auxiliary-backup/"
 fi
 
-echo "Saving list of installed packages..."
-pacman -Q > ~/.packages
-
-backup-secret
+rsyncOptions=(--delete --archive --progress --verbose --exclude={.Xauthority,/.bash*,.cache,.cargo,/.config,.lesshst,/.local,.mozilla,.NERDTreeBookmarks,.node-gyp,.npm,.nvm,.rustup,.texlive,.viminfo,/.vscode,.xsession*,.zcompdump,/.zprofile,/.zsh*,/lost+found,/.Trash-*} --delete-excluded)
 
 if [ $dryRun ]
 then
   echo "Starting backup dry-run..."
-  sudo rsync --dry-run "${rsyncOptions[@]}" ~/ "$path"
+  sudo rsync --dry-run "${rsyncOptions[@]}" "$src" "$dest"
   exit 0
 else
   read -p "Continue with backup? (y/n) " continue
@@ -50,8 +92,10 @@ else
     read -p "Are you sure? (y/n) " continue
     if [[ $continue == "y" || $continue == "Y" ]]
     then
-    echo "Starting backup..."
-      sudo rsync "${rsyncOptions[@]}" ~/ "$path"
+      echo "Starting backup..."
+      sudo rsync "${rsyncOptions[@]}" "$src" "$dest"
+
+      unmount
       exit 0
     fi
   fi
