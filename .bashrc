@@ -62,6 +62,8 @@ alias grep='grep --color=auto'
 
 alias bibcache='rm -rf $(biber --cache)'
 
+alias ws='python3 -m http.server 8000'
+
 alias w='work'
 alias b='buy'
 alias k='keep'
