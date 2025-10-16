@@ -35,10 +35,10 @@ handle_mime() {
             fi
             if [ -f "$HOME/.config/highlight/themes/${HIGHLIGHT_STYLE}.theme" ]; then
                 highlight --replace-tabs="${HIGHLIGHT_TABWIDTH}" --out-format="${highlight_format}" \
-                    --config-file="$HOME/.config/highlight/themes/${HIGHLIGHT_STYLE}.theme" --force -- "${FILE_PATH}"
+                    --wrap --config-file="$HOME/.config/highlight/themes/${HIGHLIGHT_STYLE}.theme" --force -- "${FILE_PATH}"
             else
                 highlight --replace-tabs="${HIGHLIGHT_TABWIDTH}" --out-format="${highlight_format}" \
-                    --style="${HIGHLIGHT_STYLE}" --force -- "${FILE_PATH}"
+                    --wrap --style="${HIGHLIGHT_STYLE}" --force -- "${FILE_PATH}"
             fi
             ;;
     esac
