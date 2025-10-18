@@ -1,0 +1,50 @@
+{
+  "global": {
+    "check_for_updates_on_startup": true,
+    "show_in_menu_bar": true
+  },
+  "profiles": [
+    {
+      "name": "Default",
+      "selected": true,
+      "complex_modifications": {
+        "parameters": {
+          "basic.to_if_held_down_threshold_milliseconds": 120,
+          "basic.to_if_alone_timeout_milliseconds": 200
+        },
+        "rules": [
+          {
+            "description": "Map the Globe/Fn key to F13 while preserving M4 MacBook Air builtin keyboard F1–F12 behavior",
+            "manipulators": [
+              {
+                "type": "basic",
+                "from": {
+                  "key_code": "fn",
+                  "modifiers": { "optional": ["any"] }
+                },
+
+                /* Hold Globe → hold F13 (keyDown on threshold; keyUp on release) */
+                "to_if_held_down": [
+                  { "key_code": "f13" }
+                ],
+
+                /* Tap Globe quickly → tap F13 (nice-to-have for a quick toggle) */
+                "to_if_alone": [
+                  { "key_code": "f13" }
+                ],
+
+                /* If you press another key with Globe (e.g., Fn+F12), pass Fn through */
+                "to": [
+                  { "key_code": "fn" }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "devices": [],
+      "simple_modifications": [],
+      "fn_function_keys": []
+    }
+  ]
+}
