@@ -7,6 +7,9 @@
     {
       "name": "Default",
       "selected": true,
+      "simple_modifications": {
+        "caps_lock": "escape"
+      },
       "complex_modifications": {
         "parameters": {
           "basic.to_if_held_down_threshold_milliseconds": 120,
