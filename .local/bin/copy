@@ -49,7 +49,7 @@ if test -f "$dest/$oldTexFileName"; then
 fi
 
 cd $dest
-rm -rf .git *.bcf *.blg *.log *.pdf *.xml *.bbl *.aux
+rm -rf .git *.bcf *.blg *.log *.pdf *.xml *.bbl *.aux *.out
 
 git init >> /dev/null
 git add --all >> /dev/null
