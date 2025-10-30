@@ -58,6 +58,10 @@ bindkey -s '˝'  'cd "$HOME/Graduate School/semester-files/2025-fall" && lf\n'
 bindkey -s 'ø'  'cd "$HOME/Career/2024-ozarks-counseling-center"\n'
 # Ø = alt+O
 bindkey -s 'Ø'  'cd "$HOME/Career/2024-ozarks-counseling-center" && lf\n'
+# † = alt+t
+bindkey -s '†'  'cd "$HOME/Career/2025-private-practice"\n'
+# ˇ = alt+T
+bindkey -s 'ˇ'  'cd "$HOME/Career/2025-private-practice" && lf\n'
 # ß = alt+s
 bindkey -s 'ß'  'cd "$HOME/Sync"\n'
 # Í = alt+S
