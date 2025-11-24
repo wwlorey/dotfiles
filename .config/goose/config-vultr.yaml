@@ -1,4 +1,0 @@
-OPENAI_HOST: https://api.vultrinference.com
-OPENAI_BASE_PATH: v1/chat/completions
-GOOSE_PROVIDER: openai
-GOOSE_MODEL: kimi-k2-instruct
