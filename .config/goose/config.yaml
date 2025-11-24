@@ -1,5 +1,9 @@
+OPENAI_HOST: https://api.runpod.ai/v2/63uqy5cvze8ckn
 GOOSE_PROVIDER: openrouter
-GOOSE_MODEL: google/gemini-2.5-pro
+GOOSE_MODEL: qwen/qwen3-coder # https://openrouter.ai/qwen/qwen3-coder
+# GOOSE_MODEL: qwen/qwen3-coder-30b-a3b-instruct # https://openrouter.ai/qwen/qwen3-coder-30b-a3b-instruct
+# GOOSE_MODEL: minimax/minimax-m2 # https://openrouter.ai/minimax/minimax-m2
+# GOOSE_MODEL: openai/gpt-oss-120b # https://openrouter.ai/openai/gpt-oss-120b
 extensions:
   computercontroller:
     enabled: true
@@ -8,6 +12,13 @@ extensions:
     description: controls for webscraping, file caching, and automations
     display_name: Computer Controller
     timeout: 300
+    bundled: true
+    available_tools: []
+  extensionmanager:
+    enabled: true
+    type: platform
+    name: Extension Manager
+    description: Enable extension management tools for discovering, enabling, and disabling extensions
     bundled: true
     available_tools: []
   todo:
@@ -24,13 +35,6 @@ extensions:
     description: Search past conversations and load session summaries for contextual memory
     bundled: true
     available_tools: []
-  extensionmanager:
-    enabled: true
-    type: platform
-    name: Extension Manager
-    description: Enable extension management tools for discovering, enabling, and disabling extensions
-    bundled: true
-    available_tools: []
   developer:
     enabled: true
     type: builtin
@@ -41,7 +45,7 @@ extensions:
     bundled: true
     available_tools: []
   memory:
-    enabled: true
+    enabled: false
     type: builtin
     name: memory
     description: Tools to save and retrieve durable memories
@@ -49,32 +53,3 @@ extensions:
     timeout: 300
     bundled: true
     available_tools: []
-  tutorial:
-    enabled: true
-    type: builtin
-    name: tutorial
-    description: Access interactive tutorials and guides
-    display_name: Tutorial
-    timeout: 300
-    bundled: true
-    available_tools: []
-  autovisualiser:
-    enabled: true
-    type: builtin
-    name: autovisualiser
-    description: Data visualization and UI generation tools
-    display_name: Auto Visualiser
-    timeout: 300
-    bundled: true
-    available_tools: []
-GOOSE_MODE: auto
-hooks:
-  - event: stop
-    run:
-      - type: command
-        command: afplay /System/Library/Sounds/Blow.aiff
-
-  - event: notification
-    run:
-      - type: command
-        command: afplay /System/Library/Sounds/Blow.aiff
