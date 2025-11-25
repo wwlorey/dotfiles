@@ -64,6 +64,12 @@ alias bibcache='rm -rf $(biber --cache)'
 
 alias ws='python3 -m http.server 8000'
 
+alias cb='cargo build'
+alias cr='cargo run'
+alias ccb='cargo build 2>&1 | tee /dev/tty | pbcopy'
+
+alias eg='$EDITOR $HOME/Repos/dotfiles/.config/goose/config.yaml'
+
 alias w='work'
 alias b='buy'
 alias k='keep'

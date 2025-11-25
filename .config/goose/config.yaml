@@ -4,6 +4,7 @@ GOOSE_MODEL: qwen/qwen3-coder # https://openrouter.ai/qwen/qwen3-coder
 # GOOSE_MODEL: qwen/qwen3-coder-30b-a3b-instruct # https://openrouter.ai/qwen/qwen3-coder-30b-a3b-instruct
 # GOOSE_MODEL: minimax/minimax-m2 # https://openrouter.ai/minimax/minimax-m2
 # GOOSE_MODEL: openai/gpt-oss-120b # https://openrouter.ai/openai/gpt-oss-120b
+# GOOSE_MODEL: openai/gpt-oss-20b # https://openrouter.ai/openai/gpt-oss-20b
 extensions:
   computercontroller:
     enabled: true
@@ -44,12 +45,16 @@ extensions:
     timeout: 300
     bundled: true
     available_tools: []
-  memory:
-    enabled: false
-    type: builtin
-    name: memory
-    description: Tools to save and retrieve durable memories
-    display_name: Memory
+  fetch:
+    enabled: true
+    type: stdio
+    name: Fetch
+    description: Web content fetching and processing capabilities
+    cmd: uvx
+    args:
+    - mcp-server-fetch
+    envs: {}
+    env_keys: []
     timeout: 300
-    bundled: true
+    bundled: null
     available_tools: []
