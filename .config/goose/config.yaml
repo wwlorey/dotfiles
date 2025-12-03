@@ -1,10 +1,17 @@
-OPENAI_HOST: https://api.runpod.ai/v2/63uqy5cvze8ckn
+GOOSE_LEAD_PROVIDER: openrouter
+GOOSE_LEAD_MODEL: google/gemini-2.5-flash # https://openrouter.ai/google/gemini-2.5-flash
+
 GOOSE_PROVIDER: openrouter
 GOOSE_MODEL: qwen/qwen3-coder # https://openrouter.ai/qwen/qwen3-coder
 # GOOSE_MODEL: qwen/qwen3-coder-30b-a3b-instruct # https://openrouter.ai/qwen/qwen3-coder-30b-a3b-instruct
 # GOOSE_MODEL: minimax/minimax-m2 # https://openrouter.ai/minimax/minimax-m2
 # GOOSE_MODEL: openai/gpt-oss-120b # https://openrouter.ai/openai/gpt-oss-120b
 # GOOSE_MODEL: openai/gpt-oss-20b # https://openrouter.ai/openai/gpt-oss-20b
+# GOOSE_MODEL: x-ai/grok-4.1-fast # https://openrouter.ai/x-ai/grok-4.1-fast
+# GOOSE_MODEL: x-ai/grok-code-fast-1 # https://openrouter.ai/x-ai/grok-code-fast-1
+# GOOSE_MODEL: x-ai/grok-4.1-fast:free # https://openrouter.ai/x-ai/grok-4.1-fast:free
+# GOOSE_MODEL: google/gemini-2.5-flash # https://openrouter.ai/google/gemini-2.5-flash
+
 extensions:
   computercontroller:
     enabled: true
@@ -53,6 +60,34 @@ extensions:
     cmd: uvx
     args:
     - mcp-server-fetch
+    envs: {}
+    env_keys: []
+    timeout: 300
+    bundled: null
+    available_tools: []
+  youtubetranscript:
+    enabled: false
+    type: stdio
+    name: YouTube Transcript
+    description: Access YouTube video transcripts
+    cmd: uvx
+    args:
+    - --from
+    - git+https://github.com/jkawamoto/mcp-youtube-transcript
+    - mcp-youtube-transcript
+    envs: {}
+    env_keys: []
+    timeout: 300
+    bundled: null
+    available_tools: []
+  pdfreader:
+    enabled: false
+    type: stdio
+    name: PDF Reader
+    description: Read large and complex PDF documents
+    cmd: uvx
+    args:
+    - mcp-read-pdf
     envs: {}
     env_keys: []
     timeout: 300

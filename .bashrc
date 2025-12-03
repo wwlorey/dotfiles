@@ -68,7 +68,11 @@ alias cb='cargo build'
 alias cr='cargo run'
 alias ccb='cargo build 2>&1 | tee /dev/tty | pbcopy'
 
+alias g='goose'
+alias gsr='goose session --resume'
 alias eg='$EDITOR $HOME/Repos/dotfiles/.config/goose/config.yaml'
+
+alias oc='opencode'
 
 alias w='work'
 alias b='buy'
