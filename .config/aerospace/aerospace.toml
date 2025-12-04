@@ -8,6 +8,9 @@ start-at-login = true
     if.app-id = 'com.openai.chat'
     run = 'move-node-to-workspace 0'
 [[on-window-detected]]
+    if.app-id = 'com.brave.Browser.app.ggjocahimgaohmigbfhghnlfcnjemagj' # Grok
+    run = 'move-node-to-workspace 0'
+[[on-window-detected]]
     if.app-id = 'org.alacritty'
     run = 'move-node-to-workspace 1'
 [[on-window-detected]]

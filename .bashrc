@@ -22,6 +22,7 @@ alias gdss='git diff --staged --stat'
 alias gfuz='git-checkout-fuzzy'
 alias gl='git log --graph'
 alias glp='git log --patch'
+alias gm='git merge'
 alias gpul='git pull'
 alias gpus='git push'
 alias gpusi='git-push-init'
@@ -73,6 +74,9 @@ alias gsr='goose session --resume'
 alias eg='$EDITOR $HOME/Repos/dotfiles/.config/goose/config.yaml'
 
 alias oc='opencode'
+
+alias ti='sh <(curl https://create.tauri.app/sh)' # Initialize Tauri
+alias td='pnpm tauri dev'
 
 alias w='work'
 alias b='buy'
