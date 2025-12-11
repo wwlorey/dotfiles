@@ -44,6 +44,7 @@ alias cp='cp -iv'
 alias mv='mv -iv'
 
 alias v='nvim'
+alias vd='nvim -d'
 alias ev='$EDITOR $HOME/Repos/dotfiles/.config/nvim/init.vim'
 
 alias t='tmux'
@@ -77,6 +78,8 @@ alias oc='opencode'
 
 alias ti='sh <(curl https://create.tauri.app/sh)' # Initialize Tauri
 alias td='pnpm tauri dev'
+
+alias pk='port-kill'
 
 alias w='work'
 alias b='buy'

@@ -1,0 +1,34 @@
+#!/bin/bash
+
+if [ -z "$1" ]; then
+    echo "Error: No port number provided."
+    echo "Usage: $0 <port>"
+    exit 1
+fi
+
+PORT="$1"
+
+# Find PIDs using the port (terse output with -t)
+PIDS=$(sudo lsof -t -i:"$PORT")
+
+if [ -z "$PIDS" ]; then
+    echo "No process found using port $PORT."
+    exit 0
+fi
+
+echo "Found process(es) on port $PORT (PIDs: $PIDS)"
+
+# First try graceful termination (SIGTERM)
+echo "Attempting graceful kill..."
+sudo kill $PIDS
+
+# Wait a moment and check if still running
+sleep 2
+STILL_RUNNING=$(sudo lsof -t -i:"$PORT" 2>/dev/null)
+
+if [ -n "$STILL_RUNNING" ]; then
+    echo "Process did not terminate gracefully. Forcing kill (SIGKILL)..."
+    sudo kill -9 $PIDS
+else
+    echo "Process terminated successfully."
+fi

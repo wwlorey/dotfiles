@@ -50,10 +50,6 @@ bindkey -s '^f' 'dir=$(pwd) && cd "$HOME" && fzf-wrapper && cd $dir && unset dir
 bindkey -s 'ƒ'  'cd "$HOME" && cd "$(dirname \"$(fzf)\")"\n'
 # Ï = alt+F
 bindkey -s 'Ï'  'cd "$HOME" && cd "$(dirname \"$(fzf)\")" && lf\n'
-# © = alt+g
-bindkey -s '©' 'cd "$HOME/Graduate School/semester-files/2025-fall"\n'
-# ˝ = alt+G
-bindkey -s '˝'  'cd "$HOME/Graduate School/semester-files/2025-fall" && lf\n'
 # ø = alt+o
 bindkey -s 'ø'  'cd "$HOME/Career/2024-ozarks-counseling-center"\n'
 # Ø = alt+O
