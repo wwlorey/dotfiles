@@ -16,16 +16,25 @@ Options
 "
 }
 
-while getopts "ebsh" opt; do
-  case $1 in
-    -e | --exclude-bib) excludeBib=1 ;;
-    -b | --basic) basic=1 ;;
-    -s | --student) student=1 ;;
-    -h | --help) printHelp && exit 1 ;;
-    ?) printHelp && exit 1 ;;
+while getopts "ebsh-:" opt; do
+  case $opt in
+    e) excludeBib=1 ;;
+    b) basic=1 ;;
+    s) student=1 ;;
+    h) printHelp && exit 0 ;;
+    -)
+      case "${OPTARG}" in
+        student)      student=1 ;;
+        exclude-bib)  excludeBib=1 ;;
+        basic)        basic=1 ;;
+        help)         printHelp && exit 0 ;;
+        *) echo "Invalid option --${OPTARG}" >&2 ; printHelp && exit 1 ;;
+      esac ;;
+    \?) printHelp && exit 1 ;;
   esac
-  shift
 done
+
+shift $((OPTIND-1))
 
 if [ $basic ]; then
   excludeBib=1
@@ -36,6 +45,11 @@ dir=$1
 if ! [[ $dir ]]
 then
   echo Please provide directory name.
+  exit 1
+fi
+
+if [[ "$dir" == -* ]] || [[ "$dir" =~ ^-+$ ]]; then
+  echo "Error: Directory name cannot start with '-' or be only dashes."
   exit 1
 fi
 
@@ -61,10 +75,10 @@ then
 fi
 
 cd "$dir"
-rm -rf .git *.bcf *.blg *.log *.pdf *.xml *.bbl *.aux README.md LICENSE
+rm -rf .git "*.bcf" "*.blg" "*.log" "*.pdf" "*.xml" "*.bbl" "*.aux" README.md LICENSE
 
 if [ $excludeBib ]; then
-  rm -rf *.bib
+  rm -rf "*.bib"
 fi
 
 if [ $student ]; then
