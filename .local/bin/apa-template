@@ -75,10 +75,10 @@ then
 fi
 
 cd "$dir"
-rm -rf .git "*.bcf" "*.blg" "*.log" "*.pdf" "*.xml" "*.bbl" "*.aux" README.md LICENSE
+trash .git *.bcf *.blg *.log *.pdf *.xml *.bbl *.aux README.md LICENSE 2>/dev/null || true
 
 if [ $excludeBib ]; then
-  rm -rf "*.bib"
+  trash *.bib 2>/dev/null || true
 fi
 
 if [ $student ]; then
@@ -88,7 +88,7 @@ else
   if [ $basic ]; then
     mv -f truman-apa7-template-SIMPLE.tex truman-apa7-template.tex
   else
-    rm -rf truman-apa7-template-SIMPLE.tex
+    trash truman-apa7-template-SIMPLE.tex 2>/dev/null || true
   fi
 
   mv truman-apa7-template.tex $file.tex
