@@ -32,6 +32,9 @@ alias gshk='git stash --keep-index'
 alias gshl='git stash list'
 alias gshp='git stash pop'
 alias gsmui='git submodule update --init'
+alias gwa='git worktree add'
+alias gwl='git worktree list'
+alias gwr='git worktree remove'
 
 alias r='ranger'
 
@@ -78,6 +81,7 @@ alias oc='opencode'
 
 alias ti='sh <(curl https://create.tauri.app/sh)' # Initialize Tauri
 alias td='pnpm tauri dev'
+alias tk='port-kill 1420'
 
 alias pk='port-kill'
 
