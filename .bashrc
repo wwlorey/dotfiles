@@ -79,6 +79,8 @@ alias eg='$EDITOR $HOME/Repos/dotfiles/.config/goose/config.yaml'
 
 alias oc='opencode'
 
+alias cl='claude'
+
 alias ti='sh <(curl https://create.tauri.app/sh)' # Initialize Tauri
 alias td='pnpm tauri dev'
 alias tk='port-kill 1420'
