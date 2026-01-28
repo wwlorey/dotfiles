@@ -1,0 +1,112 @@
+#!/usr/bin/env bash
+
+# ┌───────────────────────────────────────────────────────────────┐
+# │  macOS Audio Recorder  (WAV format)                           │
+# │  Requires: ffmpeg (brew install ffmpeg)                       │
+# └───────────────────────────────────────────────────────────────┘
+
+set -u
+
+# ==================== CONFIGURATION ====================
+
+DEFAULT_DURATION=0           # 0 = record until Ctrl+C
+DEFAULT_QUALITY="cd"         # cd = CD quality (44100 Hz, stereo, 16-bit)
+                             # You can also use: "dat" (48000), "voice" (8000 Hz mono), etc.
+
+# ==================== AUTO FILENAME ====================
+
+if [[ -z "${1:-}" ]]; then
+    filename="recording_$(date +%Y%m%d-%H%M%S).wav"
+else
+    filename="$1"
+    # Add .wav if user forgot extension
+    if [[ ! "$filename" =~ \.wav$ ]]; then
+        filename="${filename}.wav"
+    fi
+fi
+
+# ==================== ARGUMENT PARSING ====================
+
+duration="$DEFAULT_DURATION"
+show_help=false
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -h|--help)
+            show_help=true
+            shift
+            ;;
+        -d|--duration)
+            duration="$2"
+            shift 2
+            ;;
+        -*)
+            echo "Unknown option: $1" >&2
+            show_help=true
+            shift
+            ;;
+        *)
+            filename="$1"
+            if [[ ! "$filename" =~ \.wav$ ]]; then
+                filename="${filename}.wav"
+            fi
+            shift
+            ;;
+    esac
+done
+
+if [[ "$show_help" = true ]]; then
+    cat << 'EOF'
+Usage: ./record-macos.sh [OPTIONS] [filename.wav]
+
+Options:
+  -h, --help              Show this help
+  -d, --duration SECONDS  Record for specified seconds (default: until Ctrl+C)
+
+Examples:
+  ./record-macos.sh                        # → recording_YYYYMMDD-HHMMSS.wav (until Ctrl+C)
+  ./record-macos.sh meeting.wav            # save as meeting.wav
+  ./record-macos.sh -d 180 interview       # record 3 min → interview.wav
+EOF
+    exit 0
+fi
+
+# ==================== MAIN RECORDING ====================
+
+echo "┌──────────────────────────────────────────────┐"
+echo "│  Recording audio (mic input)...              │"
+echo "│  Press Ctrl+C to stop                        │"
+if [[ $duration -gt 0 ]]; then
+    echo "│  Auto-stop after $duration seconds           │"
+fi
+echo "└──────────────────────────────────────────────┘"
+echo "File: $filename"
+echo ""
+
+# List devices once (uncomment if you want to choose specific input)
+# ffmpeg -f avfoundation -list_devices true -i ""
+
+# Core recording command
+# ":1" usually = built-in microphone (run list_devices to confirm)
+if [[ $duration -gt 0 ]]; then
+    ffmpeg -f avfoundation -i ":1" -t "$duration" -c:a pcm_s16le "$filename" 2>/dev/null
+else
+    ffmpeg -f avfoundation -i ":1" -c:a pcm_s16le "$filename" 2>/dev/null
+fi
+
+# ==================== FINISH MESSAGE ====================
+
+if [[ -f "$filename" && -s "$filename" ]]; then
+    size=$(du -h "$filename" | cut -f1)
+    echo ""
+    echo "Recording saved → $filename"
+    echo "Size: $size"
+    echo "Done ✓"
+    
+    # Optional: play it back immediately (uncomment if desired)
+    # afplay "$filename" &
+else
+    echo "Error: No recording saved (permission denied? mic not available? too short?)" >&2
+    rm -f "$filename" 2>/dev/null
+    exit 1
+fi

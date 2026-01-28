@@ -94,6 +94,8 @@ alias t='todo'
 alias b='buy'
 alias k='keep'
 
+alias h='hours'
+
 if [[ "$OSTYPE" == "darwin"* ]];
 then
 	alias ls='ls -G'
