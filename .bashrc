@@ -24,6 +24,7 @@ alias gi='git init'
 alias gl='git log --graph'
 alias glp='git log --patch'
 alias gm='git merge'
+alias gmm='git merge master'
 alias gpul='git pull'
 alias gpus='git push'
 alias gpusi='git-push-init'
@@ -82,8 +83,7 @@ alias oc='opencode'
 
 alias cl='claude'
 
-alias ti='sh <(curl https://create.tauri.app/sh)' # Initialize Tauri
-alias td='pnpm tauri dev'
+# Tauri
 alias tk='port-kill 1420'
 
 alias pk='port-kill'
