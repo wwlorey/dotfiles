@@ -50,14 +50,18 @@ bindkey -s '^f' 'dir=$(pwd) && cd "$HOME" && fzf-wrapper && cd $dir && unset dir
 bindkey -s 'ƒ'  'cd "$HOME" && cd "$(dirname \"$(fzf)\")"\n'
 # Ï = alt+F
 bindkey -s 'Ï'  'cd "$HOME" && cd "$(dirname \"$(fzf)\")" && lf\n'
+# ç = alt+c
+bindkey -s 'ç'  'cd "$HOME/Career"\n'
+# Ç = alt+C
+bindkey -s 'Ç'  'cd "$HOME/Career" && lf\n'
 # ø = alt+o
 bindkey -s 'ø'  'cd "$HOME/Career/2024-ozarks-counseling-center"\n'
 # Ø = alt+O
 bindkey -s 'Ø'  'cd "$HOME/Career/2024-ozarks-counseling-center" && lf\n'
 # † = alt+t
-bindkey -s '†'  'cd "$HOME/Career/2025-private-practice"\n'
+bindkey -s '†'  'cd "$HOME/Career/private-practice"\n'
 # ˇ = alt+T
-bindkey -s 'ˇ'  'cd "$HOME/Career/2025-private-practice" && lf\n'
+bindkey -s 'ˇ'  'cd "$HOME/Career/private-practice" && lf\n'
 # ß = alt+s
 bindkey -s 'ß'  'cd "$HOME/Sync"\n'
 # Í = alt+S
@@ -66,6 +70,10 @@ bindkey -s 'Í'  'cd "$HOME/Sync" && lf\n'
 bindkey -s '∂'  'cd "$HOME/Documents"\n'
 # Î = alt+D
 bindkey -s 'Î'  'cd "$HOME/Documents" && lf\n'
+# ∂ = alt+d
+bindkey -s '∂'  'cd "$HOME/Documents/notes"\n'
+# Î = alt+D
+bindkey -s 'Î'  'cd "$HOME/Documents/notes" && lf\n'
 # ∑ = alt+w
 bindkey -s '∑'  'cd "$HOME/Downloads"\n'
 # „ = alt+W
