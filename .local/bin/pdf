@@ -31,8 +31,12 @@ then
 
   ebook-convert $epubFile $pdfFile
 else
-  echo "[unoconv] Converting docx/pptx (all files provided)..."
+  echo "[libreoffice] Converting docx/pptx (all files provided)..."
 
-  unoconv -f pdf "$@"
+  for file in "$@"; do
+    outdir="$(dirname "$file")"
+    echo "  Converting '$file' -> '$outdir/'"
+    /Applications/LibreOffice.app/Contents/MacOS/soffice --headless --convert-to pdf --outdir "$outdir" "$file"
+  done
 fi
 
