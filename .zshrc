@@ -70,10 +70,6 @@ bindkey -s 'Í'  'cd "$HOME/Sync" && lf\n'
 bindkey -s '∂'  'cd "$HOME/Documents"\n'
 # Î = alt+D
 bindkey -s 'Î'  'cd "$HOME/Documents" && lf\n'
-# ∂ = alt+d
-bindkey -s '∂'  'cd "$HOME/Documents/notes"\n'
-# Î = alt+D
-bindkey -s 'Î'  'cd "$HOME/Documents/notes" && lf\n'
 # ∑ = alt+w
 bindkey -s '∑'  'cd "$HOME/Downloads"\n'
 # „ = alt+W
@@ -131,3 +127,5 @@ case ":$PATH:" in
   *":$PNPM_HOME:"*) ;;
   *) export PATH="$PNPM_HOME:$PATH" ;;
 esac
+
+eval "$(direnv hook zsh)"
