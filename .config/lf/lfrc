@@ -3,6 +3,15 @@ set shell zsh
 # Periodically check for directory updates
 set period 1
 
+# Keep tmux @shell_cwd in sync so tmux bindings (e.g. prefix-o) open the
+# directory currently selected in lf, not the one from when lf launched.
+cmd on-cd &{{
+  if [ -n "$TMUX" ]; then
+    tmux set-option -p @shell_cwd "$PWD"
+  fi
+}}
+on-cd
+
 set hiddenfiles ".*:*.aux:*.log:*.bbl:*.bcf:*.blg:*.run.xml"
 
 set mouse true

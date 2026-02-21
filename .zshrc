@@ -10,7 +10,10 @@ PS1='%F{yellow}%4>>%n%<<%f%F{blue}@%f%F{red}%m%f %B%1~%b %B%F{blue}>%f%b '
 # Git prompt
 GIT_PS1_SHOWDIRTYSTATE=1
 GIT_PS1_SHOWCOLORHINTS=1
-precmd () { RPROMPT=$(__git_ps1 " (%s)") }
+precmd () {
+  RPROMPT=$(__git_ps1 " (%s)")
+  [ -n "$TMUX" ] && tmux set-option -qp @shell_cwd "$PWD"
+}
 
 # Keep track of history
 export HISTSIZE=10000
