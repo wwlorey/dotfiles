@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+
+staged=false
+push=false
+
+while [ $# -gt 0 ]; do
+  case $1 in
+    --staged) staged=true ;;
+    --push) push=true ;;
+    -h | --help)
+      echo "Usage: git commit-auto [--staged] [--push]"
+      echo ""
+      echo "  --staged  Only commit what's already staged (skip git add -A)"
+      echo "  --push    Push after committing"
+      exit 0
+      ;;
+    *)
+      echo "Unknown option: $1"
+      exit 1
+      ;;
+  esac
+  shift
+done
+
+if ! $staged; then
+  git add -A
+fi
+
+if git diff --staged --quiet; then
+  echo "Nothing to commit."
+  exit 0
+fi
+
+diff=$(git diff --staged)
+status=$(git status --short)
+
+prompt="You are a commit message generator. Given the following git diff and status, write a single concise commit message. Output ONLY the commit message text, nothing else. No quotes, no prefixes, no explanation.
+
+git status:
+$status
+
+git diff:
+$diff"
+
+msg=$(claude -p "$prompt" --model haiku)
+
+if [ -z "$msg" ]; then
+  echo "Failed to generate commit message."
+  exit 1
+fi
+
+echo "Committing: $msg"
+git commit -m "$msg"
+
+if $push; then
+  git push
+fi
