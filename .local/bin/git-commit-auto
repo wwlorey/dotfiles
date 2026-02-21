@@ -42,7 +42,26 @@ $status
 git diff:
 $diff"
 
+spin() {
+  local chars='⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'
+  while true; do
+    for ((i = 0; i < ${#chars}; i++)); do
+      printf '\r%s Generating commit message...' "${chars:$i:1}"
+      sleep 0.08
+    done
+  done
+}
+
+spin &
+spin_pid=$!
+trap 'kill $spin_pid 2>/dev/null' EXIT
+
 msg=$(claude -p "$prompt" --model haiku)
+
+kill $spin_pid 2>/dev/null
+wait $spin_pid 2>/dev/null
+trap - EXIT
+printf '\r\033[K'
 
 if [ -z "$msg" ]; then
   echo "Failed to generate commit message."
