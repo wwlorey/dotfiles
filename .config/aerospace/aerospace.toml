@@ -55,8 +55,6 @@ start-at-login = true
 
 
 [mode.main.binding]
-    cmd-ctrl-t = 'layout tiles horizontal vertical'
-    cmd-ctrl-a = 'layout accordion horizontal vertical'
     cmd-alt-f = ['layout floating tiling', 'mode main']
 
     cmd-ctrl-f = 'fullscreen'
