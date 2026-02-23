@@ -51,7 +51,7 @@ alias v='nvim'
 alias vd='nvim -d'
 alias ev='$EDITOR $HOME/Repos/dotfiles/.config/nvim/init.vim'
 
-alias tx='tmux'
+alias t='tmux'
 alias et='$EDITOR $HOME/Repos/dotfiles/.config/tmux/tmux.conf'
 alias ta='tmux attach'
 
@@ -91,7 +91,7 @@ alias pk='port-kill'
 
 alias w='work'
 alias l='life'
-alias t='todo'
+alias td='todo'
 alias b='buy'
 alias k='keep'
 
