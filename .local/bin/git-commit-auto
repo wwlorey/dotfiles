@@ -1,4 +1,10 @@
 #!/usr/bin/env bash
+set -e
+
+if ! git rev-parse --git-dir > /dev/null 2>&1; then
+  echo "fatal: not a git repository (or any of the parent directories): .git"
+  exit 1
+fi
 
 staged=false
 push=false
@@ -54,12 +60,20 @@ spin() {
 
 spin &
 spin_pid=$!
-trap 'kill $spin_pid 2>/dev/null' EXIT
+trap 'kill $spin_pid 2>/dev/null; wait $spin_pid 2>/dev/null; printf "\r\033[K"' EXIT
 
-msg=$(claude -p "$prompt" --model haiku)
+msg=$(claude-wrapper -p "$prompt" --model haiku) || {
+  kill $spin_pid 2>/dev/null || true
+  wait $spin_pid 2>/dev/null || true
+  trap - EXIT
+  printf '\r\033[K'
+  echo "Failed to generate commit message:"
+  echo "$msg"
+  exit 1
+}
 
-kill $spin_pid 2>/dev/null
-wait $spin_pid 2>/dev/null
+kill $spin_pid 2>/dev/null || true
+wait $spin_pid 2>/dev/null || true
 trap - EXIT
 printf '\r\033[K'
 
