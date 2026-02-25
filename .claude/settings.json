@@ -3,6 +3,17 @@
     "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
   },
   "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$HOME/.claude/hooks/require-claude-wrapper.sh"
+          }
+        ]
+      }
+    ],
     "Notification": [
       {
         "hooks": [
