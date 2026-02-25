@@ -82,7 +82,7 @@ alias eg='$EDITOR $HOME/Repos/dotfiles/.config/goose/config.yaml'
 
 alias oc='opencode'
 
-alias cl='claude'
+alias cl='claude-wrapper'
 
 # Tauri
 alias tk='port-kill 1420'
