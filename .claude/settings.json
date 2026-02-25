@@ -19,7 +19,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "afplay /System/Library/Sounds/Blow.aiff"
+            "command": "afplay /System/Library/Sounds/Blow.aiff &>/dev/null &"
           }
         ]
       }
@@ -29,7 +29,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "afplay /System/Library/Sounds/Blow.aiff"
+            "command": "afplay /System/Library/Sounds/Blow.aiff &>/dev/null &"
           }
         ]
       }
