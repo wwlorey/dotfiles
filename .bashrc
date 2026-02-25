@@ -116,3 +116,4 @@ if [[ $TERM == alacritty ]]; then export TERM=xterm-256color; fi
 # Use vi-style command line editing
 set -o vi
 
+. rc-secret
