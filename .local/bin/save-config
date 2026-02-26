@@ -8,7 +8,7 @@ do
     then
         cd "$dir"
         echo "---$dir---"
-        rsync --archive --verbose --recursive --exclude={.git*,README.md} . ~/
+        rsync --archive --verbose --recursive --exclude={.git*,README.md,AGENTS.md,CLAUDE.md} . ~/
     else
         echo "'$dir' does not exist."
     fi
