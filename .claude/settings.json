@@ -10,6 +10,10 @@
           {
             "type": "command",
             "command": "$HOME/.claude/hooks/require-claude-wrapper.sh"
+          },
+          {
+            "type": "command",
+            "command": "python3 $HOME/.claude/hooks/protect-dirs.py"
           }
         ]
       }
