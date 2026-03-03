@@ -1,0 +1,16 @@
+#!/bin/bash
+
+set -euo pipefail  # Exit on error, undefined vars, pipe failures
+
+PROMPT_FILES=(
+  "$HOME/.MEMENTO.md"
+  "./BACKPRESSURE.md"
+  "./specs/README.md"
+)
+
+args=()
+for f in "${PROMPT_FILES[@]}"; do
+  [[ -f "$f" ]] && args+=(--append-system-prompt-file "$f")
+done
+
+exec claude-wrapper-secret "${args[@]}" "$@"
