@@ -49,6 +49,9 @@ cmd moveto ${{
 }}
 map m moveto $f
 
+cmd yank-name &basename "$f" | tr -d '\n' | pbcopy
+map Y yank-name
+
 map A rename      # End of filename
 map C push A<c-u> # New filename
 map I push A<c-a> # Beginning of filename
