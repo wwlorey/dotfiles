@@ -1,5 +1,7 @@
 set shell zsh
 
+cmd v $nvim "$1"
+
 # Periodically check for directory updates
 set period 1
 
