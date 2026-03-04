@@ -40,6 +40,8 @@ cmd delete ${{
 }}
 map D delete
 
+cmd m %mkdir -p "$@"
+
 cmd moveto ${{
 	destFile="$HOME/$(cd $HOME && fzf)"
   destPath="$(dirname $destFile)"
