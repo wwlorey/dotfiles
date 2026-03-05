@@ -132,3 +132,6 @@ case ":$PATH:" in
 esac
 
 eval "$(direnv hook zsh)"
+
+
+export PROMPT_FILES="$HOME/.MEMENTO.md:./BACKPRESSURE.md:./specs/README.md"

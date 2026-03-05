@@ -2,15 +2,21 @@
 
 set -euo pipefail  # Exit on error, undefined vars, pipe failures
 
-PROMPT_FILES=(
-  "$HOME/.MEMENTO.md"
-  "./BACKPRESSURE.md"
-  "./specs/README.md"
-)
-
 args=()
-for f in "${PROMPT_FILES[@]}"; do
-  [[ -f "$f" ]] && args+=(--append-system-prompt-file "$f")
-done
+if [[ -z "${PROMPT_FILES:-}" ]]; then
+  echo "Warning: PROMPT_FILES not set" >&2
+else
+  IFS=':' read -ra _prompt_files <<< "$PROMPT_FILES"
+
+  for f in "${_prompt_files[@]}"; do
+    expanded="${f/\$HOME/$HOME}"
+    expanded="${expanded/#~/$HOME}"
+    if [[ -f "$expanded" ]]; then
+      args+=(--append-system-prompt-file "$expanded")
+    else
+      echo "Warning: $expanded not found" >&2
+    fi
+  done
+fi
 
 exec claude-wrapper-secret "${args[@]}" "$@"
