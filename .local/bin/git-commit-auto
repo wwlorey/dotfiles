@@ -70,11 +70,14 @@ spin &
 spin_pid=$!
 trap 'kill $spin_pid 2>/dev/null; wait $spin_pid 2>/dev/null; printf "\r\033[K"' EXIT
 
-msg=$(claude-wrapper -p "$prompt" --model haiku) || {
+errfile=$(mktemp)
+msg=$(claude-wrapper -p "$prompt" --model haiku 2>"$errfile") || {
   kill $spin_pid 2>/dev/null || true
   wait $spin_pid 2>/dev/null || true
   trap - EXIT
   printf '\r\033[K'
+  cat "$errfile" >&2
+  rm -f "$errfile"
   echo "Failed to generate commit message:"
   echo "$msg"
   exit 1
@@ -84,6 +87,11 @@ kill $spin_pid 2>/dev/null || true
 wait $spin_pid 2>/dev/null || true
 trap - EXIT
 printf '\r\033[K'
+
+if [ -s "$errfile" ]; then
+  cat "$errfile" >&2
+fi
+rm -f "$errfile"
 
 if [ -z "$msg" ]; then
   echo "Failed to generate commit message."
