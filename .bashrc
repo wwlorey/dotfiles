@@ -95,6 +95,7 @@ alias l='life'
 alias td='todo'
 alias b='buy'
 alias k='keep'
+alias q='quick'
 
 alias h='hours'
 
