@@ -8,15 +8,21 @@ if [[ -z "${PROMPT_FILES:-}" ]]; then
 else
   IFS=':' read -ra _prompt_files <<< "$PROMPT_FILES"
 
+  studies=()
   for f in "${_prompt_files[@]}"; do
     expanded="${f/\$HOME/$HOME}"
     expanded="${expanded/#~/$HOME}"
     if [[ -f "$expanded" ]]; then
-      args+=(--append-system-prompt-file "$expanded")
+      studies+=("study @$expanded")
     else
       echo "Warning: $expanded not found" >&2
     fi
   done
+
+  if [[ ${#studies[@]} -gt 0 ]]; then
+    instruction=$(IFS='; '; echo "${studies[*]}")
+    args+=(--append-system-prompt "$instruction")
+  fi
 fi
 
 exec claude-wrapper-secret "${args[@]}" "$@"
