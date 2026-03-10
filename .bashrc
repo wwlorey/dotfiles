@@ -99,6 +99,10 @@ alias q='quick'
 
 alias h='hours'
 
+alias cn='casenote'
+alias cna='casenote agg'
+alias cnn='casenote new'
+
 if [[ "$OSTYPE" == "darwin"* ]];
 then
 	alias ls='ls -G'
