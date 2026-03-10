@@ -51,6 +51,7 @@
       "Read ~/Library/Application Support/1Password/**",
       "Read ~/.password-store/**",
       "Read ~/.config/keybase/**",
+      "Read ~/.Trash/**",
 
       "Grep ~/.ssh/**",
       "Grep ~/.gnupg/**",
@@ -91,6 +92,7 @@
       "Grep ~/Library/Application Support/1Password/**",
       "Grep ~/.password-store/**",
       "Grep ~/.config/keybase/**",
+      "Grep ~/.Trash/**",
 
       "Glob ~/.ssh/**",
       "Glob ~/.gnupg/**",
@@ -122,6 +124,7 @@
       "Glob ~/Library/Application Support/1Password/**",
       "Glob ~/.password-store/**",
       "Glob ~/.config/keybase/**",
+      "Glob ~/.Trash/**",
 
       "Edit ~/.ssh/**",
       "Edit ~/.gnupg/**",
@@ -148,6 +151,7 @@
       "Edit ~/.age/**",
       "Edit ~/.env",
       "Edit ~/.env.*",
+      "Edit ~/.Trash/**",
       "Edit /usr/local/bin/**",
       "Edit /opt/homebrew/bin/**",
 
@@ -176,6 +180,7 @@
       "Write ~/.age/**",
       "Write ~/.env",
       "Write ~/.env.*",
+      "Write ~/.Trash/**",
       "Write /usr/local/bin/**",
       "Write /opt/homebrew/bin/**",
 
