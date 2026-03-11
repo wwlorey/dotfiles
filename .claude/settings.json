@@ -9,7 +9,7 @@
   },
   "sandbox": {
     "filesystem": {
-      "allowWrite": ["~/.cache/prek"]
+      "allowWrite": ["~/.cache/prek", "/tmp", "/private/tmp"]
     }
   },
   "permissions": {
