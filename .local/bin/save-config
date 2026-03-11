@@ -16,6 +16,8 @@ done
 
 brewPacks="$HOME/Sync/.computer-backup/brew-packages.txt"
 brewCasks="$HOME/Sync/.computer-backup/brew-casks.txt"
+handySettings="$HOME/Sync/.computer-backup/handy-settings_store.json"
 
 brew list --installed-on-request > "$brewPacks"
 brew list --cask > "$brewCasks"
+cat "/Users/william/Library/Application Support/com.pais.handy/settings_store.json" > "$handySettings"
