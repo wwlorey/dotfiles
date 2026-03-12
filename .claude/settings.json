@@ -8,13 +8,25 @@
     "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
   },
   "sandbox": {
+    "allowUnsandboxedCommands": true,
+    "excludedCommands": [
+      "pnpm run test:e2e",
+      "pnpm exec playwright install"
+    ],
     "filesystem": {
-      "allowWrite": ["~/.cache/prek", "/tmp", "/private/tmp"]
+      "allowWrite": [
+        "~/.cache/prek",
+        "~/.cargo",
+        "~/Library/Caches/ms-playwright",
+        "/tmp",
+        "/private/tmp"
+      ]
     }
   },
   "permissions": {
     "allow": [
-      "Read(~/.MEMENTO.md)"
+      "Read(~/.MEMENTO.md)",
+      "Bash(pnpm run test:e2e)"
     ],
     "deny": [
       "Read ~/.ssh/**",
