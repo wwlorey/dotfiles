@@ -31,7 +31,7 @@
       "Read(~/.MEMENTO.md)",
       "Bash(pnpm install*)",
       "Bash(pnpm add*)",
-      "Bash(pnpm run test:e2e)"
+      "Bash(pnpm run test:e2e*)"
     ],
     "deny": [
       "Read ~/.ssh/**",
