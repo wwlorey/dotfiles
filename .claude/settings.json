@@ -28,6 +28,7 @@
   },
   "permissions": {
     "allow": [
+      "Read(~/.cargo/*)",
       "Read(~/.MEMENTO.md)",
       "Bash(pnpm install*)",
       "Bash(pnpm add*)",
