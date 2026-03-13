@@ -10,13 +10,16 @@
   "sandbox": {
     "allowUnsandboxedCommands": true,
     "excludedCommands": [
-      "pnpm run test:e2e",
-      "pnpm exec playwright install"
+      "pnpm add*",
+      "pnpm exec playwright install",
+      "pnpm install*",
+      "pnpm run test:e2e*"
     ],
     "filesystem": {
       "allowWrite": [
         "~/.cache/prek",
         "~/.cargo",
+        "~/.pnpm-store",
         "~/Library/Caches/ms-playwright",
         "/tmp",
         "/private/tmp"
@@ -26,6 +29,8 @@
   "permissions": {
     "allow": [
       "Read(~/.MEMENTO.md)",
+      "Bash(pnpm install*)",
+      "Bash(pnpm add*)",
       "Bash(pnpm run test:e2e)"
     ],
     "deny": [
