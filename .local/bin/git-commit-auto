@@ -71,7 +71,7 @@ spin_pid=$!
 trap 'kill $spin_pid 2>/dev/null; wait $spin_pid 2>/dev/null; printf "\r\033[K"' EXIT
 
 errfile=$(mktemp)
-msg=$(claude-wrapper -p "$prompt" --model haiku 2>"$errfile") || {
+msg=$(cl -p "$prompt" --model haiku 2>"$errfile") || {
   kill $spin_pid 2>/dev/null || true
   wait $spin_pid 2>/dev/null || true
   trap - EXIT
