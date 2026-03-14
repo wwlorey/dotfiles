@@ -83,7 +83,6 @@ alias eg='$EDITOR $HOME/Repos/dotfiles/.config/goose/config.yaml'
 
 alias oc='opencode'
 
-alias cl='claude-wrapper'
 alias cli='echo "install" | cl --model haiku'
 alias clv='echo "verify that the pn tasks for this project will fully implement the specs" | cl'
 
