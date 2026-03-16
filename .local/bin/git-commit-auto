@@ -6,19 +6,19 @@ if ! git rev-parse --git-dir > /dev/null 2>&1; then
   exit 1
 fi
 
-staged=false
+stage=false
 push=false
 amend=false
 
 while [ $# -gt 0 ]; do
   case $1 in
-    --staged) staged=true ;;
+    --stage) stage=true ;;
     --push) push=true ;;
     --amend) amend=true ;;
     -h | --help)
-      echo "Usage: git commit-auto [--staged] [--push] [--amend]"
+      echo "Usage: git commit-auto [--stage] [--push] [--amend]"
       echo ""
-      echo "  --staged  Only commit what's already staged (skip git add -A)"
+      echo "  --stage   Stage all changes (git add -A) before committing"
       echo "  --push    Push after committing"
       echo "  --amend   Amend the previous commit"
       exit 0
@@ -31,7 +31,7 @@ while [ $# -gt 0 ]; do
   shift
 done
 
-if ! $staged && ! $amend; then
+if $stage; then
   git add -A
 fi
 
@@ -41,7 +41,15 @@ if ! $amend && git diff --staged --quiet; then
 fi
 
 if $amend; then
-  diff=$(git diff HEAD~1 HEAD)
+  diff=$(git diff --staged)
+  if [ -z "$diff" ]; then
+    diff=$(git diff HEAD~1 HEAD)
+  else
+    diff="$diff
+
+Previously committed:
+$(git diff HEAD~1 HEAD)"
+  fi
   status=$(git diff HEAD~1 HEAD --stat)
 else
   diff=$(git diff --staged)
