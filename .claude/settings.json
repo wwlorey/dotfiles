@@ -29,7 +29,7 @@
   "permissions": {
     "allow": [
       "Read(~/.cargo/*)",
-      "Read(~/.MEMENTO.md)",
+      "Read(~/.sgf/*)",
       "Bash(pnpm install*)",
       "Bash(pnpm add*)",
       "Bash(pnpm run test:e2e*)"
