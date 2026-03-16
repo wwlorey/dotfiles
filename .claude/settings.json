@@ -8,6 +8,8 @@
     "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
   },
   "sandbox": {
+    "enabled": true,
+    "autoAllowBashIfSandboxed": true,
     "allowUnsandboxedCommands": true,
     "excludedCommands": [
       "pnpm add*",
@@ -19,11 +21,26 @@
       "allowWrite": [
         "~/.cache/prek",
         "~/.cargo",
+        "~/.local/share/forma",
+        "~/.local/share/pensa",
         "~/.pnpm-store",
         "~/Library/Caches/ms-playwright",
+        "~/.sgf",
         "/tmp",
         "/private/tmp"
       ]
+    },
+    "network": {
+      "allowedDomains": [
+        "localhost",
+        "github.com",
+        "*.githubusercontent.com",
+        "crates.io",
+        "*.crates.io",
+        "registry.npmjs.org",
+        "registry.yarnpkg.com"
+      ],
+      "allowLocalBinding": true
     }
   },
   "permissions": {
