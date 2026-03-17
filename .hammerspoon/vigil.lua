@@ -51,6 +51,6 @@ function vigil.toggle()
 end
 
 menubar:setClickCallback(vigil.toggle)
-updateMenubar()
+deactivate()
 
 hs.hotkey.bind({"ctrl", "cmd"}, "V", vigil.toggle)
