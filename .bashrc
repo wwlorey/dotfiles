@@ -79,12 +79,6 @@ alias ccb='cargo build 2>&1 | tee /dev/tty | pbcopy'
 alias ct='cargo test'
 alias ctn='cargo test -- --nocapture'
 
-alias g='goose'
-alias gsr='goose session --resume'
-alias eg='$EDITOR $HOME/Repos/dotfiles/.config/goose/config.yaml'
-
-alias oc='opencode'
-
 alias cli='echo "install" | cl --model haiku'
 alias clv='echo "verify that the pn tasks for this project will fully implement the specs" | cl'
 
