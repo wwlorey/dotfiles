@@ -45,6 +45,7 @@
     }
   },
   "permissions": {
+    "defaultMode": "bypassPermissions",
     "allow": [
       "Read(~/.cargo/*)",
       "Read(~/.sgf/*)",
