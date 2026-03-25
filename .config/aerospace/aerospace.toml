@@ -35,9 +35,6 @@ start-at-login = true
     if.app-id = 'com.brave.Browser.app.ojibjkjikcpjonjjngfkegflhmffeemk' # Proton Calendar
     run = 'move-node-to-workspace 4'
 [[on-window-detected]]
-    if.app-id = 'com.apple.mail'
-    run = 'move-node-to-workspace 4'
-[[on-window-detected]]
     if.app-id = 'org.keepassxc.keepassxc'
     run = 'move-node-to-workspace 5'
 [[on-window-detected]]
@@ -48,6 +45,9 @@ start-at-login = true
     run = 'move-node-to-workspace 7'
 [[on-window-detected]]
     if.app-id = 'com.hnc.Discord'
+    run = 'move-node-to-workspace 8'
+[[on-window-detected]]
+    if.app-id = 'com.apple.mail'
     run = 'move-node-to-workspace 8'
 [[on-window-detected]]
     if.app-id = 'com.makemkv.MakeMKV'
