@@ -29,7 +29,7 @@ start-at-login = true
     if.app-id = 'com.brave.Browser'
     run = 'move-node-to-workspace 3'
 [[on-window-detected]]
-    if.app-id = 'ch.protonmail.desktop'
+    if.app-id = 'com.brave.Browser.app.jnpecgipniidlgicjocehkhajgdnjekh' # Proton Mail
     run = 'move-node-to-workspace 4'
 [[on-window-detected]]
     if.app-id = 'com.brave.Browser.app.ojibjkjikcpjonjjngfkegflhmffeemk' # Proton Calendar
