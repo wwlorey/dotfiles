@@ -90,6 +90,8 @@ alias tk='port-kill 1420'
 
 alias pk='port-kill'
 
+alias j='just'
+
 alias w='work'
 alias l='life'
 alias td='todo'
