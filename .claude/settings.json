@@ -18,12 +18,10 @@
       "pnpm run test:e2e*",
       "node*export.js*",
       "sgf*",
-      "cl*",
-      "kw*"
+      "cl*"
     ],
     "filesystem": {
       "allowWrite": [
-        "~/.cache/kw",
         "~/.cache/prek",
         "~/.cargo",
         "~/.local/share/forma",
