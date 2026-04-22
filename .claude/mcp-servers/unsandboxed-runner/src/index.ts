@@ -37,11 +37,28 @@ function truncate(output: string, label: string): string {
   return truncated + `\n\n... [${label} truncated at ${MAX_OUTPUT_BYTES / 1024}KB]`;
 }
 
+function stripProxyEnv(env: Record<string, string | undefined>): Record<string, string | undefined> {
+  const cleaned = { ...env };
+  const proxyKeys = [
+    "HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "FTP_PROXY",
+    "http_proxy", "https_proxy", "all_proxy", "ftp_proxy",
+    "NO_PROXY", "no_proxy", "RSYNC_PROXY",
+    "DOCKER_HTTP_PROXY", "DOCKER_HTTPS_PROXY",
+    "CLOUDSDK_PROXY_TYPE", "CLOUDSDK_PROXY_ADDRESS", "CLOUDSDK_PROXY_PORT",
+    "GRPC_PROXY", "grpc_proxy",
+  ];
+  for (const key of proxyKeys) {
+    delete cleaned[key];
+  }
+  return cleaned;
+}
+
 function runCommand(
   command: string,
   args: string[],
   cwd: string,
-  timeoutSecs: number
+  timeoutSecs: number,
+  env?: Record<string, string | undefined>
 ): Promise<RunResult> {
   return new Promise((resolve) => {
     let stdout = "";
@@ -52,7 +69,7 @@ function runCommand(
     const child: ChildProcess = spawn(command, args, {
       cwd,
       stdio: ["ignore", "pipe", "pipe"],
-      env: { ...process.env },
+      env: env ?? { ...process.env },
     });
 
     child.stdout?.on("data", (chunk: Buffer) => {
@@ -255,6 +272,26 @@ server.tool(
       readyPattern,
       failPatterns
     );
+    return {
+      content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+    };
+  }
+);
+
+server.tool(
+  "run_kw",
+  "Run the kw CLI outside the sandbox. Bypasses the sandbox HTTPS proxy so reqwest can reach api.dataforseo.com directly.",
+  {
+    args: z.array(z.string()).describe("Arguments to pass to kw (e.g. [\"difficulty\", \"therapy\"])."),
+    cwd: z.string().optional().describe("Working directory relative to project root."),
+    timeout_secs: z.number().optional().describe("Timeout in seconds (default 300, max 600)."),
+  },
+  async ({ args, cwd, timeout_secs }) => {
+    const resolvedCwd = resolveCwd(cwd);
+    const timeout = clampTimeout(timeout_secs);
+    const cleanEnv = stripProxyEnv(process.env);
+
+    const result = await runCommand("kw", args, resolvedCwd, timeout, cleanEnv);
     return {
       content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
     };
