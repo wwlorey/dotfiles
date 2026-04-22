@@ -16,7 +16,8 @@
       "pnpm exec playwright install",
       "pnpm install*",
       "pnpm run test:e2e*",
-      "node*export.js*"
+      "node*export.js*",
+      "sgf*"
     ],
     "filesystem": {
       "allowWrite": [
