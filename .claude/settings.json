@@ -17,7 +17,8 @@
       "pnpm install*",
       "pnpm run test:e2e*",
       "node*export.js*",
-      "sgf*"
+      "sgf*",
+      "cl*"
     ],
     "filesystem": {
       "allowWrite": [
