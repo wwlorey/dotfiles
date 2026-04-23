@@ -279,6 +279,24 @@ server.tool(
 );
 
 server.tool(
+  "run_newsboat",
+  "Run newsboat commands outside the sandbox. Bypasses the sandbox HTTPS proxy so newsboat can fetch RSS/Atom feeds directly. Use for reloading feeds, exporting OPML, or querying feed data.",
+  {
+    args: z.array(z.string()).describe("Arguments to pass to newsboat (e.g. [\"-x\", \"reload\"], [\"-e\"] to export OPML, [\"-x\", \"print-unread\"])."),
+    timeout_secs: z.number().optional().describe("Timeout in seconds (default 300, max 600)."),
+  },
+  async ({ args, timeout_secs }) => {
+    const timeout = clampTimeout(timeout_secs);
+    const cleanEnv = stripProxyEnv(process.env);
+
+    const result = await runCommand("newsboat", args, process.env.HOME ?? "/", timeout, cleanEnv);
+    return {
+      content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+    };
+  }
+);
+
+server.tool(
   "run_kw",
   "Run the kw CLI outside the sandbox. Bypasses the sandbox HTTPS proxy so reqwest can reach api.dataforseo.com directly.",
   {
