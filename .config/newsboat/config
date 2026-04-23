@@ -1,0 +1,25 @@
+# Vim bindings
+unbind-key j
+unbind-key k
+unbind-key h
+unbind-key l
+bind-key j down
+bind-key k up
+bind-key h quit
+bind-key l open
+bind-key g home
+bind-key G end
+bind-key J next-feed articlelist
+bind-key K prev-feed articlelist
+bind-key / open-search
+bind-key n next
+bind-key N prev
+
+browser "open %u"
+
+# Fake-feed-with-highlight hack
+highlight feedlist "---.*---" yellow default bold
+highlight feedlist ".*0/0.." default default invis
+
+# Automatically purge feeds in newsboat's cache database but which are no longer in urls
+cleanup-on-quit yes
