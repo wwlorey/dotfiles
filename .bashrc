@@ -42,7 +42,7 @@ alias gwa='git worktree add'
 alias gwl='git worktree list'
 alias gwr='git worktree remove'
 
-alias n='newsboat'
+alias n='cl "/news"'
 
 # Ask for consent & be verbose
 # These aliases can be ignored by prepending "\" (i.e. "\rm")
@@ -79,9 +79,6 @@ alias ccb='cargo build 2>&1 | tee /dev/tty | pbcopy'
 alias ct='cargo test'
 alias ctn='cargo test -- --nocapture'
 alias ctd='cargo tauri dev'
-
-alias cli='echo "install" | cl --model haiku'
-alias clv='echo "verify that the pn tasks for this project will fully implement the specs" | cl'
 
 alias pnr='pn ready'
 alias pno='pn list --status open'
