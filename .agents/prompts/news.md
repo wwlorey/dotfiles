@@ -2,7 +2,7 @@ Give me a summary of my newsboat feeds.
 
 Steps:
 
-1. Refresh feeds by running the newsboat MCP (with argument `-x reload`). This can take 30-60 seconds depending on how many feeds I have. If it fails because newsboat is already running (lock file), tell me and stop — don't try to force it.
+1. Refresh the newsboat feeds. This can take 30-60 seconds depending on how many feeds I have. If it fails because newsboat is already running (lock file), tell me and stop — don't try to force it.
 
 2. Query `~/.local/share/newsboat/cache.db` for unread items from the last $ARGUMENTS hours. If $ARGUMENTS is empty, default to 168 (1 week).
 

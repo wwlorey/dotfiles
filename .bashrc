@@ -1,4 +1,6 @@
 PS1='[\u@\h \W]\$ '
+DOTFILES="$HOME/Repos/dotfiles"
+PROMPTS="$HOME/.agents/prompts"
 
 alias c='clear'
 
@@ -42,7 +44,7 @@ alias gwa='git worktree add'
 alias gwl='git worktree list'
 alias gwr='git worktree remove'
 
-alias n='cl "/news"'
+alias n="cd $DOTFILES/ && cl \"@$PROMPTS/news.md\""
 
 # Ask for consent & be verbose
 # These aliases can be ignored by prepending "\" (i.e. "\rm")
@@ -52,16 +54,16 @@ alias mv='mv -iv'
 
 alias v='nvim'
 alias vd='nvim -d'
-alias ev='$EDITOR $HOME/Repos/dotfiles/.config/nvim/init.vim'
+alias ev="$EDITOR $DOTFILES/.config/nvim/init.vim"
 
 alias t='tmux'
-alias et='$EDITOR $HOME/Repos/dotfiles/.config/tmux/tmux.conf'
+alias et="$EDITOR $DOTFILES/.config/tmux/tmux.conf"
 alias ta='tmux attach'
 
-alias el='$EDITOR $HOME/Repos/dotfiles/.config/lf/lfrc'
+alias el="$EDITOR $DOTFILES/.config/lf/lfrc"
 
-alias eb='$EDITOR $HOME/Repos/dotfiles/.bashrc'
-alias ez='$EDITOR $HOME/Repos/dotfiles/.zshrc'
+alias eb="$EDITOR $DOTFILES/.bashrc"
+alias ez="$EDITOR $DOTFILES/.zshrc"
 
 alias hs='hugo server --noHTTPCache'
 
