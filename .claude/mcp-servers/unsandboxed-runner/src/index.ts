@@ -297,6 +297,32 @@ server.tool(
 );
 
 server.tool(
+  "create_project",
+  "Scaffold a new project outside the sandbox using `pnpm create` (or npm/yarn). Bypasses sandbox network and subprocess restrictions that block interactive scaffolding tools like create-vite, create-next-app, etc.",
+  {
+    template: z.string().describe("The create template to use (e.g. \"vite\", \"vite@latest\", \"next-app\", \"svelte\")."),
+    name: z.string().describe("Project directory name. Created inside cwd."),
+    args: z.array(z.string()).optional().describe("Extra arguments passed after the project name (e.g. [\"--template\", \"react-ts\"])."),
+    cwd: z.string().optional().describe("Working directory where the project folder will be created. Defaults to $TMPDIR."),
+    pm: z.enum(["pnpm", "npm", "yarn"]).optional().describe("Package manager to use (default: pnpm)."),
+    timeout_secs: z.number().optional().describe("Timeout in seconds (default 300, max 600)."),
+  },
+  async ({ template, name, args, cwd, pm, timeout_secs }) => {
+    const targetCwd = cwd ?? process.env.TMPDIR ?? "/tmp";
+    const timeout = clampTimeout(timeout_secs);
+    const cleanEnv = stripProxyEnv(process.env);
+    const manager = pm ?? "pnpm";
+
+    const cmdArgs = ["create", template, name, ...(args ?? [])];
+
+    const result = await runCommand(manager, cmdArgs, targetCwd, timeout, cleanEnv);
+    return {
+      content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+    };
+  }
+);
+
+server.tool(
   "run_kw",
   "Run the kw CLI outside the sandbox. Bypasses the sandbox HTTPS proxy so reqwest can reach api.dataforseo.com directly.",
   {
