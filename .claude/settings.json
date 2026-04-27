@@ -17,6 +17,7 @@
       "pnpm install*",
       "pnpm run test:e2e*",
       "node*export.js*",
+      "cargo*",
       "sgf*",
       "cl*"
     ],
