@@ -1,6 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { spawn, type ChildProcess } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { z } from "zod";
 import path from "node:path";
 
@@ -336,6 +337,56 @@ server.tool(
     const cleanEnv = stripProxyEnv(process.env);
 
     const result = await runCommand("kw", args, resolvedCwd, timeout, cleanEnv);
+    return {
+      content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+    };
+  }
+);
+
+const ALLOWED_PNPM_SCRIPTS = new Set([
+  "seed",
+  "push:schema",
+  "push:perms",
+]);
+
+function loadDotenv(cwd: string): Record<string, string | undefined> {
+  const cleanEnv: Record<string, string | undefined> = stripProxyEnv(process.env);
+  try {
+    const dotenv = readFileSync(path.join(cwd, ".env"), "utf-8");
+    for (const line of dotenv.split("\n")) {
+      const match = line.match(/^\s*([^#=]+?)\s*=\s*(.*)\s*$/);
+      if (match) cleanEnv[match[1]] = match[2];
+    }
+  } catch {}
+  return cleanEnv;
+}
+
+server.tool(
+  "run_pnpm",
+  `Run an allowlisted pnpm script outside the sandbox. Loads .env from the project root and strips proxy env so Node can reach external APIs directly. Allowed scripts: ${[...ALLOWED_PNPM_SCRIPTS].join(", ")}`,
+  {
+    script: z.string().describe(`The pnpm script to run. Must be one of: ${[...ALLOWED_PNPM_SCRIPTS].join(", ")}`),
+    cwd: z.string().optional().describe("Working directory relative to project root."),
+    timeout_secs: z.number().optional().describe("Timeout in seconds (default 300, max 600)."),
+  },
+  async ({ script, cwd, timeout_secs }) => {
+    if (!ALLOWED_PNPM_SCRIPTS.has(script)) {
+      return {
+        content: [{ type: "text", text: JSON.stringify({
+          success: false,
+          exit_code: null,
+          stdout: "",
+          stderr: `Script "${script}" is not in the allowlist. Allowed: ${[...ALLOWED_PNPM_SCRIPTS].join(", ")}`,
+          timed_out: false,
+        }, null, 2) }],
+      };
+    }
+
+    const resolvedCwd = resolveCwd(cwd);
+    const timeout = clampTimeout(timeout_secs);
+    const env = loadDotenv(resolvedCwd);
+
+    const result = await runCommand("pnpm", ["run", script], resolvedCwd, timeout, env);
     return {
       content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
     };

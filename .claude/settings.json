@@ -31,7 +31,8 @@
         "~/Library/Caches/ms-playwright",
         "~/.sgf",
         "/tmp",
-        "/private/tmp"
+        "/private/tmp",
+        "~/Repos/hooked-on-pa/node_modules/.vite-temp"
       ]
     },
     "network": {
@@ -42,7 +43,8 @@
         "crates.io",
         "*.crates.io",
         "registry.npmjs.org",
-        "registry.yarnpkg.com"
+        "registry.yarnpkg.com",
+        "api.instantdb.com"
       ],
       "allowLocalBinding": true
     }
