@@ -98,6 +98,7 @@ alias td='todo'
 alias b='buy'
 alias k='keep'
 alias q='quick'
+alias p='proj'
 
 alias h='hours'
 
