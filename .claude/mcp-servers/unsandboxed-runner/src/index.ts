@@ -347,6 +347,7 @@ const ALLOWED_PNPM_SCRIPTS = new Set([
   "seed",
   "push:schema",
   "push:perms",
+  "clear:screener",
 ]);
 
 function loadDotenv(cwd: string): Record<string, string | undefined> {
