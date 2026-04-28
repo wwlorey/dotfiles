@@ -469,6 +469,11 @@ colorscheme github_dark
 " https://vi.stackexchange.com/questions/7112/tmux-messing-with-vim-highlighting
 set t_Co=256
 
+" Single global statusline; use WinSeparator for split dividers
+set laststatus=3
+set fillchars+=horiz:─,horizup:┴,horizdown:┬,vert:│,vertleft:┤,vertright:├
+highlight WinSeparator guifg=#6e7681 guibg=NONE
+
 
 " SYNTAX HIGHLIGHTING
 
