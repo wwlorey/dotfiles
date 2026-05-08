@@ -14,6 +14,9 @@ precmd () {
   RPROMPT=$(__git_ps1 " (%s)")
   [ -n "$TMUX" ] && tmux set-option -qp @shell_cwd "$PWD"
 }
+chpwd () {
+  [ -n "$TMUX" ] && tmux set-option -qp @shell_cwd "$PWD"
+}
 
 # Keep track of history
 export HISTSIZE=10000
