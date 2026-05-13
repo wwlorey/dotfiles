@@ -247,7 +247,7 @@
           },
           {
             "type": "command",
-            "command": "# Keep tmux @shell_cwd in sync with Claude Code's project root so new pane splits open in the right directory. The CLAUDECODE guard in .zshrc prevents bash subshells from overwriting this.\n[ -n \"$TMUX\" ] && tmux set-option -qp @shell_cwd \"$(pwd)\" 2>/dev/null || true"
+            "command": "# Keep tmux @shell_cwd in sync with Claude Code's project root so new pane splits open in the right directory. The CLAUDECODE guard in .zshrc prevents bash subshells from overwriting this.\n[ -n \"$TMUX\" ] && [ -n \"$TMUX_PANE\" ] && tmux set-option -qp -t \"$TMUX_PANE\" @shell_cwd \"$(pwd)\" 2>/dev/null || true"
           }
         ]
       },

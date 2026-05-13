@@ -9,7 +9,7 @@ set period 1
 # directory currently selected in lf, not the one from when lf launched.
 cmd on-cd &{{
   if [ -n "$TMUX" ]; then
-    tmux set-option -p @shell_cwd "$PWD"
+    tmux set-option -p -t "$TMUX_PANE" @shell_cwd "$PWD"
   fi
 }}
 on-cd

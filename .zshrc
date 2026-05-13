@@ -12,10 +12,10 @@ GIT_PS1_SHOWDIRTYSTATE=1
 GIT_PS1_SHOWCOLORHINTS=1
 precmd () {
   RPROMPT=$(__git_ps1 " (%s)")
-  [ -n "$TMUX" ] && [ -z "$CLAUDECODE" ] && tmux set-option -qp @shell_cwd "$PWD"
+  [ -n "$TMUX" ] && [ -z "$CLAUDECODE" ] && tmux set-option -qp -t "$TMUX_PANE" @shell_cwd "$PWD"
 }
 chpwd () {
-  [ -n "$TMUX" ] && [ -z "$CLAUDECODE" ] && tmux set-option -qp @shell_cwd "$PWD"
+  [ -n "$TMUX" ] && [ -z "$CLAUDECODE" ] && tmux set-option -qp -t "$TMUX_PANE" @shell_cwd "$PWD"
 }
 
 # Keep track of history
