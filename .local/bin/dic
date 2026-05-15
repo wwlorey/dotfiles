@@ -1,0 +1,128 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# ┌───────────────────────────────────────────────────────────────┐
+# │  dic — "say!" (Latin, imperative of dīcere)                  │
+# │  TTS wrapper with auto-provisioned model files                │
+# │  Requires: kokoro-tts (uv tool install kokoro-tts)            │
+# └───────────────────────────────────────────────────────────────┘
+
+DATA_DIR="$HOME/.local/share/kokoro-tts"
+MODEL="$DATA_DIR/kokoro-v1.0.onnx"
+VOICES="$DATA_DIR/voices-v1.0.bin"
+BASE_URL="https://github.com/nazdridoy/kokoro-tts/releases/download/v1.0.0"
+
+DEFAULT_VOICE="af_sarah"
+
+# ==================== DEPENDENCY CHECK ====================
+
+if ! command -v kokoro-tts &>/dev/null; then
+    echo "Error: kokoro-tts not found. Install with: uv tool install kokoro-tts" >&2
+    exit 1
+fi
+
+# ==================== ENSURE MODELS ====================
+
+ensure_models() {
+    if [[ -f "$MODEL" && -f "$VOICES" ]]; then
+        return
+    fi
+    echo "Downloading kokoro models to $DATA_DIR..." >&2
+    mkdir -p "$DATA_DIR"
+    [[ -f "$MODEL" ]]  || curl -fSL "$BASE_URL/kokoro-v1.0.onnx" -o "$MODEL"
+    [[ -f "$VOICES" ]] || curl -fSL "$BASE_URL/voices-v1.0.bin" -o "$VOICES"
+    echo "Models ready." >&2
+}
+
+# ==================== HELP ====================
+
+show_usage() {
+    cat << 'EOF'
+Usage: dic [OPTIONS] [TEXT]
+       echo "text" | dic [OPTIONS]
+
+Speak text aloud using kokoro-tts. Models are auto-downloaded on first run.
+
+Options:
+  -v, --voice NAME    Voice to use (default: af_sarah)
+  -s, --speed FLOAT   Speech speed (default: 1.0)
+  -o, --output FILE   Save audio to file instead of playing
+  -f, --format FMT    Audio format: wav or mp3 (default: wav)
+  -l, --lang LANG     Language code (default: en-us)
+  --verbose           Show progress output (suppressed by default)
+  --voices            List available voices
+  -h, --help          Show this help
+
+Examples:
+  dic "Hello world."
+  echo "Breaking news." | dic --voice bf_emma
+  echo "Slow and steady." | dic --speed 0.8
+  dic -o briefing.wav "Today's news summary."
+  dic -o podcast.mp3 -f mp3 --voice bm_george "Episode one."
+  dic --verbose "Speak with progress output."
+  dic --voices
+EOF
+    exit 0
+}
+
+# ==================== PARSE ARGS ====================
+
+voice="$DEFAULT_VOICE"
+speed=""
+lang=""
+output=""
+format=""
+verbose=false
+text=""
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -h|--help)    show_usage ;;
+        --voices)     ensure_models; PYMUPDF_MESSAGE="path:/dev/null" kokoro-tts --help-voices --model "$MODEL" --voices "$VOICES" | grep -v "pymupdf_layout"; exit 0 ;;
+        -v|--voice)   voice="$2"; shift 2 ;;
+        -s|--speed)   speed="$2"; shift 2 ;;
+        -o|--output)  output="$2"; shift 2 ;;
+        -f|--format)  format="$2"; shift 2 ;;
+        -l|--lang)    lang="$2"; shift 2 ;;
+        --verbose)    verbose=true; shift ;;
+        -*)           echo "Unknown option: $1" >&2; exit 1 ;;
+        *)            text="$1"; shift ;;
+    esac
+done
+
+# ==================== READ INPUT ====================
+
+if [[ -n "$text" ]]; then
+    input="$text"
+elif [[ ! -t 0 ]]; then
+    input="$(cat)"
+else
+    show_usage
+fi
+
+if [[ -z "$input" ]]; then
+    exit 0
+fi
+
+# ==================== SPEAK ====================
+
+ensure_models
+
+tmpfile="$(mktemp "${TMPDIR:-/tmp}/dic-XXXXXX.txt")"
+printf '%s' "$input" > "$tmpfile"
+trap 'rm -f "$tmpfile"' EXIT
+
+if [[ -n "$output" ]]; then
+    args=("$tmpfile" "$output" --model "$MODEL" --voices "$VOICES" --voice "$voice")
+else
+    args=("$tmpfile" --stream --model "$MODEL" --voices "$VOICES" --voice "$voice")
+fi
+[[ -n "$speed" ]]  && args+=(--speed "$speed")
+[[ -n "$format" ]] && args+=(--format "$format")
+[[ -n "$lang" ]]   && args+=(--lang "$lang")
+
+if [[ "$verbose" = true ]]; then
+    PYMUPDF_MESSAGE="path:/dev/null" kokoro-tts "${args[@]}" | grep -v "pymupdf_layout"
+else
+    PYMUPDF_MESSAGE="path:/dev/null" kokoro-tts "${args[@]}" > /dev/null
+fi

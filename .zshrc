@@ -134,4 +134,7 @@ case ":$PATH:" in
   *) export PATH="$PNPM_HOME:$PATH" ;;
 esac
 
+# Ensure uv tools are installed
+command -v kokoro-tts &>/dev/null || uv tool install kokoro-tts
+
 eval "$(direnv hook zsh)"
