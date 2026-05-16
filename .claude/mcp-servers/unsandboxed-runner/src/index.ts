@@ -395,8 +395,20 @@ server.tool(
 );
 
 server.tool(
+  "save_config",
+  "Deploy dotfiles from the repo to $HOME via save-config. Runs outside the sandbox so it can write to ~/.",
+  {},
+  async () => {
+    const result = await runCommand("save-config", [], process.env.HOME ?? "/", 60);
+    return {
+      content: [{ type: "text", text: result.success ? "Deployed." : JSON.stringify(result, null, 2) }],
+    };
+  }
+);
+
+server.tool(
   "run_dic",
-  "Speak text aloud using the dic TTS wrapper. Runs outside the sandbox so it can access audio output and model files.",
+  "Speak text aloud using the dic TTS wrapper. Runs outside the sandbox so it can access audio output and model files. Streams progress via logging notifications.",
   {
     text: z.string().describe("The text to speak aloud."),
     voice: z.string().optional().describe("Voice to use (default: bf_isabella). Run with --voices flag to list available voices."),
@@ -407,9 +419,60 @@ server.tool(
     if (voice) args.unshift("-v", voice);
     if (speed) args.unshift("-s", String(speed));
 
-    const result = await runCommand("dic", args, process.env.HOME ?? "/", 60);
+    const result = await new Promise<RunResult>((resolve) => {
+      let stdout = "";
+      let stderr = "";
+      let timedOut = false;
+
+      const child = spawn("dic", args, {
+        cwd: process.env.HOME ?? "/",
+        stdio: ["ignore", "pipe", "pipe"],
+        env: { ...process.env },
+      });
+
+      child.stdout?.on("data", (chunk: Buffer) => {
+        const line = chunk.toString();
+        stdout += line;
+        server.sendLoggingMessage({ level: "info", data: line.trimEnd() });
+      });
+
+      child.stderr?.on("data", (chunk: Buffer) => {
+        const line = chunk.toString();
+        stderr += line;
+        server.sendLoggingMessage({ level: "info", data: line.trimEnd() });
+      });
+
+      const timer = setTimeout(() => {
+        timedOut = true;
+        child.kill("SIGTERM");
+        setTimeout(() => { if (!child.killed) child.kill("SIGKILL"); }, 5000);
+      }, 60_000);
+
+      child.on("close", (code) => {
+        clearTimeout(timer);
+        resolve({
+          success: !timedOut && code === 0,
+          exit_code: code,
+          stdout: truncate(stdout, "stdout"),
+          stderr: truncate(stderr, "stderr"),
+          timed_out: timedOut,
+        });
+      });
+
+      child.on("error", (err) => {
+        clearTimeout(timer);
+        resolve({
+          success: false,
+          exit_code: null,
+          stdout: truncate(stdout, "stdout"),
+          stderr: err.message,
+          timed_out: false,
+        });
+      });
+    });
+
     return {
-      content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+      content: [{ type: "text", text: result.success ? "Done." : JSON.stringify(result, null, 2) }],
     };
   }
 );

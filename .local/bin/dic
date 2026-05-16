@@ -108,9 +108,12 @@ fi
 
 ensure_models
 
-tmpfile="$(mktemp "${TMPDIR:-/tmp}/dic-XXXXXX.txt")"
+# Isolate tmp per invocation to prevent kokoro-tts internal file collisions
+DIC_TMPDIR="$(mktemp -d "${TMPDIR:-/tmp}/dic-XXXXXX")"
+tmpfile="$DIC_TMPDIR/input.txt"
 printf '%s' "$input" > "$tmpfile"
-trap 'rm -f "$tmpfile"' EXIT
+trap 'rm -rf "$DIC_TMPDIR"' EXIT
+export TMPDIR="$DIC_TMPDIR"
 
 if [[ -n "$output" ]]; then
     args=("$tmpfile" "$output" --model "$MODEL" --voices "$VOICES" --voice "$voice")
