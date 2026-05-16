@@ -112,8 +112,41 @@ ensure_models
 DIC_TMPDIR="$(mktemp -d "${TMPDIR:-/tmp}/dic-XXXXXX")"
 tmpfile="$DIC_TMPDIR/input.txt"
 printf '%s' "$input" > "$tmpfile"
-trap 'rm -rf "$DIC_TMPDIR"' EXIT
 export TMPDIR="$DIC_TMPDIR"
+
+# Serialize playback — only one dic instance speaks at a time
+LOCK_DIR="/tmp/dic.lock"
+_dic_owns_lock=false
+
+lock_release() {
+    if [[ "$_dic_owns_lock" = true ]]; then
+        rm -rf "$LOCK_DIR"
+        _dic_owns_lock=false
+    fi
+}
+
+trap 'lock_release; rm -rf "$DIC_TMPDIR"' EXIT
+
+# Acquire lock with stale-detection and timeout
+max_wait=30 waited=0
+while ! mkdir "$LOCK_DIR" 2>/dev/null; do
+    if [[ -f "$LOCK_DIR/pid" ]]; then
+        holder_pid=$(cat "$LOCK_DIR/pid" 2>/dev/null || echo "")
+        if [[ -n "$holder_pid" ]] && ! kill -0 "$holder_pid" 2>/dev/null; then
+            # Stale lock — try to claim by atomic rename-into-place
+            rm -rf "$LOCK_DIR" 2>/dev/null || true
+            continue
+        fi
+    fi
+    sleep 0.5
+    waited=$((waited + 1))
+    if [[ $waited -ge $((max_wait * 2)) ]]; then
+        echo "dic: timed out waiting for lock (held by PID ${holder_pid:-unknown})" >&2
+        exit 1
+    fi
+done
+echo $$ > "$LOCK_DIR/pid"
+_dic_owns_lock=true
 
 if [[ -n "$output" ]]; then
     args=("$tmpfile" "$output" --model "$MODEL" --voices "$VOICES" --voice "$voice")
