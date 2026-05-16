@@ -394,6 +394,26 @@ server.tool(
   }
 );
 
+server.tool(
+  "run_dic",
+  "Speak text aloud using the dic TTS wrapper. Runs outside the sandbox so it can access audio output and model files.",
+  {
+    text: z.string().describe("The text to speak aloud."),
+    voice: z.string().optional().describe("Voice to use (default: bf_isabella). Run with --voices flag to list available voices."),
+    speed: z.number().optional().describe("Speech speed (default: 1.0)."),
+  },
+  async ({ text, voice, speed }) => {
+    const args = [text];
+    if (voice) args.unshift("-v", voice);
+    if (speed) args.unshift("-s", String(speed));
+
+    const result = await runCommand("dic", args, process.env.HOME ?? "/", 60);
+    return {
+      content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+    };
+  }
+);
+
 async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
