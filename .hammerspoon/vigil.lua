@@ -25,12 +25,16 @@ end
 
 local function deactivate()
     hs.execute("sudo pmset -a disablesleep 0 && sudo pmset -a hibernatemode 3", true)
+    local dev = hs.audiodevice.defaultOutputDevice()
+    if dev then dev:setMuted(false) end
     isActive = false
     updateMenubar()
 end
 
 local function activate()
     hs.execute("sudo pmset -a disablesleep 1 && sudo pmset -a hibernatemode 0", true)
+    local dev = hs.audiodevice.defaultOutputDevice()
+    if dev then dev:setMuted(true) end
     isActive = true
     updateMenubar()
 end
