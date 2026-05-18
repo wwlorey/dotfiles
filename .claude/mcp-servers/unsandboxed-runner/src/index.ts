@@ -408,16 +408,20 @@ server.tool(
 
 server.tool(
   "run_dic",
-  "Speak text aloud using the dic TTS wrapper. Runs outside the sandbox so it can access audio output and model files. Streams progress via logging notifications.",
+  "Speak text aloud using the dic TTS wrapper. Runs outside the sandbox so it can access audio output and model files. Streams progress via logging notifications. When output is provided, saves audio to a file instead of playing aloud.",
   {
     text: z.string().describe("The text to speak aloud."),
     voice: z.string().optional().describe("Voice to use (default: bf_isabella). Run with --voices flag to list available voices."),
     speed: z.number().optional().describe("Speech speed (default: 1.0)."),
+    output: z.string().optional().describe("Output file path. Saves audio to this file instead of playing aloud. Supports .wav and .mp3."),
+    format: z.string().optional().describe("Audio format: wav or mp3 (default: wav). Only relevant when output is set."),
   },
-  async ({ text, voice, speed }) => {
+  async ({ text, voice, speed, output, format }) => {
     const args = [text];
     if (voice) args.unshift("-v", voice);
     if (speed) args.unshift("-s", String(speed));
+    if (output) args.unshift("-o", output);
+    if (format) args.unshift("-f", format);
 
     const result = await new Promise<RunResult>((resolve) => {
       let stdout = "";
