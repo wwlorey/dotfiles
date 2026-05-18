@@ -16,7 +16,7 @@ local iconUnlit = hs.image.imageFromPath(hs.configdir .. "/vigil-unlit.png"):set
 local function updateMenubar()
     if isActive then
         menubar:setIcon(iconLit)
-        menubar:setTooltip("Vigil: On — Mac will stay awake")
+        menubar:setTooltip("Vigil: On — Mac will stay awake and muted")
     else
         menubar:setIcon(iconUnlit)
         menubar:setTooltip("Vigil: Off — Normal sleep")
