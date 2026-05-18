@@ -110,6 +110,8 @@ alias cnn='casenote new'
 
 alias ty='transcribe-yt'
 
+alias dm='dic-mute'
+
 if [[ "$OSTYPE" == "darwin"* ]];
 then
 	alias ls='ls -G'

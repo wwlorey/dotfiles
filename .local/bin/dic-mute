@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+MUTE_FILE="$HOME/.local/share/dic/mute"
+
+if [[ -f "$MUTE_FILE" ]]; then
+    rm "$MUTE_FILE"
+    echo "dic unmuted"
+else
+    mkdir -p "$(dirname "$MUTE_FILE")"
+    touch "$MUTE_FILE"
+    echo "dic muted"
+fi

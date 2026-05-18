@@ -10,6 +10,11 @@ This repo is a mirror of configuration files, scripts, etc. in `$HOME`. Files he
 - After adding a new MCP tool, document its use in `~/Repos/springfield/.sgf/MEMENTO.md`
 
 
+## MCP server (unsandboxed-runner)
+
+- Located at `.claude/mcp-servers/unsandboxed-runner/`
+- Runs via `tsx` directly — no build step needed. Changes to `src/index.ts` take effect on next MCP server restart.
+
 ## Commit workflow
 
 1. commit changes
