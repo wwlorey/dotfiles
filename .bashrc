@@ -46,6 +46,7 @@ alias gwr='git worktree remove'
 
 alias n="cd $DOTFILES/ && cl \"@$PROMPTS/news.md\""
 alias sb="cd $DOTFILES/ && cl \"@$PROMPTS/storybrand.md\""
+alias sbw="cl \"@$PROMPTS/storybrand-website.md\""
 alias i="cd ~/Downloads/images/ && cl \"@$PROMPTS/images.md\""
 
 # Ask for consent & be verbose
