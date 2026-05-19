@@ -1,6 +1,7 @@
 -- vigil.lua
 -- Toggles macOS sleep/hibernation so the lid can be closed without sleeping.
 -- All processes keep running; screen locks and dims normally.
+-- Mutes dic (TTS) on activate, unmutes on deactivate.
 -- Automatically re-enables sleep when the lid is opened.
 --
 -- Required one-time setup (prevents sudo password prompt):
@@ -16,25 +17,27 @@ local iconUnlit = hs.image.imageFromPath(hs.configdir .. "/vigil-unlit.png"):set
 local function updateMenubar()
     if isActive then
         menubar:setIcon(iconLit)
-        menubar:setTooltip("Vigil: On — Mac will stay awake and muted")
+        menubar:setTooltip("Vigil: On — Mac will stay awake, dic muted")
     else
         menubar:setIcon(iconUnlit)
         menubar:setTooltip("Vigil: Off — Normal sleep")
     end
 end
 
+local dicMuteFile = os.getenv("HOME") .. "/.local/share/dic/mute"
+
 local function deactivate()
     hs.execute("sudo pmset -a disablesleep 0 && sudo pmset -a hibernatemode 3", true)
-    local dev = hs.audiodevice.defaultOutputDevice()
-    if dev then dev:setMuted(false) end
+    if isActive then os.remove(dicMuteFile) end
     isActive = false
     updateMenubar()
 end
 
 local function activate()
     hs.execute("sudo pmset -a disablesleep 1 && sudo pmset -a hibernatemode 0", true)
-    local dev = hs.audiodevice.defaultOutputDevice()
-    if dev then dev:setMuted(true) end
+    hs.execute("mkdir -p '" .. os.getenv("HOME") .. "/.local/share/dic'", true)
+    local f = io.open(dicMuteFile, "w")
+    if f then f:close() end
     isActive = true
     updateMenubar()
 end
