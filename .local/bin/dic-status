@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+MUTE_FILE="$HOME/.local/share/dic/mute"
+
+quiet=false
+case "${1:-}" in
+    -q|--quiet) quiet=true ;;
+    "") ;;
+    *) echo "Usage: dic-status [-q|--quiet]" >&2; exit 2 ;;
+esac
+
+if [[ -f "$MUTE_FILE" ]]; then
+    [[ "$quiet" == true ]] || echo "dic muted"
+    exit 0
+else
+    [[ "$quiet" == true ]] || echo "dic unmuted"
+    exit 1
+fi

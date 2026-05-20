@@ -24,20 +24,16 @@ local function updateMenubar()
     end
 end
 
-local dicMuteFile = os.getenv("HOME") .. "/.local/share/dic/mute"
-
 local function deactivate()
     hs.execute("sudo pmset -a disablesleep 0 && sudo pmset -a hibernatemode 3", true)
-    if isActive then os.remove(dicMuteFile) end
+    if isActive then hs.execute("dic-mute off", true) end
     isActive = false
     updateMenubar()
 end
 
 local function activate()
     hs.execute("sudo pmset -a disablesleep 1 && sudo pmset -a hibernatemode 0", true)
-    hs.execute("mkdir -p '" .. os.getenv("HOME") .. "/.local/share/dic'", true)
-    local f = io.open(dicMuteFile, "w")
-    if f then f:close() end
+    hs.execute("dic-mute on", true)
     isActive = true
     updateMenubar()
 end

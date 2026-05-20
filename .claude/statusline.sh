@@ -2,7 +2,7 @@
 input=$(cat)
 cwd=$(echo "$input" | jq -r '.cwd // empty')
 pct=$(echo "$input" | jq -r '.context_window.used_percentage // empty')
-if [ -f "$HOME/.local/share/dic/mute" ]; then
+if dic-status -q; then
   parts="🔇"
 else
   parts="🔈"

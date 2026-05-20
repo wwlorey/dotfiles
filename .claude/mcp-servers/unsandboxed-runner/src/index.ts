@@ -1,7 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { spawn, type ChildProcess } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { spawn, spawnSync, type ChildProcess } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { z } from "zod";
 import path from "node:path";
 
@@ -417,8 +417,7 @@ server.tool(
     format: z.string().optional().describe("Audio format: wav or mp3 (default: wav). Only relevant when output is set."),
   },
   async ({ text, voice, speed, output, format }) => {
-    const muteFile = path.join(process.env.HOME ?? "/", ".local/share/dic/mute");
-    if (existsSync(muteFile)) {
+    if (spawnSync("dic-status", ["-q"]).status === 0) {
       return { content: [{ type: "text", text: "Done." }] };
     }
 

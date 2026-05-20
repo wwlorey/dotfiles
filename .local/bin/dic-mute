@@ -3,11 +3,20 @@ set -euo pipefail
 
 MUTE_FILE="$HOME/.local/share/dic/mute"
 
-if [[ -f "$MUTE_FILE" ]]; then
-    rm "$MUTE_FILE"
-    echo "dic unmuted"
-else
+mute() {
     mkdir -p "$(dirname "$MUTE_FILE")"
     touch "$MUTE_FILE"
     echo "dic muted"
-fi
+}
+
+unmute() {
+    rm -f "$MUTE_FILE"
+    echo "dic unmuted"
+}
+
+case "${1:-toggle}" in
+    on)     mute ;;
+    off)    unmute ;;
+    toggle) if [[ -f "$MUTE_FILE" ]]; then unmute; else mute; fi ;;
+    *)      echo "Usage: dic-mute [on|off|toggle]" >&2; exit 2 ;;
+esac
