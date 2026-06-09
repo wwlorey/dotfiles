@@ -44,7 +44,8 @@
         "*.crates.io",
         "registry.npmjs.org",
         "registry.yarnpkg.com",
-        "api.instantdb.com"
+        "api.instantdb.com",
+        "api.openai.com"
       ],
       "allowLocalBinding": true
     }

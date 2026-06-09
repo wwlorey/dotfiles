@@ -133,6 +133,10 @@ case ":$PATH:" in
   *) export PATH="$PNPM_HOME:$PATH" ;;
 esac
 
+# Prepend ~/.cargo/bin so cargo-installed binaries (e.g. pensa's `pn`) win
+# over Homebrew shims (e.g. pnpm's `pn`) that path_helper inserts later.
+export PATH="$HOME/.cargo/bin:$PATH"
+
 # Ensure uv tools are installed
 command -v kokoro-tts &>/dev/null || uv tool install kokoro-tts
 
