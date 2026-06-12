@@ -19,7 +19,7 @@
       "node*export.js*",
       "cargo*",
       "sgf*",
-      "cl*"
+      "agent*"
     ],
     "filesystem": {
       "allowWrite": [
@@ -257,7 +257,7 @@
           },
           {
             "type": "command",
-            "command": "$HOME/.claude/hooks/require-claude-wrapper.sh"
+            "command": "$HOME/.claude/hooks/require-agent-wrapper.sh"
           },
           {
             "type": "command",

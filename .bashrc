@@ -44,10 +44,11 @@ alias gwa='git worktree add'
 alias gwl='git worktree list'
 alias gwr='git worktree remove'
 
-alias n="mkdir -p ~/Downloads/news && cd ~/Downloads/news && cl \"@$PROMPTS/news.md\""
-alias sb="cd $DOTFILES/ && cl \"@$PROMPTS/storybrand.md\""
-alias sbw="cl \"@$PROMPTS/storybrand-website.md\""
-alias i="cl \"@$PROMPTS/images.md\""
+alias a='agent'
+alias n="mkdir -p ~/Downloads/news && cd ~/Downloads/news && agent \"@$PROMPTS/news.md\""
+alias sb="cd $DOTFILES/ && agent \"@$PROMPTS/storybrand.md\""
+alias sbw="agent \"@$PROMPTS/storybrand-website.md\""
+alias i="agent \"@$PROMPTS/images.md\""
 
 # Ask for consent & be verbose
 # These aliases can be ignored by prepending "\" (i.e. "\rm")

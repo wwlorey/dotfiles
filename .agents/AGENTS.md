@@ -1,1 +1,1 @@
-MANDATORY: study `~/.sgf/MEMENTO.md` (loaded via `cl`).
+MANDATORY: study `~/.sgf/MEMENTO.md` (loaded via `agent`).
