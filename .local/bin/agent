@@ -2,13 +2,61 @@
 
 set -euo pipefail
 
-MEMENTO="$HOME/.sgf/MEMENTO.md"
+AGENTS="$HOME/.agents" MEMENTO="$AGENTS/MEMENTO.md"
+
+extractFrontmatterField() {
+  awk -F': *' -v k="$1" '$1==k{sub(/^[^:]*: */,""); print; exit}' "$2"
+}
+
+getMemento() {
+  [[ -f "$MEMENTO" ]] && cat "$MEMENTO"
+  if compgen -G "$AGENTS/skills/*/SKILL.md" >/dev/null; then
+    echo
+    echo "## Skills"
+    for f in "$AGENTS"/skills/*/SKILL.md; do
+      n=$(extractFrontmatterField name "$f")
+      d=$(extractFrontmatterField description "$f")
+      if [[ -z "$n" || -z "$d" ]]; then
+        echo "Error: bad frontmatter in $f" >&2
+        exit 1
+      fi
+      echo "- $n: $d → read $f before related work"
+    done
+  fi
+}
+
+
+if [[ "${1:-}" == "ls" || "${1:-}" == "list" ]]; then
+  for f in "$AGENTS"/skills/*/SKILL.md; do
+    if [[ ! -e "$f" ]]; then
+      echo "No skills in $AGENTS/skills/"
+      break
+    fi
+    printf '%-20s %s\n' \
+      "$(extractFrontmatterField name "$f")" \
+      "$(extractFrontmatterField description "$f")"
+  done
+  exit 0
+fi
 
 args=()
 if [[ -f "$MEMENTO" ]]; then
-  args+=(--append-system-prompt "$(cat "$MEMENTO")")
+  args+=(--append-system-prompt "$(getMemento)")
 else
   echo "Warning: $MEMENTO not found" >&2
 fi
 
-exec agent-secret "${args[@]}" "$@"
+mode=()
+if [[ "${1:-}" == "-p" ]]; then
+  mode=(-p)
+  shift
+fi
+
+if [[ -n "${1:-}" && -d "$AGENTS/skills/$1" ]]; then
+  skill="$1"
+  shift
+  exec agent-secret ${args[@]+"${args[@]}"} ${mode[@]+"${mode[@]}"} "Load and follow the $skill skill. Args: ${*:-none}. cwd: $PWD"
+fi
+
+exec agent-secret ${args[@]+"${args[@]}"} ${mode[@]+"${mode[@]}"} "$@"
+
