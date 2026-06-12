@@ -1,0 +1,14 @@
+#!/bin/bash
+
+set -euo pipefail
+
+MEMENTO="$HOME/.sgf/MEMENTO.md"
+
+args=()
+if [[ -f "$MEMENTO" ]]; then
+  args+=(--append-system-prompt "$(cat "$MEMENTO")")
+else
+  echo "Warning: $MEMENTO not found" >&2
+fi
+
+exec agent-secret "${args[@]}" "$@"

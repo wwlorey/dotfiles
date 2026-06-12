@@ -257,7 +257,7 @@
           },
           {
             "type": "command",
-            "command": "$HOME/.claude/hooks/require-agent-wrapper.sh"
+            "command": "$HOME/.claude/hooks/require-agent-script.sh"
           },
           {
             "type": "command",
