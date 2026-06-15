@@ -1,27 +1,27 @@
 ---
 name: orchestrate
-description: Decomposing work across multiple subagents — fan-out, parallelization, batched delegation, sweeps over many files or items, and Ralph loops (running a worker repeatedly on the same task until done). Consult whenever the task naturally splits into independent worker units (audit N files, refactor M call sites, research K sources, draft and critique in parallel), whenever the user asks for a Ralph loop, or whenever they say "orchestrate", "delegate", "fan out", "parallelize", "spawn workers", or "batch". Skip for a single one-off delegation — use the Agent tool directly for those.
+description: Spawning a subagent via the Agent tool, including a single one-off delegation. Consult before every Agent call — no bottom limit, no exceptions; don't talk yourself out of consulting because the spawn feels small or fast. Also consult whenever the user says "orchestrate", "delegate", "fan out", "parallelize", "spawn workers", "batch", or asks for a Ralph loop.
 ---
 
 # Orchestrate
 
-You are the orchestrator. Workers do the work in parallel; you brief them, synthesize their returns, and report at end-of-turn. There are exactly two tiers: **orchestrator** (you, this turn) and **workers** (Agent-tool spawns). Workers do NOT spawn further workers.
+You are the orchestrator. Workers do the work; you brief them, synthesize their returns, and report at end-of-turn. There are exactly two tiers: **orchestrator** (you, this turn) and **workers** (Agent-tool spawns). Workers do NOT spawn further workers.
 
-## When to orchestrate
+This skill governs **every Agent spawn**, single or multiple. Briefing is the load-bearing step — workers inherit no skills, no MEMENTO, no conversation context, so anything they need has to be named in the prompt.
 
-Orchestrate when the task splits cleanly into 2+ independent units that don't share state during execution:
+## Shape of the spawn
 
-- Review N files across distinct concerns (one worker per dimension)
-- Research M competing approaches and pick (one worker per option)
-- Draft and adversarially critique in parallel (writer + critic)
-- Sweep K targets for a pattern (one worker per target chunk)
+Decide how many workers fit the task — the count doesn't change whether you consult this skill, only how you spawn:
+
+- **Single worker** — one **focused** delegation. Brief per the checklist below and call Agent.
+- **Parallel fan-out (2+ workers)** — task splits into independent units that don't share state. Emit multiple Agent calls in one message; they run concurrently. Examples: review N files across distinct concerns, research M competing approaches, draft + adversarial critique pair, sweep K targets.
+- **Sequential dependency** — worker #2's briefing needs worker #1's output. Brief them one at a time.
 - **Ralph loop** — run a worker repeatedly on the same task until a stop condition is met (build until tests pass, refine a spec until complete, fix until clean). Sequential, not parallel: each iteration's briefing reflects the state the previous worker left behind. Define the stop condition explicitly before the first spawn; cap iterations to avoid runaway loops.
 
-Do NOT orchestrate for:
+Do the work yourself (no spawn) when:
 
-- A single delegation — call Agent directly
-- Work with cross-step state (sequential edits to the same file) — do it yourself
-- Trivial tasks where briefing cost ≥ doing it inline
+- Cross-step state (sequential edits to the same file) makes splitting harmful.
+- Briefing cost ≥ doing it inline (a one-line read, a single grep).
 
 For >5 workers, multi-stage pipelines, or structured-schema returns, stop and use the **Workflow** tool instead. It handles concurrency caps, schemas, journaling, and resumption that this skill leaves to you.
 
@@ -30,35 +30,21 @@ For >5 workers, multi-stage pipelines, or structured-schema returns, stop and us
 Workers spawned via the Agent tool do NOT inherit the MEMENTO, the skills index, or your conversation context. They only see what you put in the briefing. Every briefing must contain:
 
 1. **Goal** — what the worker is producing, in one sentence.
-2. **Scope** — exactly which files / paths / areas they may touch, and what is off-limits.
+2. **Scope** — exactly which files / paths / areas they may touch, and what is off-limits. By default workers research, draft, and report — they do NOT apply code changes; the orchestrator applies them after synthesis. Override only when scopes are genuinely disjoint (one worker per file, no overlap) and you state "apply your changes directly" in the briefing.
 3. **Return format** — prose, list, diff, structured block. Be explicit.
-4. **Inherited rules they'd otherwise miss** — if the worker must follow a project rule (use MCP wrappers over bash, edit dotfiles not deployed copies, use `pn` not `gh`, etc.), state it. They will not know otherwise.
-5. **The silence clause, verbatim:**
+4. **Skills, scripts, and MCP tools they should reach for** — before spawning, inventory what's available that fits the task and name it explicitly. Examples: `youtube-transcript` for any YouTube source, `deep-research` for fan-out web research, `generate-image` for visual output, `voice` for TTS, `unsandboxed-runner` MCP wrappers for shell commands that need network or non-sandbox paths, any project script the worker would otherwise have to re-derive. Workers do not see the skill index, so unmentioned skills are invisible to them. Skipping this step is the most common briefing failure.
+5. **Inherited project rules they'd otherwise miss** — if the worker must follow a project rule (edit dotfiles not deployed copies, use `pn` not `gh`, use a specific commit-message format, etc.), state it. They will not know otherwise.
+6. **The silence clause, verbatim:**
 
    > You are a worker, not an orchestrator. Do NOT produce a spoken end-of-turn report. Do NOT call any TTS / voice / `run_dic` tool. Do NOT spawn further workers via the Agent tool — return your result directly. Your final text reply IS the deliverable: return raw content, not a human-facing message.
 
-Keep briefings tight. Too much wastes tokens; too little drifts off-task. The five items above are the minimum bar.
-
-## Spawning
-
-Use the Agent tool. Pick `subagent_type`:
-
-- **`Explore`** — read-only search, locate-this-symbol, where-is-X workers
-- **`claude`** — general work (edits, research, mixed)
-- **`Plan`** — design / strategy workers
-- **`code-reviewer`** or other specialized types when the fit is obvious
-
-Independent workers run in parallel: emit multiple Agent tool calls in a **single message**. They execute concurrently and results come back together.
-
-Dependent workers run sequentially: brief #2 using the output of #1.
-
-By default workers research / draft / report — they do NOT apply code changes. The orchestrator applies them after synthesis. Override only when scopes are genuinely disjoint (one worker per file, no overlap) and you state "apply your changes directly" in the briefing.
+Keep briefings tight. Too much wastes tokens; too little drifts off-task. The six items above are the minimum bar.
 
 ## Synthesis and end-of-turn
 
 After workers return:
 
 - Synthesize their outputs into a single coherent answer for the user.
-- Apply any changes the workers proposed (per the default above).
+- Apply any changes the workers proposed.
 - If a worker returned nothing useful, **say so** in the synthesis — silence reads as "covered".
 - End the turn with a spoken report per the `end-of-turn-report` skill. **Orchestrators speak; workers do not.**
