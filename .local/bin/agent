@@ -4,6 +4,18 @@ set -euo pipefail
 
 AGENTS="$HOME/.agents" MEMENTO="$AGENTS/MEMENTO.md"
 
+ensureSkillsSymlink() {
+  local target="$AGENTS/skills" link="$HOME/.claude/skills"
+  [[ -L "$link" && "$(readlink "$link")" == "$target" ]] && return 0
+  if [[ -e "$link" || -L "$link" ]]; then
+    echo "Error: $link exists but is not a symlink to $target" >&2
+    exit 1
+  fi
+  mkdir -p "$HOME/.claude"
+  ln -s "$target" "$link"
+}
+ensureSkillsSymlink
+
 extractFrontmatterField() {
   awk -F': *' -v k="$1" '$1==k{sub(/^[^:]*: */,""); print; exit}' "$2"
 }
