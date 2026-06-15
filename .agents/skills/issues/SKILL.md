@@ -98,7 +98,12 @@ issues/ready              # all ready issues
 issues/ready auth         # only slugs starting with "auth-"
 ```
 
-`ready` doubles as a doctor: it warns on (a) unknown values in the four enum fields, (b) `deps:` entries that don't resolve to an issue file. Warnings go to stderr; the slug list stays on stdout so you can pipe it.
+`ready` doubles as a doctor:
+
+- **Warns** (stderr, exit 0) on unknown enum values and `deps:` entries that don't resolve to an issue file.
+- **Errors** (stderr, exit 1, issue excluded from output) on structurally broken frontmatter: missing/unterminated `---`, or a `deps:` value that isn't an inline list like `[a, b]`. Block-form (`deps:` followed by `- a`) is not supported — write `deps: [a, b]`.
+
+The slug list stays on stdout regardless, so the script is pipe-friendly.
 
 It does NOT detect cycles. At <100 issues per project the cost of manual cycle review on `dep add` is lower than the script complexity. Revisit if you ever build a project where this bites.
 
@@ -111,6 +116,16 @@ It does NOT detect cycles. At <100 issues per project the cost of manual cycle r
 5. **Reopen if needed.** Edit `status: open`. Commit with the reason.
 
 There is no separate "reopened" state — git history shows it was closed and then opened. That's enough.
+
+## Concurrent claims
+
+Two agents may try to claim the same issue. The protocol:
+
+1. Before editing, re-read the file (or `git pull` if working on a shared branch). If the status is already `in_progress`, pick a different issue.
+2. Claim by editing `status: open` → `in_progress` in a single commit, message `claim <slug>`.
+3. On a shared branch with another worktree, two `→ in_progress` edits produce identical text and git will silently auto-merge. The `claim <slug>` commit message — visible in `git log --follow issues/<slug>.md` — is the tie-breaker: whichever commit lands first owns the claim, the loser unclaims (revert to `open`) and picks something else.
+
+There is no in-band lock. Don't introduce one — the rate of real collisions at this scale doesn't justify the schema.
 
 ## When workflow skills use this
 

@@ -24,6 +24,14 @@ PRIORITY = {"p0", "p1", "p2", "p3"}
 TYPE = {"bug", "task", "chore"}
 PRIORITY_RANK = {"p0": 0, "p1": 1, "p2": 2, "p3": 3}
 
+HAD_ERROR = False
+
+
+def err(msg: str) -> None:
+    global HAD_ERROR
+    HAD_ERROR = True
+    sys.stderr.write(msg)
+
 
 def find_issues_dir() -> Path:
     cur = Path.cwd().resolve()
@@ -36,44 +44,68 @@ def find_issues_dir() -> Path:
 
 
 def parse_frontmatter(path: Path) -> dict | None:
-    """Return the frontmatter as a dict, or None if the file has no frontmatter."""
+    """Return the frontmatter as a dict, or None on structural error.
+
+    Returning None excludes the issue from the working set entirely — it cannot
+    appear in `ready` output and other issues that depend on it will surface as
+    orphan-dep warnings.
+    """
     try:
         text = path.read_text()
     except OSError as e:
-        sys.stderr.write(f"warn: {path.name}: cannot read ({e})\n")
+        err(f"error: {path.name}: cannot read ({e})\n")
         return None
     if not text.startswith("---\n"):
-        sys.stderr.write(f"warn: {path.name}: no frontmatter\n")
+        err(f"error: {path.name}: no frontmatter\n")
         return None
     end = text.find("\n---\n", 4)
     if end == -1:
-        sys.stderr.write(f"warn: {path.name}: unterminated frontmatter\n")
+        err(f"error: {path.name}: unterminated frontmatter\n")
         return None
     block = text[4:end]
+    lines = block.splitlines()
     fm: dict = {}
-    for raw in block.splitlines():
+    i = 0
+    while i < len(lines):
+        raw = lines[i]
         line = raw.strip()
+        i += 1
         if not line or line.startswith("#"):
             continue
         if ":" not in line:
-            continue
+            err(f"error: {path.name}: unexpected frontmatter line {raw!r}\n")
+            return None
         key, _, value = line.partition(":")
         key = key.strip()
         value = value.strip()
         if key == "deps":
-            # Accept inline list: [a, b, c] or [] — block lists not supported, keep KISS.
-            if value.startswith("[") and value.endswith("]"):
+            # Only inline lists are accepted: [a, b, c] or []. Block form is a
+            # hard error — silently treating it as empty would let an issue with
+            # real deps appear ready.
+            if value == "":
+                j = i
+                while j < len(lines) and (
+                    not lines[j].strip() or lines[j].strip().startswith("#")
+                ):
+                    j += 1
+                if j < len(lines) and lines[j].lstrip().startswith("- "):
+                    err(
+                        f"error: {path.name}: deps must be an inline list like [a, b] "
+                        f"(block-form `deps:` followed by `- item` is not supported)\n"
+                    )
+                    return None
+                fm["deps"] = []
+            elif value.startswith("[") and value.endswith("]"):
                 inner = value[1:-1].strip()
                 fm["deps"] = (
                     [s.strip() for s in inner.split(",") if s.strip()] if inner else []
                 )
-            elif value == "":
-                fm["deps"] = []
             else:
-                sys.stderr.write(
-                    f"warn: {path.name}: deps must be an inline list like [a, b]\n"
+                err(
+                    f"error: {path.name}: deps must be an inline list like [a, b] "
+                    f"(got {value!r})\n"
                 )
-                fm["deps"] = []
+                return None
         else:
             fm[key] = value
     return fm
@@ -128,7 +160,7 @@ def main() -> int:
     ready.sort(key=lambda s: (PRIORITY_RANK.get(by_slug[s].get("priority", "p3"), 3), s))
     for slug in ready:
         print(slug)
-    return 0
+    return 1 if HAD_ERROR else 0
 
 
 if __name__ == "__main__":
