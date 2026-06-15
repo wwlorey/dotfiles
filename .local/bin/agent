@@ -39,14 +39,24 @@ getMemento() {
 
 
 if [[ "${1:-}" == "ls" || "${1:-}" == "list" ]]; then
+  long=0
+  [[ "${2:-}" == "-l" || "${2:-}" == "--long" ]] && long=1
+  [[ ! -t 1 ]] && long=1
+  if (( ! long )); then
+    cols=$(tput cols 2>/dev/null || echo 80)
+    maxdesc=$((cols - 21))
+  fi
   for f in "$AGENTS"/skills/*/SKILL.md; do
     if [[ ! -e "$f" ]]; then
       echo "No skills in $AGENTS/skills/"
       break
     fi
-    printf '%-20s %s\n' \
-      "$(extractFrontmatterField name "$f")" \
-      "$(extractFrontmatterField description "$f")"
+    n=$(extractFrontmatterField name "$f")
+    d=$(extractFrontmatterField description "$f")
+    if (( ! long )); then
+      d=$(perl -CSDA -e 'my ($t, $w) = @ARGV; print length($t) > $w ? substr($t, 0, $w-1) . "\x{2026}" : $t' "$d" "$maxdesc")
+    fi
+    printf '%-20s %s\n' "$n" "$d"
   done
   exit 0
 fi

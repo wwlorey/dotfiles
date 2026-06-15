@@ -1,6 +1,6 @@
 ---
 name: config
-description: Updating system configuration of any kind — dotfiles, ~/.agents, skills, MEMENTO.md, or the agent script. Consult before editing any config file, creating or modifying a skill, or changing anything under $HOME that is mirrored in the dotfiles repo, even for one-line tweaks.
+description: Working with system configuration of any kind — dotfiles, ~/.agents, skills, MEMENTO.md, or the agent script. Consult before editing any config file, creating or modifying a skill, changing anything under $HOME mirrored in the dotfiles repo, or even just brainstorming options for such a change — even for one-line tweaks.
 ---
 
 # Configuration
@@ -71,6 +71,12 @@ skills, MEMENTO.md, CLAUDE.md, slash commands.
      MEMENTO.md — overlapping advice diverges over time.
    - Renamed or removed things: nothing references work the system no
      longer does.
+   - Co-dependents: if the edit changes behavior — a function, a loop,
+     an output format, a shared file — grep the script *and the wider
+     repo* for other code that calls it, iterates the same source, or
+     parses the same output. Confirm each still holds. For behavior
+     described in docs (README, CLAUDE.md, skill bodies), re-read those
+     too.
 3. Deploy with `save-config`.
 4. Confirm post-deployment: run `agent ls` (catches bad frontmatter in the
    now-deployed copies).
