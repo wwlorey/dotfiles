@@ -1,6 +1,6 @@
-# StoryBrand Primer for AI Coaches
+# StoryBrand SB7 Primer (deep theory)
 
-You are an AI coach trained in Donald Miller's StoryBrand framework. Your job is to guide a user through (1) building a clear brand message using the **SB7 Framework**, and where helpful, (2) sanity-checking their **business or product name**. This document is your full reference. It is distilled from Miller's book *Building a StoryBrand*, the StoryBrand 7-Part Framework workbook, and Miller's video on naming and the "curse of knowledge."
+Reference material — load when the coaching procedure in `../SKILL.md` needs the *why* behind a rule, worked examples, the naming module, the 5-things-every-website-must-have, or the resistance heuristics. Distilled from Donald Miller's *Building a StoryBrand*, the SB7 workbook, and Miller's video on naming and the "curse of knowledge."
 
 ---
 
@@ -40,7 +40,7 @@ If a caveman in a bearskin t-shirt couldn't grunt the answer ("You sell headache
 
 ---
 
-## Part 2: The SB7 Framework
+## Part 2: The SB7 Framework (deep dive)
 
 > *A CHARACTER who wants something encounters a PROBLEM before they can get it. At the peak of their despair, a GUIDE steps into their lives, gives them a PLAN, and CALLS THEM TO ACTION. That action helps them avoid FAILURE and ends in a SUCCESS.*
 
@@ -76,10 +76,6 @@ The diagnostic question: **How does your customer want to be described by their 
 Capture it as a single line: *"We know you want to become the type of person who is described as: ____________."*
 
 This identity threads through the rest of the BrandScript — it shapes the empathy you express, the success you paint, and the language you use throughout.
-
-**Coach prompts:**
-1. *"What is the one thing your customer most wants that you can deliver? State it in 3–8 words, in plain language a customer would use."*
-2. *"How does your customer want to be described by their friends after using your product? Give me 3–5 adjectives or a short phrase."*
 
 ---
 
@@ -121,8 +117,6 @@ A brand that resolves all three levels in one purchase creates passionate evange
 - Internal: I want to be an early adopter of new technology
 - Philosophical: My car ought to help save the environment
 
-**Coach prompt:** *"Who or what is the villain? What does it do to your customer (external)? How does it make them feel (internal)? Why is it just plain wrong (philosophical)?"*
-
 ---
 
 ### Element 3 — MEETS A GUIDE (empathy + authority)
@@ -155,8 +149,6 @@ Show you've helped others solve this exact problem. Authority answers the second
 3. **Awards** — small logos at the bottom of the page.
 4. **Logos of clients** (B2B) — social proof that businesses like the customer's trust you.
 
-**Coach prompt:** *"Write one empathetic sentence acknowledging your customer's internal problem. Then list 2–4 specific proofs of competence (numbers, named clients, awards, or testimonial themes)."*
-
 ---
 
 ### Element 4 — WHO GIVES THEM A PLAN
@@ -182,8 +174,6 @@ Agreement plans often live behind the scenes — on a packaging, a wall, a "why 
 #### Name the plan
 
 Naming the plan dramatically increases its perceived value: "The Easy Installation Plan," "The Customer Satisfaction Agreement," "The World's Best Night's Sleep Plan."
-
-**Coach prompt:** *"Give me a 3-step process plan for working with you, then a name for the plan."*
 
 ---
 
@@ -221,8 +211,6 @@ Common formats:
 
 > StoryBrand itself doubled revenue in year two using only one transitional CTA — a free PDF.
 
-**Coach prompt:** *"Write one direct CTA (3–5 words) and one transitional CTA (a specific free thing you'd offer in exchange for an email address)."*
-
 ---
 
 ### Element 6 — THAT HELPS THEM AVOID FAILURE
@@ -245,8 +233,6 @@ From Infante, Rancer & Womack — a soft, ethical way to use stakes:
 > *"If your BrandScript is a recipe for bread, failure is the salt. Too much ruins the loaf; leave it out and it tastes bland."*
 
 Just a pinch. Too much fear and customers disengage entirely; too little and they don't see why your product matters.
-
-**Coach prompt:** *"List 3–4 specific negative consequences your customer faces if they don't engage you. Be concrete (lost money, lost time, embarrassment, missed opportunity)."*
 
 ---
 
@@ -272,8 +258,6 @@ Every successful resolution maps to one or more of:
 
 Show smiling people who have already crossed the finish line — using your product, enjoying the outcome. Visual cues do as much work as words.
 
-**Coach prompt:** *"Describe the customer's life 6 months after using your product. Be visual and specific. What are they doing, feeling, and able to do that they couldn't before?"*
-
 ---
 
 ## Part 3: The One-Liner (your verbal calling card)
@@ -297,7 +281,7 @@ Memorize it. Put it in email signatures. Print it on business cards. Repeat it u
 
 ## Part 4: The 5 Things Every Website Must Have
 
-After the BrandScript, the website is the highest-leverage place to apply it.
+After the BrandScript, the website is the highest-leverage place to apply it. (For the full website build, hand off to the `storybrand-website` skill.)
 
 1. **An offer above the fold** — a short, bold statement that either (a) promises an aspirational identity, (b) promises to solve a specific problem, or (c) states exactly what you do. Squarespace: *"We help you make beautiful websites."* Local Honey hair salon: *"We sell clothes. We do hair."*
 2. **Obvious calls to action** — direct CTA top-right and center-above-the-fold, repeated as user scrolls. Same wording, same color, brighter than any other button. Transitional CTA next to it, less bright.
@@ -378,81 +362,9 @@ A skincare brand's tagline: *"Look five years younger and age more slowly."* It'
 
 ---
 
-## Part 6: How to Run a BrandScript Session as a Coach
+## Part 6: Handling Resistance (the most common failure mode)
 
-**Follow this order strictly.** Miller is explicit: skipping ahead is the "amateur screenwriter mistake" — having an overview but not learning the rules of each module. Do not let the user jump to a later element until the current one has both a brainstorm and a decision. Within each step, brainstorming can be loose and exploratory; the BrandScript decision (what actually gets used) must be deliberate.
-
-### Run these checkpoints
-
-Run them at the moments indicated, not just at the end:
-
-- **Grunt test** — after the one-liner is drafted, and after any website hero copy is drafted. Can a stranger answer "What do you offer? How does it improve my life? What do I do to buy?" in 5 seconds?
-- **Tap test** — after any name, tagline, or controlling idea is drafted. Would a cold reader, with zero context, guess what the product does just from the words?
-- **Hero check** — after every element. If the user is the hero of their own copy, redirect.
-
-### Step 0 — Frame the project
-
-Ask: *"For the purposes of this exercise, what one project, product, division, or audience are we building a BrandScript for?"* (One BrandScript per audience or major product. The master brand gets its own.)
-
-### Step 1 — Character
-
-1. *"Who is the customer? Describe them in one sentence."*
-2. *"What is the one thing they want from your brand? (Pare to a single, survival-linked desire.)"*
-3. *"What's the aspirational identity? How do they want their friends to describe them after using your product?"*
-
-### Step 2 — Problem
-
-1. *"Who or what is the villain?"* (one, root cause, relatable, real)
-2. *"External problem — what tangible thing are you fixing?"*
-3. *"Internal problem — how does that external problem make them feel?"*
-4. *"Philosophical problem — why is this just plain wrong in the world?"*
-
-### Step 3 — Guide
-
-1. *"Write one empathetic sentence acknowledging their internal problem."*
-2. *"List your authority proofs: testimonials, statistics, awards, client logos."*
-
-### Step 4 — Plan
-
-1. *"Give me a 3–4 step process plan."*
-2. *"Name the plan."*
-3. *(Optional)* *"What fears do customers have about working with you? Write 3–5 agreements that alleviate them."*
-
-### Step 5 — Calls to Action
-
-1. *"What's your direct CTA? (Buy Now / Schedule / Call.)"*
-2. *"What's your transitional CTA? (Free PDF / webinar / sample / trial.)"*
-
-### Step 6 — Failure (just a pinch)
-
-*"Three negative consequences if they don't engage you. Be specific."*
-
-### Step 7 — Success
-
-*"Paint the post-purchase picture. What does their life look like? Tie it to one or more of: status, completeness, self-realization. Be visual and specific."*
-
-### Step 8 — Synthesize
-
-1. Write the **one-liner** (Character + Problem + Plan + Success).
-2. Run the **grunt test** on the result: can a stranger answer "what do you offer / how does it improve my life / what do I do next" in 5 seconds?
-3. Run the **tap test** on any name or tagline: would a cold reader guess the offering?
-
-### Step 9 — Implement
-
-Apply to:
-- Website (the 5 things)
-- Email signatures
-- Sales scripts and elevator pitches
-- Business cards
-- Onboarding for new hires (so the whole team speaks the same language)
-
----
-
-## Part 7: Coaching Heuristics
-
-### Handling resistance
-
-The single most common failure mode: the user insists *"my business is different / more complicated / I have 27 products / you don't understand my industry."* Miller heard this constantly. His answer is consistent and you should mirror it:
+The user insists *"my business is different / more complicated / I have 27 products / you don't understand my industry."* Miller heard this constantly. The answer is consistent:
 
 1. **Acknowledge the complexity is real.** Don't argue.
 2. **Insist on a master BrandScript anyway.** It pares down to the *one* core desire shared across the customer base. This is the brand-level message.
@@ -460,35 +372,3 @@ The single most common failure mode: the user insists *"my business is different
 4. **Cite Miller's industrial painter.** He had three revenue streams (powder-coating auto parts, sealant on concrete, sterile painting in hospitals) and insisted his business couldn't be reduced to one message. The message that would have grown his business: *"We Paint All Kinds of S#*%."* The sub-products live behind that umbrella.
 
 If the user pushes back that their offering is "too sophisticated" or "the customer needs to understand all the nuance" — that's the curse of knowledge talking. Run the tap test on them.
-
-### General principles
-
-- **If you confuse, you lose.** When in doubt, cut.
-- **Hero, not guide.** If the user starts every sentence with "we…", redirect them to "you…" (the customer).
-- **One thing, not twenty-seven.** Resist the urge to mention every feature. Pick one core desire for the master script.
-- **Survival-linked, not abstract.** "Inhale knowledge, exhale success" → "become the leader everybody loves."
-- **Specific, not fuzzy.** "Improve your life" → "save 5 hours a week on bookkeeping."
-- **Tell them where you're taking them.** Don't assume they get it.
-- **Repeat the message until it feels excessive.** It still isn't.
-- **Stay on script.** Anything in marketing that doesn't fit one of the 7 elements is noise. Cut it.
-- **Watch for the curse of knowledge** every time the user uses jargon, a clever-but-vague tagline, or a name that needs explaining. If they have to explain it to you, customers won't get it either.
-
----
-
-## Quick Reference — The 7 Elements on One Page
-
-| # | Element | Customer's Question | Coach's Output |
-|---|---|---|---|
-| 1 | A Character | "What do I want?" | One specific, survival-linked desire + aspirational identity |
-| 2 | Has a Problem | "What's getting in my way?" | Villain + external + internal + philosophical |
-| 3 | Meets a Guide | "Can I trust you?" | Empathy statement + authority proofs |
-| 4 | Who Gives Them a Plan | "How does this work?" | 3–4 step named process plan (and/or agreement plan) |
-| 5 | And Calls Them to Action | "What do I do next?" | Direct CTA + transitional CTA |
-| 6 | That Helps Them Avoid Failure | "What happens if I don't?" | 3–4 specific negative stakes (a pinch) |
-| 7 | And Ends in a Success | "What does success look like?" | Specific, visual end-state tied to status / completeness / self-realization |
-
-**The one-liner formula:** *We help [Character] who struggle with [Problem] by [Plan] so they [Success].*
-
-**The grunt test:** Can a caveman answer "What do you offer? How does it improve my life? What do I do to buy?" in 5 seconds?
-
-**The tap test:** Can someone unfamiliar with your product guess what it does just from the name?
