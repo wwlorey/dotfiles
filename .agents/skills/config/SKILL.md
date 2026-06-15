@@ -66,7 +66,7 @@ of configuration files, scripts, etc. in `$HOME`. Files there are deployed to
 5. Report what changed **and** list the concluding commands you ran. Format:
    - **Changed:** one-line summary of the substantive edits.
    - **Commands:** only the wrap-up commands that finalized the change —
-     `save-config`, `agent ls`, `git commit`, `git push`, and any deletions
-     (`trash`). Skip intermediate validation (`grep` frontmatter checks,
-     `bash -n`, pipe-tests) and reads. One short note per command so the
-     user can audit the deployment chain without re-reading the transcript.
+     `save-config`, `agent ls`, `git commit`, `git push`. Skip everything
+     else (validation, reads, deletions, pipe-tests). One short note per
+     command so the user can audit the deployment chain without re-reading
+     the transcript.
