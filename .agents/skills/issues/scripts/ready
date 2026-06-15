@@ -1,0 +1,135 @@
+#!/usr/bin/env python3
+"""
+Print issue slugs that are ready to work on.
+
+Ready = status: open AND every dep resolves to a status: closed issue.
+Output is sorted by priority (p0 first), then by slug.
+
+Usage:
+    ready                Print all ready issues in the current repo.
+    ready <prefix>       Filter to slugs starting with <prefix>.
+
+Run from anywhere inside a repo that has an issues/ directory at the root.
+Doubles as a doctor: warns to stderr on unknown enum values and orphan
+deps. The slug list stays on stdout so it's pipe-friendly.
+"""
+
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+STATUS = {"open", "in_progress", "closed"}
+PRIORITY = {"p0", "p1", "p2", "p3"}
+TYPE = {"bug", "task", "chore"}
+PRIORITY_RANK = {"p0": 0, "p1": 1, "p2": 2, "p3": 3}
+
+
+def find_issues_dir() -> Path:
+    cur = Path.cwd().resolve()
+    for candidate in [cur, *cur.parents]:
+        d = candidate / "issues"
+        if d.is_dir():
+            return d
+    sys.stderr.write("error: no issues/ directory found in cwd or any parent\n")
+    sys.exit(2)
+
+
+def parse_frontmatter(path: Path) -> dict | None:
+    """Return the frontmatter as a dict, or None if the file has no frontmatter."""
+    try:
+        text = path.read_text()
+    except OSError as e:
+        sys.stderr.write(f"warn: {path.name}: cannot read ({e})\n")
+        return None
+    if not text.startswith("---\n"):
+        sys.stderr.write(f"warn: {path.name}: no frontmatter\n")
+        return None
+    end = text.find("\n---\n", 4)
+    if end == -1:
+        sys.stderr.write(f"warn: {path.name}: unterminated frontmatter\n")
+        return None
+    block = text[4:end]
+    fm: dict = {}
+    for raw in block.splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        if ":" not in line:
+            continue
+        key, _, value = line.partition(":")
+        key = key.strip()
+        value = value.strip()
+        if key == "deps":
+            # Accept inline list: [a, b, c] or [] — block lists not supported, keep KISS.
+            if value.startswith("[") and value.endswith("]"):
+                inner = value[1:-1].strip()
+                fm["deps"] = (
+                    [s.strip() for s in inner.split(",") if s.strip()] if inner else []
+                )
+            elif value == "":
+                fm["deps"] = []
+            else:
+                sys.stderr.write(
+                    f"warn: {path.name}: deps must be an inline list like [a, b]\n"
+                )
+                fm["deps"] = []
+        else:
+            fm[key] = value
+    return fm
+
+
+def load_all(issues_dir: Path) -> dict[str, dict]:
+    by_slug: dict[str, dict] = {}
+    for path in sorted(issues_dir.glob("*.md")):
+        fm = parse_frontmatter(path)
+        if fm is None:
+            continue
+        slug = path.stem
+        # Validate enum fields.
+        for field, allowed in (("status", STATUS), ("priority", PRIORITY), ("type", TYPE)):
+            v = fm.get(field)
+            if v is None:
+                sys.stderr.write(f"warn: {slug}: missing field '{field}'\n")
+            elif v not in allowed:
+                sys.stderr.write(
+                    f"warn: {slug}: unknown {field}: {v!r} (expected one of {sorted(allowed)})\n"
+                )
+        fm.setdefault("deps", [])
+        by_slug[slug] = fm
+    return by_slug
+
+
+def check_orphan_deps(by_slug: dict[str, dict]) -> None:
+    for slug, fm in by_slug.items():
+        for dep in fm["deps"]:
+            if dep not in by_slug:
+                sys.stderr.write(f"warn: {slug}: dep {dep!r} does not resolve to an issue\n")
+
+
+def is_ready(slug: str, by_slug: dict[str, dict]) -> bool:
+    fm = by_slug[slug]
+    if fm.get("status") != "open":
+        return False
+    for dep in fm["deps"]:
+        target = by_slug.get(dep)
+        if target is None or target.get("status") != "closed":
+            return False
+    return True
+
+
+def main() -> int:
+    prefix = sys.argv[1] if len(sys.argv) > 1 else ""
+    issues_dir = find_issues_dir()
+    by_slug = load_all(issues_dir)
+    check_orphan_deps(by_slug)
+
+    ready = [s for s in by_slug if s.startswith(prefix) and is_ready(s, by_slug)]
+    ready.sort(key=lambda s: (PRIORITY_RANK.get(by_slug[s].get("priority", "p3"), 3), s))
+    for slug in ready:
+        print(slug)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
