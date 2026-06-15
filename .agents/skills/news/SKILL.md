@@ -36,6 +36,7 @@ Refresh the user's newsboat feeds, group unread items by theme, write a short su
       ffmpeg -y -f concat -safe 0 -i /tmp/news/YYYY-MM-DD/filelist.txt -c copy ./YYYY-MM-DD-news.wav
       ```
    5. Do **not** play the audio — just save the file.
+   6. After the file is written, print its `file://` URL on its own line so the terminal auto-linkifies it (relative paths aren't linkified). Format: `file:///absolute/path/to/YYYY-MM-DD-news.wav`.
 
 ## Rules
 
