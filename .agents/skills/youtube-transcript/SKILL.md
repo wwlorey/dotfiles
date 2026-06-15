@@ -11,10 +11,22 @@ Use the `transcribe-yt` CLI to pull a transcript, then Read the resulting file.
 
 1. Run `transcribe-yt <youtube-url>` from `$TMPDIR/claude` so the transcript
    does not land in the user's working directory.
-2. Parse the `Saved to <filename>.txt` line from stdout — that path
-   (relative to where you ran the command) is the transcript.
+2. Parse the `Title:` and `Saved to <filename>.txt` lines from stdout — keep
+   the title for the sources section, and the path (relative to where you
+   ran the command) is the transcript.
 3. Read the file with the Read tool. Now do whatever the user asked
    (summarize, quote, answer questions, etc.).
+4. End your reply with a `Sources:` section listing every video you pulled.
+   The URL must appear as a bare URL (NOT wrapped in markdown `[text](url)`
+   syntax) so the terminal auto-linkifies it and the user can click it:
+
+   ```
+   Sources:
+   - <title> — https://www.youtube.com/watch?v=...
+   ```
+
+   Include this even for single-video tasks — the user wants to click
+   through to the source.
 
 ```bash
 cd "$TMPDIR/claude" && transcribe-yt "https://www.youtube.com/watch?v=..."
