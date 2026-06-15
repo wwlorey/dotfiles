@@ -37,6 +37,17 @@ of configuration files, scripts, etc. in `$HOME`. Files there are deployed to
   frontmatter at spawn time; changing frontmatter is the only way to change
   it).
 
+## Writing prompts
+
+These rules apply to anything that becomes a prompt an agent will read —
+skills, MEMENTO.md, CLAUDE.md, slash commands.
+
+- **Each version reads as if it were the first.** Don't reference prior
+  tools or earlier wording ("replaces X", "what Y called", "no longer
+  does Z"). When iterating, rewrite the affected passage cleanly rather
+  than layering negations or parenthetical exclusions on top of the old
+  text. The prompt describes its current desired state, not its history.
+
 ## MCP server (unsandboxed-runner)
 
 - Located at `.claude/mcp-servers/unsandboxed-runner/` in the dotfiles repo.
@@ -63,10 +74,6 @@ of configuration files, scripts, etc. in `$HOME`. Files there are deployed to
 3. Deploy with `save-config`.
 4. Confirm post-deployment: run `agent ls` (catches bad frontmatter in the
    now-deployed copies).
-5. Report what changed **and** list the concluding commands you ran. Format:
-   - **Changed:** one-line summary of the substantive edits.
-   - **Commands:** only the wrap-up commands that finalized the change —
-     `save-config`, `agent ls`, `git commit`, `git push`. Skip everything
-     else (validation, reads, deletions, pipe-tests). One short note per
-     command so the user can audit the deployment chain without re-reading
-     the transcript.
+5. Report under a `**Config changes:**` header as a brief bullet list,
+   one bullet per wrap-up step that ran. Each bullet is one of these
+   strings copied verbatim: `deployed`, `audited`, `committed`, `pushed`.
