@@ -18,7 +18,6 @@
       "pnpm run test:e2e*",
       "node*export.js*",
       "cargo*",
-      "sgf*",
       "agent*"
     ],
     "filesystem": {
@@ -29,7 +28,6 @@
         "~/.local/share/pensa",
         "~/.pnpm-store",
         "~/Library/Caches/ms-playwright",
-        "~/.sgf",
         "/tmp",
         "/private/tmp",
         "~/Repos/hooked-on-pa/node_modules/.vite-temp"
@@ -54,7 +52,6 @@
     "defaultMode": "bypassPermissions",
     "allow": [
       "Read(~/.cargo/*)",
-      "Read(~/.sgf/*)",
       "Bash(pnpm install*)",
       "Bash(pnpm add*)",
       "Bash(pnpm run test:e2e*)"
