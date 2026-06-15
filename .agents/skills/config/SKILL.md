@@ -63,10 +63,10 @@ of configuration files, scripts, etc. in `$HOME`. Files there are deployed to
 3. Deploy with `save-config`.
 4. Confirm post-deployment: run `agent ls` (catches bad frontmatter in the
    now-deployed copies).
-5. Report what changed **and** list every shell command that ran. Format:
+5. Report what changed **and** list the concluding commands you ran. Format:
    - **Changed:** one-line summary of the substantive edits.
-   - **Commands:** every command this session ran that touched the
-     system — `save-config`, `agent ls`, deletions (`trash`/`rm`), git ops
-     (`git commit`, `git push`), and anything else with side effects.
-     One short note per command so the user can audit the deployment chain
-     after the fact without re-reading the transcript.
+   - **Commands:** only the wrap-up commands that finalized the change —
+     `save-config`, `agent ls`, `git commit`, `git push`, and any deletions
+     (`trash`). Skip intermediate validation (`grep` frontmatter checks,
+     `bash -n`, pipe-tests) and reads. One short note per command so the
+     user can audit the deployment chain without re-reading the transcript.
