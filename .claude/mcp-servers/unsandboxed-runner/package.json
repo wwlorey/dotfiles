@@ -9,14 +9,9 @@
     "@modelcontextprotocol/sdk": "^1.29.0",
     "zod": "^3.25.76"
   },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "esbuild"
-    ]
-  },
   "devDependencies": {
-    "@types/node": "^22.19.19",
-    "tsx": "^4.21.0",
+    "@types/node": "^22.19.21",
+    "tsx": "^4.22.4",
     "typescript": "^5.9.3"
   }
 }
