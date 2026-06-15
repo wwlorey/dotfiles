@@ -29,7 +29,7 @@ Refresh the user's newsboat feeds, group unread items by theme, write a short su
 5. **Render the spoken version** to `./YYYY-MM-DD-news.wav`:
    1. Write a spoken script for each theme — plain prose, no URLs, no markdown.
    2. `mkdir -p /tmp/news/YYYY-MM-DD`
-   3. Generate each theme as a separate WAV at `/tmp/news/YYYY-MM-DD/NN.wav` via `run_dic` (use its `output` param). Run up to 3 in parallel.
+   3. Generate each theme as a separate WAV at `/tmp/news/YYYY-MM-DD/NN.wav` using the voice skill's audio file render mode (pass `output: "/tmp/news/YYYY-MM-DD/NN.wav"`). Run up to 3 in parallel.
    4. Concatenate the chunks into the final file:
       ```bash
       printf "file '%s'\n" /tmp/news/YYYY-MM-DD/*.wav > /tmp/news/YYYY-MM-DD/filelist.txt
