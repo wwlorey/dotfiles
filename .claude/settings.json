@@ -30,6 +30,7 @@
         "~/Library/Caches/ms-playwright",
         "/tmp",
         "/private/tmp",
+        "~/Repos/dotfiles",
         "~/Repos/hooked-on-pa/node_modules/.vite-temp"
       ]
     },
@@ -263,6 +264,10 @@
           {
             "type": "command",
             "command": "python3 $HOME/.claude/hooks/protect-dirs.py"
+          },
+          {
+            "type": "command",
+            "command": "python3 $HOME/.claude/hooks/redirect-config-edits.py"
           }
         ]
       }
