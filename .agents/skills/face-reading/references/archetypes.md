@@ -79,6 +79,8 @@ Mars often sublimates into competitive professions: athletes, fighters, surgeons
 - **Jolly, jovial, "great at parties"**
 - Naturally paired with **phlegmatic** temperament for the canonical clergy pattern
 
+**Clergy temperament outlier — the choleric-clergyman pattern.** Most clergy are phlegmatic+Jupiter (priest-VP, mediator, "great at parties"). The choleric+Jupiter outlier — Pope Leo XIV, the Renaissance cardinal-CEO archetype — inverts every downstream synthesis: it's the bishop-CEO, the institutional builder, the executive clergyman. When reading a clergy face do not default toward phlegmatic; check whether the side-profile cues (high rounded forehead, chin level with forehead, obtuse-to-acute jaw angle, no bow of melancholy) point to the choleric call instead.
+
 **Shadow**: pompous, sermonizing.
 
 ---

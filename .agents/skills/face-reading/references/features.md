@@ -177,6 +177,21 @@ Function: communication.
 
 ---
 
+## Nasolabial folds
+
+The diagonal creases running from each nostril outward to the mouth corner. Read **presence and depth relative to age**.
+
+| Cue | Reading |
+|---|---|
+| Pronounced nasolabial folds at young-to-mid age | **Commandability** — "gives orders from the top of the mountain"; aloof leadership view; sense of purpose found early; spiritual strength |
+| On a **melancholic-Venus** or **shadow-Venus** face | **Middle-manager / second-in-command signature** — the leadership view at a sub-principal level (Ghislaine Maxwell read) |
+| On a choleric face | Reinforces executive-leadership / CEO-clergy / commander capacity (Sydney Sweeney read — commandability under the actress role) |
+| Smooth nasolabial region late in life | Hasn't taken on commanding roles; deferential, supportive disposition |
+
+Pair the nasolabial-fold reading with the archetype and temperament call — the same fold reads as "boss" on a choleric+Saturn face and "henchwoman" on a melancholic+shadow-Venus face.
+
+---
+
 ## Philtrum
 
 Function: bridge between midface (social-emotional) and lower face (material). The face-as-funnel: intellect → decision-making → behavior → expression *here*.

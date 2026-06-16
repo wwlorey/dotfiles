@@ -18,16 +18,17 @@ Prosopa frames physiognomy as a two-layer system, repeated across his channel:
 
 His causal claim: genes pleiotropically code for both physical features and mental traits; epigenetics (childhood trauma, life events) toggles expression; hormones (testosterone, estrogen) shape morphology and behavior simultaneously. "You are your body." This is the implicit grounding — name it only if asked.
 
-## Inputs
+## Inputs (preflight checklist)
 
-Confirm before reading:
+Address each item before reading. Do not proceed to Step 1 until every line is either acquired or explicitly waived in the output with a stated reason.
 
-1. **Front-facing photo, neutral expression, head level, good lighting.** Smiling distorts mouth shape, lip line, and cheek volume.
-2. **Side profile if available.** Prosopa's temperament call depends on the profile — forehead slope, chin projection, jaw line angle, "bow of melancholy" vs flat vs concave curve. Without a profile, infer cautiously from front-view cues and flag confidence as moderate or lower.
-3. **Subject identity and consent.** Self, public figure, or consenting other.
-4. **For known subjects, pull a smile photo if one isn't supplied.** Cued features — gummy smile, tooth proportions, lip-corner shape — are load-bearing when present, and the supplied photo may not capture them. One extra image is cheap insurance against demoting a signature trait. Do the same for the side profile when temperament is in scope.
+- [ ] **Front-facing photo, neutral expression, head level, good lighting.** Smiling distorts mouth shape, lip line, and cheek volume.
+- [ ] **Side profile.** Prosopa's temperament call depends on it — forehead slope, chin projection, jaw line angle, "bow of melancholy" vs flat vs concave curve. Without one, infer cautiously from front-view cues and flag temperament confidence as moderate or lower.
+- [ ] **Subject identity and consent.** Self, public figure, or consenting other.
+- [ ] **Smile photo, for known subjects — non-skippable.** Gummy smile, tooth proportions, tooth gap, and lip-corner shape are load-bearing when present and the neutral photo may not capture them. For any subject with public photos available, pull one.
+- [ ] **Youth photo, for older subjects.** Aging trajectory (Venus → Mars, Saturn → Sun) and the original face-shape archetype both depend on the younger face.
 
-If the photo is poor, name the cues you can't read confidently and proceed only with the rest.
+If the photo set is poor, name the cues you can't read confidently and proceed only with the rest.
 
 ## Reading procedure
 
@@ -67,7 +68,7 @@ Full cues in `references/temperaments.md`.
 
 **Planetary archetype**: pick one of **Mars** (warrior), **Saturn** (accountant), **Earth** (farmer/businessman), **Sun** (aloof aristocrat), **Jupiter** (clergyman/judge), **Venus** (romantic diplomat), **Mercury** (jester/magician), **Uranus** (radical/sex-focused). Compound forms are legitimate and often more accurate ("Saturn over Mars," "Earth + Jupiter = Regulator"). Shadow archetypes ("shadow Venus") and the aging trajectory (Venus → Mars as the face sags) also live here.
 
-**Animal archetype**: pick one of the 36 — bird, pig, bulldog, frog, deer, horse, fox, rat, cat, wolf, lion, eagle/vulture, mouse, beaver, prairie dog, elephant, tiger, goat, badger, bat, hyena, skunk, snake, slug, owl, ostrich, vulture, rooster/peacock, penguin, bull, bear, coyote, golden retriever, monkey, lizard, dragon. The animal layer often resolves planetary ambiguity ("between Mars and Saturn → reads clearly as wolf").
+**Animal archetype**: when one of the 36 falls out cleanly, name it — bird, pig, bulldog, frog, deer, horse, fox, rat, cat, wolf, lion, eagle/vulture, mouse, beaver, prairie dog, elephant, tiger, goat, badger, bat, hyena, skunk, snake, slug, owl, ostrich, vulture, rooster/peacock, penguin, bull, bear, coyote, golden retriever, monkey, lizard, dragon. The animal layer often resolves planetary ambiguity ("between Mars and Saturn → reads clearly as wolf"). **Skip this layer when no animal falls out cleanly** — Prosopa often skips it himself and uses "wolf in sheep's clothing" or similar as a closing metaphor in Step 6 rather than as a diagnostic Step 4 call.
 
 Note the **archetype ↔ temperament fit** — Prosopa reads misfit as a person who "lost the plot" or whose life forced a channeling. Mention fit/misfit in the synthesis. Also note the **job-fit** the archetype + temperament points to.
 
@@ -105,6 +106,8 @@ In the reading text, describe what each composite shows. Patterns to look for:
 - **Split face shape** — one half a pure planetary archetype, the other half a pure different archetype, no mixing (Mark Carney = pure Saturn right / pure Mars left).
 - **Asymmetric features**: canthal tilt (positive left + negative right = privately driven, publicly conciliatory), eyelid fullness (left fuller = wants to overshare), eyebrow shape (right curved over time = public persona softened), worry lines (right = professional stress, left = personal stress, bilateral = family-business).
 - **Convergence** — halves match → inner and outer are aligned. That's a finding too.
+
+**Calibrate magnitude before naming a pattern.** Pixel-mirroring visually amplifies asymmetry — a modest "different modes for different parts of life" split can look like a two-character predator/prey divergence in the composite. Before naming "wolf in sheep's clothing," "split face shape," or "predator disguised as prey," verify with a second photo (different expression, angle, or lighting), or with the original side-by-side face. The halves composite is a hypothesis generator, not a verdict. When in doubt, name the *direction* of the split without dramatizing its *magnitude*.
 
 ### Step 7 — Synthesis
 
