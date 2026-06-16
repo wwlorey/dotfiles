@@ -25,12 +25,19 @@ Confirm before reading:
 1. **Front-facing photo, neutral expression, head level, good lighting.** Smiling distorts mouth shape, lip line, and cheek volume.
 2. **Side profile if available.** Prosopa's temperament call depends on the profile — forehead slope, chin projection, jaw line angle, "bow of melancholy" vs flat vs concave curve. Without a profile, infer cautiously from front-view cues and flag confidence as moderate or lower.
 3. **Subject identity and consent.** Self, public figure, or consenting other.
+4. **For known subjects, pull a smile photo if one isn't supplied.** Cued features — gummy smile, tooth proportions, lip-corner shape — are load-bearing when present, and the supplied photo may not capture them. One extra image is cheap insurance against demoting a signature trait. Do the same for the side profile when temperament is in scope.
 
 If the photo is poor, name the cues you can't read confidently and proceed only with the rest.
 
 ## Reading procedure
 
 Follow Prosopa's actual order. Each step gets a paragraph in the output.
+
+### The headline finding
+
+Before walking the rubric, look for the one observation that *defines* this face — the small inner face, the asymmetric two-character split, the predator-disguised-as-prey, the persistent Mercury-Saturn optical illusion, the bow of melancholy. Name it. Step 7 (synthesis) is built around it; the rubric walks are evidence in its support. A reading that walks all seven steps in equal weight without ever naming the load-bearing observation is the most common failure mode.
+
+**Calibrate toward extremes, not midpoints.** Prosopa rarely calls a feature "moderate" — he picks an end of the spectrum (flat or splayed, deep or protruding, thin or full) and reads accordingly, or skips the cue. A "moderate" call usually means you haven't looked hard enough. Either commit to an end or drop the row from the trace table.
 
 ### Step 1 — Phenotype
 
@@ -44,7 +51,7 @@ Confidence on phenotype from a photo alone is rarely better than moderate (most 
 
 ### Step 2 — Gestalt
 
-Describe the whole face in one or two sentences. Note dominant zone of the **facial thirds** (Prosopa's framework — upper = intellectual; middle = social/emotional; lower = material/practical). Name the immediate impression.
+Describe the whole face in one or two sentences. Note dominant zone of the **facial thirds** (Prosopa's framework — upper = intellectual; middle = social/emotional; lower = material/practical) and the **inner-vs-outer face ratio** (compartmentalization axis — small inner face = aloof/doublespeak; large inner face = social attunement; see `references/features.md`). Name the immediate impression.
 
 ### Step 3 — Temperament (from side profile)
 
@@ -101,7 +108,7 @@ In the reading text, describe what each composite shows. Patterns to look for:
 
 ### Step 7 — Synthesis
 
-One paragraph. Pull temperament + planetary archetype + animal archetype + dominant features + asymmetry into a single character portrait. Where Prosopa uses an animal archetype to close ("predator disguised as prey," "wolf in sheep's clothing"), name the pattern. Note where the archetype fits or misfits the temperament. Name the **job-fit / role-fit** the combination points to (CEO / VP / scholar / artist / clergy / etc.) if it's legible.
+One paragraph, **built around the headline finding named at the start**. Pull temperament + planetary archetype + animal archetype + dominant features + asymmetry into a single character portrait that the headline finding ties together. Where Prosopa uses an animal archetype to close ("predator disguised as prey," "wolf in sheep's clothing"), name the pattern. Note where the archetype fits or misfits the temperament. Name the **job-fit / role-fit** the combination points to (CEO / VP / scholar / artist / clergy / etc.) if it's legible.
 
 **Pair / counterpoint reading**: when the subject has a known partner (spouse, business partner, handler), Prosopa reads the two as functional complements — Epstein's small inner face (compartmentalized) ↔ Maxwell's large inner face (social attunement); Vance's phlegmatic-VP energy ↔ his choleric boss. If a partner is in scope, note the complementarity.
 

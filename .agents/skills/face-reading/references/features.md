@@ -16,6 +16,22 @@ Dominant zone = where the person's interests lie. Cite this in the gestalt.
 
 ---
 
+## Inner face vs outer face (compartmentalization axis)
+
+A gestalt-level observation Prosopa treats as one of his most consequential calls when present. Read the **ratio** of inner-face area (brow line to bottom lip, between the inner edges of the cheekbones) to outer-face area (hairline to chin × ear to ear).
+
+| Cue | Reading |
+|---|---|
+| **Small inner face relative to outer** | Compartmentalization, aloofness, stress immunity; "two minds at once" — can do one thing while mentally elsewhere; capacity for doublespeak. Often advantageous for politicians, pundits, operators. |
+| **Large inner face relative to outer** | Social attunement, sensitivity to others' emotional states, less compartmentalization. |
+| **Balanced** | Inner and outer aligned — no compartmentalization read. |
+
+Worked examples Prosopa cites: small inner face — Charlie Kirk, Jeffrey Epstein, Bill Clinton. Large inner face — Ghislaine Maxwell.
+
+When the inner face is dramatically small or large, **lead the synthesis with it** — Prosopa treats it as the spine of the read when present.
+
+---
+
 ## Forehead
 
 | Cue | Reading |
