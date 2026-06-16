@@ -7,12 +7,19 @@ on the next deploy. This hook fires on every Edit/Write/NotebookEdit, and if
 the target maps to a path the dotfiles repo owns, denies the call with a
 message pointing to the canonical source and the `config` skill.
 
-Ownership rule: the deployed path is "owned" if and only if the corresponding
-file exists in the repo. Directory-level matching is too aggressive — many
-mirrored parents (e.g. ~/.claude/) contain runtime-state children (sessions/,
-cache/) that aren't mirrored, and a parent-walk would false-positive on those.
-Brand-new files created inside a mirrored directory aren't caught — accept
-that gap rather than block legitimate runtime writes.
+Ownership rule — a path is "owned" by the repo if EITHER:
+  1. The corresponding file exists in the repo at the same path relative to
+     $HOME (exact match — covers existing mirrored files).
+  2. The path falls under one of the MIRRORED_PREFIXES below (fully-managed
+     prefix match — covers new files inside an exhaustively-mirrored dir).
+
+MIRRORED_PREFIXES enumerates dirs where every legitimate child belongs in
+the repo. Selectively-managed parents (e.g. ~/.claude/, which contains both
+mirrored config and runtime state) are NOT listed here — they fall back to
+exact-match only.
+
+When adding a new fully-managed top-level dir to the dotfiles repo, extend
+MIRRORED_PREFIXES so subsequent new-file edits are caught.
 """
 
 from __future__ import annotations
@@ -25,10 +32,16 @@ import sys
 DOTFILES_REPO = os.path.realpath(os.path.expanduser("~/Repos/dotfiles"))
 HOME = os.path.realpath(os.path.expanduser("~"))
 
+MIRRORED_PREFIXES = (
+    ".agents/",
+    ".claude/commands/",
+    ".claude/hooks/",
+    ".claude/mcp-servers/",
+)
+
 
 def repo_owns(target: str) -> tuple[bool, str]:
-    """Return (owned, canonical_repo_path) — true iff the corresponding file
-    exists in the dotfiles repo at the same path relative to $HOME."""
+    """Return (owned, canonical_repo_path)."""
     try:
         rel = os.path.relpath(target, HOME)
     except ValueError:
@@ -38,6 +51,10 @@ def repo_owns(target: str) -> tuple[bool, str]:
     candidate = os.path.join(DOTFILES_REPO, rel)
     if os.path.exists(candidate):
         return True, candidate
+    rel_with_slash = rel + ("" if rel.endswith("/") else "")
+    for prefix in MIRRORED_PREFIXES:
+        if rel_with_slash == prefix.rstrip("/") or rel_with_slash.startswith(prefix):
+            return True, candidate
     return False, ""
 
 

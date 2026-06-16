@@ -19,6 +19,15 @@ of configuration files, scripts, etc. in `$HOME`. Files there are deployed to
 - This applies to `~/.agents/` as well: MEMENTO.md, skills, and the `agent`
   script are configuration. Edit their mirror in the dotfiles repo, never the
   deployed copies.
+- A PreToolUse hook at `.claude/hooks/redirect-config-edits.py` enforces
+  this — Edit/Write on a deployed copy is denied with a pointer to the
+  canonical source. If you add a **new fully-managed top-level dir** to the
+  dotfiles repo (one where every legitimate child should live in the repo),
+  also add its repo-relative prefix to `MIRRORED_PREFIXES` in that hook so
+  brand-new files inside it are caught before the first save-config.
+  Selectively-managed parents (like `.claude/`, which contains both mirrored
+  config and runtime state) are NOT prefixes — they fall back to exact-file
+  match only.
 
 ## Editing skills
 
