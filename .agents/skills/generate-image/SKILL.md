@@ -17,7 +17,7 @@ Use OpenAI's GPT Image 2 to turn a rough request into a finished image. Iterate 
    - Icons, logos, symmetric subjects → `1024x1024`
    - The user can override with explicit dimensions.
 4. **Generate.** Call the API via curl (see *API Calls* below). Always start at `low` quality.
-5. **Save, open, link.** Save to `./YYYY-MM-DD-HH:MM:SS-short-description.png`, run `open <path>` so the user sees it immediately, and print the `file://` URL (colons URL-encoded as `%3A`) so the user can click it from the chat.
+5. **Save and open.** Save to `./YYYY-MM-DD-HH:MM:SS-short-description.png` and run `open <path>` so the user sees it immediately. (MEMENTO's surface-files rule handles printing the clickable URL.)
 6. **Iterate.** Ask for feedback. If they want changes, refine the prompt and regenerate at `low`. Repeat until they're satisfied, then ask if they want a `medium` or `high` quality final.
 
 ## API Calls
@@ -95,7 +95,7 @@ fi
   - Timestamp is generation time.
   - `short-description` is a 2-4 word kebab-case slug (e.g. `golden-retriever-field`, `neon-city-street`, `logo-concept`).
 - **Auto-open:** always `open <path>` after saving.
-- **Clickable link:** also print the absolute `file://` URL so the user can click it from the chat. Encode every `:` in the path as `%3A` (the colons in the timestamp filename break the URL otherwise). Example: `file:///Users/jane/proj/2026-06-16-15%3A00%3A00-monk-polaroid.png`.
+- Surface the file per MEMENTO's rule (`image: file:///…` with `:` encoded as `%3A`).
 
 ## Prompt Engineering
 

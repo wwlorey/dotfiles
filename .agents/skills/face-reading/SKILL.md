@@ -148,7 +148,9 @@ End the reading with a Markdown table — one row per substantive claim. Columns
 3. Temperament (Step 3)
 4. Archetype — planetary and animal (Step 4)
 5. Feature walkthrough (Step 5)
-6. Asymmetry (Step 6) — **half-face side-by-side composite embedded inline**
+6. Asymmetry (Step 6) — reference the half-face composite by its `composite: file:///…` line below
 7. Synthesis (Step 7)
-8. **Overlay image**
-9. **Trace table**
+8. **Trace table**
+9. **Artifact paths** — surface per MEMENTO's rule, one line each:
+   - `composite: file:///…halves-side-by-side.png`
+   - `overlay: file:///…overlay.png`
