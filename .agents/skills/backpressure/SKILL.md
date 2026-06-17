@@ -1,6 +1,6 @@
 ---
 name: backpressure
-description: Running the full verification gauntlet for a project's stack — build, lint, type-check, unit tests, integration tests, format, coverage. Consult before reporting code work complete, before committing, before pushing, before opening a PR, before claiming a feature is ready, and whenever the user asks for a check / verification / lint+test / "is this ready to ship" pass. Also consult when an automated pipeline (build, change, changes) is about to finish a coding iteration — the final step before commit is always this skill.
+description: Running the full verification gauntlet for a project's stack — build, lint, type-check, unit tests, integration tests, format, coverage. Consult before reporting code work complete, before committing, before pushing, before opening a PR, before claiming a feature is ready, and whenever the user asks for a check / verification / lint+test / "is this ready to ship" pass. Also consult as the final step of any procedure that touched code, before the commit lands.
 ---
 
 # Backpressure
@@ -13,9 +13,8 @@ You are about to run the full verification gauntlet for the current project. The
    - `Cargo.toml` → Rust (`references/rust.md`)
    - `package.json` with React / Vite / Tailwind → frontend (`references/frontend.md`)
    - `package.json` plus `src-tauri/` → Tauri (`references/tauri.md`)
-   - `pyproject.toml` or `requirements.txt` → Python (`references/python.md`)
 
-   Multiple may apply (a Tauri app has frontend + Rust). Run the gauntlet for each.
+   Multiple may apply (a Tauri app has frontend + Rust). Run the gauntlet for each. If the project's stack is not covered above, name the gap to the user — don't silently improvise.
 
 2. **Read the matching reference file** in this skill's `references/` directory. It lists the canonical commands for that stack, what they do, and which are required vs optional.
 

@@ -1,6 +1,6 @@
 ---
 name: issues
-description: Tracking work items in a per-project markdown backlog — creating, claiming, querying, and closing issues. Consult whenever the task involves an issue, ticket, backlog, work item, bug, TODO, or anything the user calls "what's next", "what's ready", "what's open", "the queue". Also consult when a workflow skill (build, changes, spec) needs to read or update the tracker.
+description: Tracking work items in a per-project markdown backlog — creating, claiming, querying, and closing issues. Consult whenever the task involves an issue, ticket, backlog, work item, bug, TODO, or anything the user calls "what's next", "what's ready", "what's open", "the queue", or whenever any procedure needs to read or update the project's issue tracker.
 ---
 
 # Issues
@@ -146,13 +146,3 @@ Two agents may try to claim the same issue. The protocol:
 3. On a shared branch with another worktree, two `→ in_progress` edits produce identical text and git will silently auto-merge. The `claim <slug>` commit message — visible in `git log --follow issues/<slug>.md` — is the tie-breaker: whichever commit lands first owns the claim, the loser unclaims (revert to `open`) and picks something else.
 
 There is no in-band lock. Don't introduce one — the rate of real collisions at this scale doesn't justify the schema.
-
-## When workflow skills use this
-
-A workflow skill (build, changes, spec, cohere) needing to read or update the tracker should:
-
-- Call `issues/ready [spec-prefix]` to get the next-up backlog
-- Read individual issues via `cat issues/<slug>.md` or the Read tool
-- Update issues via the Edit tool — change a frontmatter line, commit
-- Cite this skill rather than restating the schema
-

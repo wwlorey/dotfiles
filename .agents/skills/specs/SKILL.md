@@ -1,6 +1,6 @@
 ---
 name: specs
-description: Tracking design specifications in a per-project markdown library — creating, evolving, validating, and pruning specs. Consult whenever the task involves a spec, design doc, architecture note, RFC, ADR, or anything the user calls "the spec for X", "how X is supposed to work", "design for Y". Also consult when a pipeline (build, change, changes, spec) needs to read or update a spec, when discovering that code drifts from its spec, or when starting design work that should produce a spec before any code.
+description: Tracking design specifications in a per-project markdown library — creating, evolving, validating, and pruning specs. Consult whenever the task involves a spec, design doc, architecture note, RFC, ADR, or anything the user calls "the spec for X", "how X is supposed to work", "design for Y". Also consult when discovering that code drifts from its spec, when starting design work that should produce a spec before any code, or when any procedure needs to read or update the project's specs.
 ---
 
 # Specs
@@ -123,12 +123,3 @@ Cycles in the `refs:` graph almost always indicate that two specs are really one
 ## Cross-link with issues
 
 An issue's `## Doc refs` section can point at `specs/<stem>.md`. No special handling — just the path bullet under the issues skill's `## Doc refs` convention. The reverse direction (a spec naming issues) is not encoded; specs describe the design, not the work backlog.
-
-## When pipelines use this
-
-A pipeline (build, change, changes, spec) needing to read or update specs should:
-
-- Call `specs/validate` to surface structural problems before touching anything
-- Read individual specs via `cat specs/<stem>.md` or the Read tool
-- Update specs via the Edit tool — change a frontmatter line or a section body, commit
-- Cite this skill rather than restating the schema

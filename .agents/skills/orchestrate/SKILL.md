@@ -23,7 +23,7 @@ Do the work yourself (no spawn) when:
 - Cross-step state (sequential edits to the same file) makes splitting harmful.
 - Briefing cost ≥ doing it inline (a one-line read, a single grep).
 
-For multi-step procedures that are worth re-running by name — claim and implement issues, take a change request from discussion to commit, harden specs — the work belongs in a **pipeline skill** (`build`, `change`, `changes`, `spec`). Those skills define the procedure as prompt and spawn workers via this skill for the iterative or parallel parts. This skill governs the spawn; the pipeline governs the procedure.
+For multi-step procedures that are worth re-running by name, the work belongs in a **pipeline skill**, not in ad-hoc spawns from this skill. Pipeline skills define the procedure as prompt and delegate the iterative or parallel parts back to this skill. This skill governs the spawn; a pipeline governs the procedure. If you find yourself sequencing several spawns to drive a known kind of work, consider authoring a pipeline skill (see `create-skill`).
 
 ## Briefing a worker
 
