@@ -6,6 +6,12 @@ what the person would look like if both sides matched the left half, and
 if both sides matched the right half. Prosopa's asymmetry doctrine:
 LEFT = inner / private / felt self; RIGHT = outer / public / presented self.
 
+LEFT and RIGHT here are anatomical — the subject's own left and right.
+On a front-facing photo the subject's left side sits on the IMAGE-right
+half and the subject's right side sits on the IMAGE-left half (mirror
+convention). This script accounts for that, so the labels track anatomy
+rather than image coordinates.
+
 Usage:
     python3 halves.py <input_image> <midline_x> <output_dir>
 
@@ -14,8 +20,8 @@ Usage:
 it by inspecting the photo.
 
 Outputs three files in <output_dir>:
-- halves-left.png   : left half mirrored to make a symmetric face
-- halves-right.png  : right half mirrored to make a symmetric face
+- halves-left.png   : subject's left half mirrored to make a symmetric face
+- halves-right.png  : subject's right half mirrored to make a symmetric face
 - halves-side-by-side.png : the two composites stacked horizontally with labels
 """
 
@@ -43,23 +49,32 @@ def load_font(size):
 def mirror_half(img, midline_x, side):
     """Return a full-width image where one half is mirrored to fill both sides.
 
-    side: 'left' keeps the left half (x < midline_x) and mirrors it to the right.
-          'right' keeps the right half (x >= midline_x) and mirrors it to the left.
+    `side` is anatomical (subject's perspective):
+      'left'  = subject's left side, which sits on the IMAGE-right half
+                (x >= midline_x). That half is kept in place and mirrored
+                across the midline to fill the image-left half.
+      'right' = subject's right side, which sits on the IMAGE-left half
+                (x <  midline_x). Kept in place, mirrored to image-right.
+
+    Each output preserves the original photo's orientation — the kept half
+    stays where it was, the mirror takes over the other side. That way the
+    composite reads as "this is what the face would look like if both sides
+    matched the {anatomical-side} half" without flipping the viewer's frame.
     """
     w, h = img.size
     if side == "left":
-        half = img.crop((0, 0, midline_x, h))
-        mirrored = ImageOps.mirror(half)
-        out = Image.new(img.mode, (midline_x * 2, h))
-        out.paste(half, (0, 0))
-        out.paste(mirrored, (midline_x, 0))
-    elif side == "right":
         half = img.crop((midline_x, 0, w, h))
         mirrored = ImageOps.mirror(half)
         rw = w - midline_x
         out = Image.new(img.mode, (rw * 2, h))
         out.paste(mirrored, (0, 0))
         out.paste(half, (rw, 0))
+    elif side == "right":
+        half = img.crop((0, 0, midline_x, h))
+        mirrored = ImageOps.mirror(half)
+        out = Image.new(img.mode, (midline_x * 2, h))
+        out.paste(half, (0, 0))
+        out.paste(mirrored, (midline_x, 0))
     else:
         raise ValueError(f"side must be 'left' or 'right', got {side!r}")
     return out

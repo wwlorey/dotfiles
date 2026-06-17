@@ -98,7 +98,7 @@ Build the two halves with the script:
 python3 scripts/halves.py <input_image> <midline_x> <output_dir>
 ```
 
-`midline_x` is the integer pixel x-coordinate of the vertical face midline (centerline through nose tip / philtrum / chin tip). Determine it by inspecting the photo. The script writes `halves-left.png`, `halves-right.png`, and `halves-side-by-side.png` to `output_dir`.
+`midline_x` is the integer pixel x-coordinate of the vertical face midline (centerline through nose tip / philtrum / chin tip). Determine it by inspecting the photo. The script writes `halves-left.png`, `halves-right.png`, and `halves-side-by-side.png` to `output_dir`. Output labels are **anatomical** (the subject's own left and right) — `halves-left.png` doubles the subject's left side, which in a front-facing photo sits on the image-right half.
 
 In the reading text, describe what each composite shows. Patterns to look for:
 - **"Predator disguised as prey" / "wolf in sheep's clothing"** — the halves look like two different characters (Sydney Sweeney read).
