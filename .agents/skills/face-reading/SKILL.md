@@ -1,6 +1,6 @@
 ---
 name: face-reading
-description: Producing a Prosopa-Insights-style face reading from a photo — naming temperament, planetary archetype, feature-level traits, and left/right asymmetry, with an annotated overlay image and mirrored half-face composites for visual audit. Consult whenever the user supplies a face image (their own, a public figure's, a consenting friend's) and asks for a personality, typology, temperament, or character read, a physiognomy analysis, a face reading, a "Prosopa-style" reading, or any phrase that means "what does my face say about me." Even casual phrasings like "read my face," "what's my physiognomy," or "do a Prosopa on this photo" count.
+description: Producing a Prosopa-Insights-style face reading from a photo — naming temperament, planetary archetype, feature-level traits, and left/right asymmetry, with an annotated overlay image and mirrored half-face composites for visual audit. Consult whenever the user supplies a face image (their own, a public figure's, a friend's) and asks for a personality, typology, temperament, or character read, a physiognomy analysis, a face reading, a "Prosopa-style" reading, or any phrase that means "what does my face say about me." Even casual phrasings like "read my face," "what's my physiognomy," or "do a Prosopa on this photo" count.
 ---
 
 # Face Reading (Prosopa Insights style)
@@ -24,7 +24,6 @@ Address each item before reading. Do not proceed to Step 1 until every line is e
 
 - [ ] **Front-facing photo, neutral expression, head level, good lighting.** Smiling distorts mouth shape, lip line, and cheek volume.
 - [ ] **Side profile.** Prosopa's temperament call depends on it — forehead slope, chin projection, jaw line angle, "bow of melancholy" vs flat vs concave curve. Without one, infer cautiously from front-view cues and flag temperament confidence as moderate or lower.
-- [ ] **Subject identity and consent.** Self, public figure, or consenting other.
 - [ ] **Smile photo, for known subjects — non-skippable.** Gummy smile, tooth proportions, tooth gap, and lip-corner shape are load-bearing when present and the neutral photo may not capture them. For any subject with public photos available, pull one.
 - [ ] **Youth photo, for older subjects.** Aging trajectory (Venus → Mars, Saturn → Sun) and the original face-shape archetype both depend on the younger face.
 
