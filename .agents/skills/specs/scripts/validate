@@ -1,0 +1,197 @@
+#!/usr/bin/env python3
+"""
+Validate the spec library in this repo.
+
+Walks every <repo>/specs/*.md, parses frontmatter, checks required sections,
+resolves refs, detects cycles. Errors exclude a spec from the working set
+and exit 1. Warnings (orphan refs, cycles) stay on stderr and exit 0.
+
+Usage:
+    validate              Validate all specs in the current repo.
+    validate <prefix>     Filter to stems starting with <prefix>.
+
+Run from anywhere inside a repo that has a specs/ directory at the root.
+The stem list of valid specs stays on stdout so the script is pipe-friendly.
+"""
+
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+STATUS = {"draft", "approved", "implemented"}
+REQUIRED_SECTIONS = [
+    "Overview",
+    "Architecture",
+    "Dependencies",
+    "Error handling",
+    "Testing",
+]
+
+HAD_ERROR = False
+
+
+def err(msg: str) -> None:
+    global HAD_ERROR
+    HAD_ERROR = True
+    sys.stderr.write(msg)
+
+
+def warn(msg: str) -> None:
+    sys.stderr.write(msg)
+
+
+def find_specs_dir() -> Path:
+    cur = Path.cwd().resolve()
+    for candidate in [cur, *cur.parents]:
+        d = candidate / "specs"
+        if d.is_dir():
+            return d
+    sys.stderr.write("error: no specs/ directory found in cwd or any parent\n")
+    sys.exit(2)
+
+
+def parse_frontmatter_and_body(path: Path) -> tuple[dict, str] | None:
+    """Return ({status, refs}, body) or None on structural error."""
+    try:
+        text = path.read_text()
+    except OSError as e:
+        err(f"error: {path.name}: cannot read ({e})\n")
+        return None
+    if not text.startswith("---\n"):
+        err(f"error: {path.name}: no frontmatter\n")
+        return None
+    end = text.find("\n---\n", 4)
+    if end == -1:
+        err(f"error: {path.name}: unterminated frontmatter\n")
+        return None
+    block = text[4:end]
+    body = text[end + len("\n---\n") :]
+    fm: dict = {}
+    for raw in block.splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        if ":" not in line:
+            err(f"error: {path.name}: unexpected frontmatter line {raw!r}\n")
+            return None
+        key, _, value = line.partition(":")
+        key = key.strip()
+        value = value.strip()
+        if key == "refs":
+            if value == "":
+                fm["refs"] = []
+            elif value.startswith("[") and value.endswith("]"):
+                inner = value[1:-1].strip()
+                fm["refs"] = (
+                    [s.strip() for s in inner.split(",") if s.strip()] if inner else []
+                )
+            else:
+                err(
+                    f"error: {path.name}: refs must be an inline list like [a, b] "
+                    f"(got {value!r})\n"
+                )
+                return None
+        else:
+            fm[key] = value
+    fm.setdefault("refs", [])
+    return fm, body
+
+
+def check_sections(stem: str, body: str) -> bool:
+    """Verify all required H2s exist with non-empty content. Returns True if OK."""
+    lines = body.splitlines()
+    seen: dict[str, list[str]] = {s: [] for s in REQUIRED_SECTIONS}
+    current: str | None = None
+    for line in lines:
+        if line.startswith("## "):
+            heading = line[3:].strip()
+            current = heading if heading in seen else None
+        elif current is not None:
+            seen[current].append(line)
+    ok = True
+    for section in REQUIRED_SECTIONS:
+        body_lines = seen[section]
+        if not body_lines and not any(
+            line.strip().startswith("## " + section) for line in lines
+        ):
+            err(f"error: {stem}: missing required section ## {section}\n")
+            ok = False
+            continue
+        substantive = [line for line in body_lines if line.strip()]
+        if not substantive:
+            err(f"error: {stem}: ## {section} is empty\n")
+            ok = False
+    return ok
+
+
+def load_all(specs_dir: Path) -> dict[str, dict]:
+    by_stem: dict[str, dict] = {}
+    for path in sorted(specs_dir.glob("*.md")):
+        parsed = parse_frontmatter_and_body(path)
+        if parsed is None:
+            continue
+        fm, body = parsed
+        stem = path.stem
+        status = fm.get("status")
+        if status is None:
+            err(f"error: {stem}: missing field 'status'\n")
+            continue
+        if status not in STATUS:
+            err(
+                f"error: {stem}: unknown status: {status!r} (expected one of {sorted(STATUS)})\n"
+            )
+            continue
+        if not check_sections(stem, body):
+            continue
+        by_stem[stem] = fm
+    return by_stem
+
+
+def check_orphan_refs(by_stem: dict[str, dict]) -> None:
+    for stem, fm in by_stem.items():
+        for ref in fm["refs"]:
+            if ref not in by_stem:
+                warn(f"warn: {stem}: ref {ref!r} does not resolve to a spec\n")
+
+
+def detect_cycles(by_stem: dict[str, dict]) -> None:
+    """Tarjan-style: report any SCC of size >1, plus self-loops."""
+    color: dict[str, int] = {s: 0 for s in by_stem}  # 0=white, 1=gray, 2=black
+    stack: list[str] = []
+
+    def dfs(node: str) -> None:
+        color[node] = 1
+        stack.append(node)
+        for nxt in by_stem[node]["refs"]:
+            if nxt not in by_stem:
+                continue
+            if color[nxt] == 1:
+                cycle_start = stack.index(nxt)
+                cycle = stack[cycle_start:] + [nxt]
+                warn(f"warn: cycle in refs: {' -> '.join(cycle)}\n")
+            elif color[nxt] == 0:
+                dfs(nxt)
+        stack.pop()
+        color[node] = 2
+
+    for stem in by_stem:
+        if color[stem] == 0:
+            dfs(stem)
+
+
+def main() -> int:
+    prefix = sys.argv[1] if len(sys.argv) > 1 else ""
+    specs_dir = find_specs_dir()
+    by_stem = load_all(specs_dir)
+    check_orphan_refs(by_stem)
+    detect_cycles(by_stem)
+
+    stems = sorted(s for s in by_stem if s.startswith(prefix))
+    for stem in stems:
+        print(stem)
+    return 1 if HAD_ERROR else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

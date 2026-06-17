@@ -10,6 +10,10 @@ A skill is a directory under `~/.agents/skills/<name>/` containing a `SKILL.md`,
 optionally `scripts/` and `references/`. Editing and deploying skills is
 governed by the config skill — follow it; this skill governs their design.
 
+System-wide laws in `~/.agents/LAW.md` apply to every skill. Read them
+before authoring. The harness-portability law in particular shapes how a
+skill names tools and conditions its body.
+
 ## Should it be a skill?
 
 A skill holds **procedure**: how a recurring kind of work is done. It is not
@@ -60,6 +64,73 @@ Write every skill to work under both.
   `scripts/`; tell the agent to run them rather than reason the logic out.
 - State paths relative to the skill dir; the keyword spawn passes the source
   path so relative references resolve.
+
+## Pipeline skills
+
+A pipeline skill is a skill that walks an agent through a multi-step
+procedure (claim an issue and implement it, take a change request from
+discussion to commit, refine and harden a spec). Pipeline skills are
+otherwise ordinary skills — same frontmatter, same directory layout, same
+deployment. The conventions below get **inlined into the skill body at
+authoring time**, not pulled in by reference at runtime, so each pipeline
+skill stays a self-contained prompt artifact.
+
+### When to author a skill as a pipeline
+
+The work spans multiple distinct steps, has an explicit end state, and is
+worth re-running by name (the user says "build the next issue" or "make
+this change" and expects a known procedure to play out). Single-step or
+purely informational work is not a pipeline.
+
+### Ralph loop pattern (only when the pipeline iterates)
+
+Some pipelines loop over a working set (claim the next issue from the
+backlog until none remain; harden the spec until it passes the quality
+checklist). The pattern, inlined as a `## Ralph loop` section:
+
+- Each iteration spawns one fresh focused worker via the `orchestrate`
+  skill (Agent-tool spawn). Fresh context per iteration keeps the worker
+  from accumulating drift.
+- State the **stop condition** explicitly: what makes the loop end?
+  Empty backlog? Checklist all green? Max iterations hit?
+- State the **iteration cap** — a hard upper bound to prevent runaway.
+  Even if the stop condition is "until done," cap at a sane ceiling.
+- After each iteration, the orchestrator (the agent running the pipeline)
+  checks the stop condition before spawning the next worker.
+
+Non-iterating pipelines omit the section entirely.
+
+### Backpressure-as-final-step (when the pipeline touches code)
+
+Pipelines that produce code changes end by running the verification
+gauntlet. Inline as a final step in the body: "After implementing,
+consult the `backpressure` skill and run the gauntlet for this stack.
+Do not commit or report work complete until backpressure passes."
+
+Pipelines that don't touch code (a pure analysis pipeline, a reporting
+pipeline) omit this.
+
+### Vocabulary
+
+Do not use vendor-specific or legacy-tool vocabulary in pipeline skill
+bodies. Names like `pn`, `fm`, `sgf`, `cursus`, `pensa`, `forma` belong
+to the prior generation of tooling and have been replaced. Refer to
+`issues`, `specs`, `backpressure`, and the surviving pipeline skills
+directly.
+
+### Naming
+
+Flat name, no prefix. The skill name is the verb a user would say
+(`build`, `change`, `spec`). Discoverability comes from the description
+triggers, not the name.
+
+### Inlining vs referencing
+
+The conventions above are baked into each pipeline skill at create time,
+not loaded from this skill at runtime. The author of a new pipeline
+copies the relevant patterns (ralph loop section, backpressure-as-final
+step, etc.) into the new SKILL.md. This keeps every pipeline skill a
+clean standalone artifact with no runtime cross-skill dependency.
 
 ## After creating a skill
 

@@ -23,7 +23,7 @@ Do the work yourself (no spawn) when:
 - Cross-step state (sequential edits to the same file) makes splitting harmful.
 - Briefing cost ≥ doing it inline (a one-line read, a single grep).
 
-For >5 workers, multi-stage pipelines, or structured-schema returns, stop and use the **Workflow** tool instead. It handles concurrency caps, schemas, journaling, and resumption that this skill leaves to you.
+For multi-step procedures that are worth re-running by name — claim and implement issues, take a change request from discussion to commit, harden specs — the work belongs in a **pipeline skill** (`build`, `change`, `changes`, `spec`). Those skills define the procedure as prompt and spawn workers via this skill for the iterative or parallel parts. This skill governs the spawn; the pipeline governs the procedure.
 
 ## Briefing a worker
 
@@ -33,7 +33,7 @@ Workers spawned via the Agent tool do NOT inherit the MEMENTO, the skills index,
 2. **Scope** — exactly which files / paths / areas they may touch, and what is off-limits. By default workers research, draft, and report — they do NOT apply code changes; the orchestrator applies them after synthesis. Override only when scopes are genuinely disjoint (one worker per file, no overlap) and you state "apply your changes directly" in the briefing.
 3. **Return format** — prose, list, diff, structured block. Be explicit.
 4. **Skills, scripts, and MCP tools they should reach for** — before spawning, inventory what's available that fits the task and name it explicitly. Examples: `youtube-transcript` for any YouTube source, `deep-research` for fan-out web research, `generate-image` for visual output, `voice` for TTS, `unsandboxed-runner` MCP wrappers for shell commands that need network or non-sandbox paths, any project script the worker would otherwise have to re-derive. Workers do not see the skill index, so unmentioned skills are invisible to them. Skipping this step is the most common briefing failure.
-5. **Inherited project rules they'd otherwise miss** — if the worker must follow a project rule (edit dotfiles not deployed copies, use `pn` not `gh`, use a specific commit-message format, etc.), state it. They will not know otherwise.
+5. **Inherited project rules they'd otherwise miss** — if the worker must follow a project rule (edit dotfiles not deployed copies, use the project's `issues/` backlog not GitHub issues, use a specific commit-message format, etc.), state it. They will not know otherwise.
 6. **The silence clause, verbatim:**
 
    > You are a worker, not an orchestrator. Do NOT produce a spoken end-of-turn report. Do NOT call any TTS / voice / `run_dic` tool. Do NOT spawn further workers via the Agent tool — return your result directly. Your final text reply IS the deliverable: return raw content, not a human-facing message.

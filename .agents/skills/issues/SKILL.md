@@ -35,10 +35,24 @@ deps: []
 
 Users need to sign in with Google. Current flow only supports email/password.
 
-## References
+## Source refs
 
 - src/auth/login.ts — current login handler, needs provider dispatch
-- docs/auth-flow.md — spec for the OAuth callback contract
+- src/auth/oauth.ts — new provider dispatch lives here
+
+## Doc refs
+
+- specs/auth-flow.md — spec for the OAuth callback contract
+
+## Comments
+
+### 2026-06-17 — claim
+
+Starting with the Google provider; Microsoft/GitHub will reuse the same dispatch.
+
+### 2026-06-18 — blocker
+
+Stuck on the cookie-domain mismatch in staging — see specs/cookie-handling.md.
 ```
 
 **Frontmatter — exactly four fields, every issue:**
@@ -53,9 +67,15 @@ Users need to sign in with Google. Current flow only supports email/password.
 **Body:**
 - `# Title` as the first H1.
 - Description in prose underneath.
-- Optional `## References` section: one bullet per file, format `path — reason`.
+- Optional `## Source refs` section: one bullet per source file, format `path — reason`.
+- Optional `## Doc refs` section: one bullet per doc/spec file, format `path — reason`.
+- Optional `## Comments` section: date-prefixed H3 entries (`### YYYY-MM-DD — short label`) with prose underneath.
 
-That's the whole schema. No other fields. If you find yourself wanting more, push detail into the body instead.
+That's the whole schema. No other frontmatter fields. The body sections above are the only structured holes; everything else goes in the description prose.
+
+The split between `## Source refs` and `## Doc refs` exists so an agent reading the issue can tell at a glance which references are executable code and which are specs/docs. The bullet format stays the same on both sides — `path — reason`.
+
+`## Comments` is the place to annotate progress, blockers, or context that an agent or human discovered while working the issue. Commit messages are still the canonical changelog for status transitions; comments are for substance that doesn't fit a commit message. Each entry is its own H3 heading with `YYYY-MM-DD — label` so the latest is found by reading bottom-up.
 
 ## Slug rules
 

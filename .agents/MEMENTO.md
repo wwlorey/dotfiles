@@ -1,3 +1,8 @@
+## Law
+
+Non-negotiable rules live in `~/.agents/LAW.md`. Read it before authoring
+any new skill, script, hook, or prompt.
+
 ## Rules
 
 These rules override default behavior. Follow them exactly.
