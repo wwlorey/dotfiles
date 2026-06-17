@@ -1,6 +1,6 @@
 ---
 name: youtube-transcript
-description: Working with the contents of a YouTube video — fetching a transcript, summarizing, quoting, extracting notes, answering questions about what was said, or any task where the source material is a YT URL. Consult whenever the user shares a YouTube link or asks about a video by name, even when the word "transcript" is never mentioned (e.g. "summarize this", "what does he say about X", "pull the key points").
+description: Working with the contents of a YouTube video — fetching a transcript, summarizing, quoting, extracting notes, answering questions about what was said, or any task where the source material is a YT URL. Consult whenever you have a YouTube URL in hand for any reason — the user shared a link, asked about a video by name, or a search result surfaced one that would answer the question — even when the word "transcript" is never mentioned (e.g. "summarize this", "what does he say about X", "pull the key points").
 ---
 
 # YouTube Transcript
