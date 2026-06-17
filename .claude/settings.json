@@ -28,6 +28,7 @@
         "~/.local/share/pensa",
         "~/.pnpm-store",
         "~/Library/Caches/ms-playwright",
+        "~/.Trash",
         "/tmp",
         "/private/tmp",
         "~/Repos/dotfiles",
