@@ -24,8 +24,6 @@
       "allowWrite": [
         "~/.cache/prek",
         "~/.cargo",
-        "~/.local/share/forma",
-        "~/.local/share/pensa",
         "~/.pnpm-store",
         "~/Library/Caches/ms-playwright",
         "~/.Trash",

@@ -125,8 +125,8 @@ case ":$PATH:" in
   *) export PATH="$PNPM_HOME:$PATH" ;;
 esac
 
-# Prepend ~/.cargo/bin so cargo-installed binaries (e.g. pensa's `pn`) win
-# over Homebrew shims (e.g. pnpm's `pn`) that path_helper inserts later.
+# Prepend ~/.cargo/bin so cargo-installed binaries take precedence over
+# Homebrew shims that path_helper inserts later.
 export PATH="$HOME/.cargo/bin:$PATH"
 
 eval "$(direnv hook zsh)"
