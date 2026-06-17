@@ -45,14 +45,14 @@ Once an item is `approved`, queue it for implementation. **Only one item impleme
 
 For the next-in-queue approved item, spawn a worker with the full `change` skill body inlined plus:
 
-> **Goal.** Implement the approved plan for this item. Update specs alongside code (do not defer). Run backpressure. Commit. Return a one-paragraph summary of what shipped.
+> **Goal.** Implement the approved plan for this item. Update specs alongside code (do not defer). Run backpressure. Commit and push. Return a one-paragraph summary of what shipped.
 >
 > **Item:** <description>
 > **Approved plan:** <numbered plan from the planning phase>
 >
-> **Return format.** `## Summary`, `## Files changed`, `## Specs updated`, `## Backpressure outcome`.
+> **Return format.** `## Summary`, `## Files changed`, `## Specs updated`, `## Backpressure outcome`, `## Push outcome`.
 
-When the worker returns with a commit, mark the item `committed`, then dequeue the next approved item.
+When the worker returns with a commit (and a push attempt — failure is non-blocking), mark the item `committed`, then dequeue the next approved item.
 
 ### 4. Throughout: communicate the state
 

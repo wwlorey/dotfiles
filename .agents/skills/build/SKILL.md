@@ -29,7 +29,7 @@ Worker briefing template:
 > 7. Write tests (unit, property, or integration — pick what fits). No placeholder tests, no `expect(true).toBe(true)`.
 > 8. Consult the `backpressure` skill and run the full gauntlet for the project's stack. If anything fails, fix and re-run until clean.
 > 9. Close the issue: edit frontmatter `status: in_progress` → `status: closed`. Add a `## Comments` entry summarizing what was done.
-> 10. Commit the implementation + spec updates + closure as one logical change (formatter residue may be a separate commit).
+> 10. Commit the implementation + spec updates + closure as one logical change (formatter residue may be a separate commit). Then `git push` so the iteration's work reaches the remote before the next iteration starts. If push fails (no upstream, network, conflict), report the failure and continue — the commit is safe locally and a later iteration or human can push it.
 >
 > **Skills to consult.** `issues` (schema and operations), `specs` (schema and updates), `backpressure` (verification gauntlet), `orchestrate` (you are spawned via it).
 >

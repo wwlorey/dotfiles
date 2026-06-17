@@ -36,7 +36,7 @@ Use this phase when starting a new spec, or substantially restructuring an exist
 
 5. **Run `specs/validate`** to catch structural problems. Fix anything it errors on.
 
-6. **Commit.** Commit message names the spec stem(s) and the substance of the change.
+6. **Commit and push.** Commit message names the spec stem(s) and the substance of the change. Then `git push`. If push fails, report and continue — the commit is safe locally.
 
 ### Phase 2: Harden
 
@@ -66,7 +66,7 @@ Use this phase to take a `draft` spec through a quality checklist and either app
 
 4. **Update specs based on user input.** Apply the answers; re-run `specs/validate`.
 
-5. **Re-run the checklist.** If everything passes, ask the user: "Are these specs fully hardened?" If yes, promote: edit each affected spec's frontmatter from `status: draft` to `status: approved`. Commit.
+5. **Re-run the checklist.** If everything passes, ask the user: "Are these specs fully hardened?" If yes, promote: edit each affected spec's frontmatter from `status: draft` to `status: approved`. Commit, then `git push` so the promoted specs reach the remote. If push fails, report and continue.
 
 6. **If not yet hardened,** loop back to step 1 and re-walk the checklist. Cap at 25 iterations per session; if not converged by then, stop and report which specs remain at issue.
 

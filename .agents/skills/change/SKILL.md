@@ -65,9 +65,9 @@ Create an issue in `<repo>/issues/` capturing:
 
 Set the new issue's `status: closed` immediately. This issue is the changelog entry for the change, not a piece of pending work.
 
-### 7. Commit
+### 7. Commit and push
 
-One commit for the substantive change (code + specs + issue). One separate commit for formatter residue if any. Commit message references the issue slug.
+One commit for the substantive change (code + specs + issue). One separate commit for formatter residue if any. Commit message references the issue slug. Then `git push` so the change reaches the remote. If push fails (no upstream, network, conflict), report the failure to the user and continue — the commits are safe locally.
 
 ## When to push back
 
