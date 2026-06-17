@@ -26,6 +26,10 @@ DEFAULT_VOICE = "bf_isabella"
 
 _tts = None
 _tts_lock = threading.Lock()
+# kokoro_mlx.generate_stream is not lock-protected internally, and the
+# audio device can only voice one stream at a time, so serialize every
+# synthesis call across the whole daemon.
+_synth_lock = threading.Lock()
 
 
 def get_tts():
@@ -57,15 +61,16 @@ def handle(req: dict) -> dict:
         kwargs["language"] = lang
 
     tts = get_tts()
-    if action == "save":
-        path = req.get("output")
-        if not path:
-            return {"ok": False, "error": "save requires output path"}
-        tts.save(text, path, **kwargs)
-        return {"ok": True, "output": path}
-    if action == "speak":
-        tts.speak(text, **kwargs)
-        return {"ok": True}
+    with _synth_lock:
+        if action == "save":
+            path = req.get("output")
+            if not path:
+                return {"ok": False, "error": "save requires output path"}
+            tts.save(text, path, **kwargs)
+            return {"ok": True, "output": path}
+        if action == "speak":
+            tts.speak(text, stream=True, **kwargs)
+            return {"ok": True}
     return {"ok": False, "error": f"unknown action: {action}"}
 
 

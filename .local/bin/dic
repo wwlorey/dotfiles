@@ -22,7 +22,7 @@ SOCKET_PATH = "/tmp/dic.sock"
 DEFAULT_VOICE = "bf_isabella"
 DAEMON_BIN = os.path.expanduser("~/.local/bin/dic-daemon")
 CONNECT_TIMEOUT = 30.0  # seconds; covers daemon cold start + model load
-REQUEST_TIMEOUT = 300.0  # seconds; covers long synthesis
+REQUEST_TIMEOUT = 3600.0  # seconds; covers long-form streaming playback
 
 
 def connect(timeout: float = CONNECT_TIMEOUT) -> socket.socket:
