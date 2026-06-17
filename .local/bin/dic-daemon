@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+# dic-daemon — bash wrapper that bootstraps the kokoro-mlx venv,
+# then execs the Python daemon. Invoked by launchd.
+#
+# misaki (kokoro-mlx's G2P dep) lazy-downloads spaCy's en_core_web_sm
+# via `pip install` at first synthesis, which resolves to `uv pip`
+# without a venv context and crashes — so the wheel is pre-installed
+# here to avoid that runtime call entirely.
+set -euo pipefail
+
+VENV="$HOME/.local/share/dic-venv"
+PY="$VENV/bin/python"
+PKG_SPEC="kokoro-mlx==0.1.2"
+SOUNDDEVICE_SPEC="sounddevice"
+SPACY_MODEL_WHL="https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl"
+DAEMON_PY="$HOME/.local/bin/dic-daemon.py"
+
+if [[ ! -x "$PY" ]]; then
+    echo "dic-daemon: bootstrapping venv at $VENV" >&2
+    uv venv --python 3.12 "$VENV"
+    uv pip install --python "$PY" "$PKG_SPEC" "$SOUNDDEVICE_SPEC" "$SPACY_MODEL_WHL"
+    echo "dic-daemon: bootstrap complete" >&2
+else
+    # Backfill missing optional deps without re-creating the venv.
+    missing=()
+    "$PY" -c "import sounddevice" 2>/dev/null || missing+=("$SOUNDDEVICE_SPEC")
+    "$PY" -c "import en_core_web_sm" 2>/dev/null || missing+=("$SPACY_MODEL_WHL")
+    if (( ${#missing[@]} > 0 )); then
+        echo "dic-daemon: installing missing deps: ${missing[*]}" >&2
+        uv pip install --python "$PY" "${missing[@]}"
+    fi
+fi
+
+exec "$PY" "$DAEMON_PY"

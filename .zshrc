@@ -129,7 +129,4 @@ esac
 # over Homebrew shims (e.g. pnpm's `pn`) that path_helper inserts later.
 export PATH="$HOME/.cargo/bin:$PATH"
 
-# Ensure uv tools are installed
-command -v kokoro-tts &>/dev/null || uv tool install kokoro-tts
-
 eval "$(direnv hook zsh)"

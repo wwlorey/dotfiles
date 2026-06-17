@@ -1,164 +1,141 @@
-#!/usr/bin/env bash
-set -euo pipefail
+#!/usr/bin/env python3
+"""dic — "say!" (Latin imperative of dīcere). Thin client for dic-daemon.
 
-# ┌───────────────────────────────────────────────────────────────┐
-# │  dic — "say!" (Latin, imperative of dīcere)                  │
-# │  TTS wrapper with auto-provisioned model files                │
-# │  Requires: kokoro-tts (uv tool install kokoro-tts)            │
-# └───────────────────────────────────────────────────────────────┘
+Speaks via Kokoro-MLX through a daemon held warm in memory by launchd.
+The daemon listens on /tmp/dic.sock and is started by
+~/Library/LaunchAgents/co.lorey.dic-daemon.plist; if the socket is
+missing this client falls back to spawning the daemon inline (slow path,
+~5 s cold start, but always works).
+"""
 
-DATA_DIR="$HOME/.local/share/kokoro-tts"
-MODEL="$DATA_DIR/kokoro-v1.0.onnx"
-VOICES="$DATA_DIR/voices-v1.0.bin"
-BASE_URL="https://github.com/nazdridoy/kokoro-tts/releases/download/v1.0.0"
+from __future__ import annotations
 
-DEFAULT_VOICE="bf_isabella"
+import argparse
+import json
+import os
+import socket
+import subprocess
+import sys
+import time
 
-# ==================== DEPENDENCY CHECK ====================
+SOCKET_PATH = "/tmp/dic.sock"
+DEFAULT_VOICE = "bf_isabella"
+DAEMON_BIN = os.path.expanduser("~/.local/bin/dic-daemon")
+CONNECT_TIMEOUT = 30.0  # seconds; covers daemon cold start + model load
+REQUEST_TIMEOUT = 300.0  # seconds; covers long synthesis
 
-if ! command -v kokoro-tts &>/dev/null; then
-    echo "Error: kokoro-tts not found. Install with: uv tool install kokoro-tts" >&2
-    exit 1
-fi
 
-# ==================== ENSURE MODELS ====================
+def connect(timeout: float = CONNECT_TIMEOUT) -> socket.socket:
+    deadline = time.monotonic() + timeout
+    last_err: Exception | None = None
+    while time.monotonic() < deadline:
+        try:
+            s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            s.settimeout(REQUEST_TIMEOUT)
+            s.connect(SOCKET_PATH)
+            return s
+        except (FileNotFoundError, ConnectionRefusedError) as e:
+            last_err = e
+            time.sleep(0.2)
+    raise RuntimeError(f"could not connect to {SOCKET_PATH}: {last_err}")
 
-ensure_models() {
-    if [[ -f "$MODEL" && -f "$VOICES" ]]; then
+
+def ensure_daemon() -> None:
+    """If socket is missing, launch the daemon in the background."""
+    if os.path.exists(SOCKET_PATH):
         return
-    fi
-    echo "Downloading kokoro models to $DATA_DIR..." >&2
-    mkdir -p "$DATA_DIR"
-    [[ -f "$MODEL" ]]  || curl -fSL "$BASE_URL/kokoro-v1.0.onnx" -o "$MODEL"
-    [[ -f "$VOICES" ]] || curl -fSL "$BASE_URL/voices-v1.0.bin" -o "$VOICES"
-    echo "Models ready." >&2
-}
+    try:
+        subprocess.Popen(
+            [DAEMON_BIN],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True,
+        )
+    except FileNotFoundError:
+        sys.exit(f"dic: daemon binary not found at {DAEMON_BIN}")
 
-# ==================== HELP ====================
 
-show_usage() {
-    cat << 'EOF'
-Usage: dic [OPTIONS] [TEXT]
-       echo "text" | dic [OPTIONS]
+def request(req: dict) -> dict:
+    ensure_daemon()
+    s = connect()
+    try:
+        s.sendall((json.dumps(req) + "\n").encode("utf-8"))
+        buf = b""
+        while b"\n" not in buf:
+            chunk = s.recv(65536)
+            if not chunk:
+                break
+            buf += chunk
+        line = buf.split(b"\n", 1)[0]
+        return json.loads(line.decode("utf-8"))
+    finally:
+        s.close()
 
-Speak text aloud using kokoro-tts. Models are auto-downloaded on first run.
 
-Options:
-  -v, --voice NAME    Voice to use (default: af_sarah)
-  -s, --speed FLOAT   Speech speed (default: 1.0)
-  -o, --output FILE   Save audio to file instead of playing
-  -f, --format FMT    Audio format: wav or mp3 (default: wav)
-  -l, --lang LANG     Language code (default: en-us)
-  --verbose           Show progress output (suppressed by default)
-  --voices            List available voices
-  -h, --help          Show this help
+def read_text(arg: str | None) -> str:
+    if arg:
+        return arg
+    if not sys.stdin.isatty():
+        return sys.stdin.read()
+    return ""
 
-Examples:
-  dic "Hello world."
-  echo "Breaking news." | dic --voice bf_emma
-  echo "Slow and steady." | dic --speed 0.8
-  dic -o briefing.wav "Today's news summary."
-  dic -o podcast.mp3 -f mp3 --voice bm_george "Episode one."
-  dic --verbose "Speak with progress output."
-  dic --voices
-EOF
-    exit 0
-}
 
-# ==================== PARSE ARGS ====================
+def main() -> int:
+    p = argparse.ArgumentParser(
+        prog="dic",
+        description="Speak text aloud via the dic-daemon Kokoro-MLX TTS service.",
+    )
+    p.add_argument("text", nargs="?", help="Text to speak. If omitted, reads stdin.")
+    p.add_argument("-v", "--voice", default=DEFAULT_VOICE,
+                   help=f"Voice (default: {DEFAULT_VOICE})")
+    p.add_argument("-s", "--speed", type=float, default=None,
+                   help="Speech speed (default: 1.0)")
+    p.add_argument("-o", "--output", default=None,
+                   help="Save audio to this WAV file instead of playing.")
+    p.add_argument("-f", "--format", default=None,
+                   help="Audio format. Only 'wav' is supported.")
+    p.add_argument("-l", "--lang", default=None, help="Language code.")
+    p.add_argument("--voices", action="store_true",
+                   help="List available voices and exit.")
+    p.add_argument("--verbose", action="store_true",
+                   help="Show progress and daemon responses on stderr.")
+    args = p.parse_args()
 
-voice="$DEFAULT_VOICE"
-speed=""
-lang=""
-output=""
-format=""
-verbose=false
-text=""
+    if args.format and args.format.lower() != "wav":
+        print(f"dic: format '{args.format}' unsupported; using wav", file=sys.stderr)
 
-while [[ $# -gt 0 ]]; do
-    case $1 in
-        -h|--help)    show_usage ;;
-        --voices)     ensure_models; PYMUPDF_MESSAGE="path:/dev/null" kokoro-tts --help-voices --model "$MODEL" --voices "$VOICES" | grep -v "pymupdf_layout"; exit 0 ;;
-        -v|--voice)   voice="$2"; shift 2 ;;
-        -s|--speed)   speed="$2"; shift 2 ;;
-        -o|--output)  output="$2"; shift 2 ;;
-        -f|--format)  format="$2"; shift 2 ;;
-        -l|--lang)    lang="$2"; shift 2 ;;
-        --verbose)    verbose=true; shift ;;
-        -*)           echo "Unknown option: $1" >&2; exit 1 ;;
-        *)            text="$1"; shift ;;
-    esac
-done
+    if args.voices:
+        resp = request({"action": "list_voices"})
+        if not resp.get("ok"):
+            sys.exit(f"dic: {resp.get('error')}")
+        for v in resp.get("voices", []):
+            print(v)
+        return 0
 
-# ==================== READ INPUT ====================
+    text = read_text(args.text)
+    if not text.strip():
+        p.print_help(sys.stderr)
+        return 1
 
-if [[ -n "$text" ]]; then
-    input="$text"
-elif [[ ! -t 0 ]]; then
-    input="$(cat)"
-else
-    show_usage
-fi
+    req: dict = {"text": text, "voice": args.voice}
+    if args.speed is not None:
+        req["speed"] = args.speed
+    if args.lang:
+        req["lang"] = args.lang
 
-if [[ -z "$input" ]]; then
-    exit 0
-fi
+    if args.output:
+        req["action"] = "save"
+        req["output"] = os.path.abspath(args.output)
+    else:
+        req["action"] = "speak"
 
-# ==================== SPEAK ====================
+    resp = request(req)
+    if not resp.get("ok"):
+        sys.exit(f"dic: {resp.get('error')}")
+    if args.verbose:
+        print(json.dumps(resp), file=sys.stderr)
+    return 0
 
-ensure_models
 
-# Isolate tmp per invocation to prevent kokoro-tts internal file collisions
-DIC_TMPDIR="$(mktemp -d "${TMPDIR:-/tmp}/dic-XXXXXX")"
-tmpfile="$DIC_TMPDIR/input.txt"
-printf '%s' "$input" > "$tmpfile"
-export TMPDIR="$DIC_TMPDIR"
-
-# Serialize playback — only one dic instance speaks at a time
-LOCK_DIR="/tmp/dic.lock"
-_dic_owns_lock=false
-
-lock_release() {
-    if [[ "$_dic_owns_lock" = true ]]; then
-        rm -rf "$LOCK_DIR"
-        _dic_owns_lock=false
-    fi
-}
-
-trap 'lock_release; rm -rf "$DIC_TMPDIR"' EXIT
-
-# Acquire lock with stale-detection and timeout
-max_wait=30 waited=0
-while ! mkdir "$LOCK_DIR" 2>/dev/null; do
-    if [[ -f "$LOCK_DIR/pid" ]]; then
-        holder_pid=$(cat "$LOCK_DIR/pid" 2>/dev/null || echo "")
-        if [[ -n "$holder_pid" ]] && ! kill -0 "$holder_pid" 2>/dev/null; then
-            # Stale lock — try to claim by atomic rename-into-place
-            rm -rf "$LOCK_DIR" 2>/dev/null || true
-            continue
-        fi
-    fi
-    sleep 0.5
-    waited=$((waited + 1))
-    if [[ $waited -ge $((max_wait * 2)) ]]; then
-        echo "dic: timed out waiting for lock (held by PID ${holder_pid:-unknown})" >&2
-        exit 1
-    fi
-done
-echo $$ > "$LOCK_DIR/pid"
-_dic_owns_lock=true
-
-if [[ -n "$output" ]]; then
-    args=("$tmpfile" "$output" --model "$MODEL" --voices "$VOICES" --voice "$voice")
-else
-    args=("$tmpfile" --stream --model "$MODEL" --voices "$VOICES" --voice "$voice")
-fi
-[[ -n "$speed" ]]  && args+=(--speed "$speed")
-[[ -n "$format" ]] && args+=(--format "$format")
-[[ -n "$lang" ]]   && args+=(--lang "$lang")
-
-if [[ "$verbose" = true ]]; then
-    PYMUPDF_MESSAGE="path:/dev/null" kokoro-tts "${args[@]}" | grep -v "pymupdf_layout"
-else
-    PYMUPDF_MESSAGE="path:/dev/null" kokoro-tts "${args[@]}" > /dev/null
-fi
+if __name__ == "__main__":
+    sys.exit(main())

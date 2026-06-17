@@ -21,3 +21,14 @@ handySettings="$HOME/Sync/.computer-backup/handy-settings_store.json"
 brew list --installed-on-request > "$brewPacks"
 brew list --cask > "$brewCasks"
 cat "/Users/william/Library/Application Support/com.pais.handy/settings_store.json" > "$handySettings"
+
+dic_plist="$HOME/Library/LaunchAgents/co.lorey.dic-daemon.plist"
+dic_target="gui/$(id -u)/co.lorey.dic-daemon"
+if [[ -f "$dic_plist" ]]; then
+    if launchctl print "$dic_target" >/dev/null 2>&1; then
+        launchctl kickstart -k "$dic_target"
+    else
+        launchctl enable "$dic_target" 2>/dev/null || true
+        launchctl bootstrap "gui/$(id -u)" "$dic_plist"
+    fi
+fi
