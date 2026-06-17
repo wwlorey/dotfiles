@@ -7,12 +7,15 @@ description: Working with system configuration of any kind — dotfiles, ~/.agen
 
 All system configuration is managed through the dotfiles repository, a mirror
 of configuration files, scripts, etc. in `$HOME`. Files there are deployed to
-`~/` via `save-config`.
+`~/` via the `save-config` script — invoke it through the
+`mcp__unsandboxed-runner__save_config` MCP wrapper so rsync can write into
+`$HOME` from within the sandbox. A PreToolUse hook denies bare `save-config`
+in Bash with the same pointer.
 
 ## Editing config files
 
 - **Never edit config files directly in `~/`.** Always make changes in the
-  dotfiles repository, then deploy with `save-config`.
+  dotfiles repository, then deploy with `mcp__unsandboxed-runner__save_config`.
 - To modify a config (e.g. Neovim, tmux, zsh), find and edit the
   corresponding file in the repo at the same relative path it would have
   under `~/`.
@@ -86,7 +89,7 @@ skills, MEMENTO.md, CLAUDE.md, slash commands.
      parses the same output. Confirm each still holds. For behavior
      described in docs (README, CLAUDE.md, skill bodies), re-read those
      too.
-3. Deploy with `save-config`.
+3. Deploy with `mcp__unsandboxed-runner__save_config`.
 4. Confirm post-deployment: run `agent ls` (catches bad frontmatter in the
    now-deployed copies).
 5. Report under a `**Config changes:**` header as a brief bullet list,

@@ -65,5 +65,6 @@ Write every skill to work under both.
 
 The skill exists for agents the moment its frontmatter is valid and it is
 deployed — no registration step (the index is generated from frontmatter).
-Follow the config skill to deploy: verify in the repo, run `save-config`,
-confirm with `agent ls`. New skill appears in the listing → done.
+Follow the config skill to deploy: verify in the repo, call
+`mcp__unsandboxed-runner__save_config`, confirm with `agent ls`. New skill
+appears in the listing → done.
