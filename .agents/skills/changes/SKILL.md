@@ -37,6 +37,12 @@ Worker briefing template (paste the body of the `change` skill into the briefing
 When a worker returns:
 - Relay any clarifying questions to the user verbatim.
 - Once the user responds, send the answers back to the worker via a follow-up spawn so it can refine the plan.
+- **Challenge the plan before approving.** Walk this checklist against every returned plan; if the worker can't answer, send the plan back for refinement:
+  1. **Trace the full path.** From trigger to symptom (or input to output), end-to-end, naming every file and condition. If the worker can't trace it, the analysis is incomplete.
+  2. **Question magic numbers.** If the fix changes thresholds or constants, demand evidence or reasoning for the specific values chosen. "Lower X" is not a plan.
+  3. **Enumerate triggers.** Are there multiple code paths producing this symptom? Has the worker confirmed which one is actually firing?
+  4. **Edge cases.** What inputs should STILL trigger the original behavior? Make the worker prove the fix doesn't break those.
+  5. **Silent failures.** Does the fix add observability (logs / metrics / errors that propagate) so the next person debugging a similar issue has breadcrumbs?
 - When the plan is settled, present it to the user for explicit approval before moving the item to `approved`.
 
 ### 3. Serialize implementation
@@ -71,6 +77,16 @@ When all items are `committed` or `blocked`:
 - **Never send multiple approve-or-resume signals in one turn.** Each implementation worker runs to its commit before the next is unblocked.
 - **Always update specs alongside code.** The same rule as `change` — do not defer with an issue.
 - **Surface plans before implementing.** Each item must reach explicit user approval before its implementation worker spawns.
+
+## Stay above the work
+
+You are the orchestrator. Investigation, analysis, and implementation belong to workers; your job is to brief, relay, and synthesize. Default to delegating:
+
+- **Don't go fishing in source.** No exploratory Grep/Glob/Agent sweeps to "understand the codebase" yourself — that's a worker task.
+- **Don't pre-investigate before briefing.** If you read code first, your briefing biases the worker. Frame the goal, let the worker investigate.
+- **Don't implement.** Code changes happen inside the spawned implementation worker, not in the orchestrator.
+
+Exception: a single targeted `Read` on a known file is fair when a worker asks a one-line clarifying question and a spawn would be obvious overkill (e.g. "does file X export function Y?"). Resist scope creep — one file, one check, then back to orchestration.
 
 ## When to push back
 

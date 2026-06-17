@@ -24,10 +24,15 @@ Worker briefing template:
 > 2. Read the issue at `issues/<slug>.md` to understand scope, source refs, doc refs, and prior comments.
 > 3. Claim the issue by editing frontmatter `status: open` → `status: in_progress`. Commit with message `claim <slug>`.
 > 4. If the issue's `type` is `bug`, follow the bug-fix flow: reproduce, write a failing test that captures the bug, fix, re-run the test. Otherwise implement per the issue body and any referenced specs.
-> 5. Read every spec named in `## Doc refs` via `cat specs/<stem>.md`. Implement against those specs.
+> 5. Read every spec named in `## Doc refs` via `cat specs/<stem>.md`. Implement against those specs. **Assume not-yet-implemented:** specs describe planned design as readily as existing code, and a spec referring to a type, function, or module is not evidence that it exists in the codebase. When the spec mentions something, check whether it's already implemented before assuming you can call it.
 > 6. **Update specs alongside code.** If your implementation changes the design described in any spec, update the spec in the same commit as the code. Do not defer with "will update later." See the `specs` skill for the schema; transitions like `approved` → `implemented` happen here when applicable.
 > 7. Write tests (unit, property, or integration — pick what fits). No placeholder tests, no `expect(true).toBe(true)`.
-> 8. Consult the `backpressure` skill and run the full gauntlet for the project's stack. If anything fails, fix and re-run until clean.
+> 8. Consult the `backpressure` skill and run the full gauntlet for the project's stack. When a gate fails, triage:
+>    - **You caused it** → fix it. Part of this claim.
+>    - **Pre-existing but trivial** (lint warnings, formatter drift, a one-line type-fix) → fix it. Part of this claim.
+>    - **Pre-existing and non-trivial** (a real failing test that's not yours, a broken module on a path you didn't touch) → log a new issue under `issues/` capturing what's broken and where, and leave it alone. Do not absorb unrelated work into this claim.
+>
+>    Re-run the gauntlet until it passes clean. Don't ship with unaddressed failures from your own changes.
 > 9. Close the issue: edit frontmatter `status: in_progress` → `status: closed`. Add a `## Comments` entry summarizing what was done.
 > 10. Commit the implementation + spec updates + closure as one logical change (formatter residue may be a separate commit). Then `git push` so the iteration's work reaches the remote before the next iteration starts. If push fails (no upstream, network, conflict), report the failure and continue — the commit is safe locally and a later iteration or human can push it.
 >
