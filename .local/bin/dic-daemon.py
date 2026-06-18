@@ -13,6 +13,7 @@ startup stays fast.
 
 from __future__ import annotations
 
+import fcntl
 import json
 import os
 import signal
@@ -22,6 +23,7 @@ import threading
 import traceback
 
 SOCKET_PATH = "/tmp/dic.sock"
+LOCK_PATH = "/tmp/dic-daemon.lock"
 DEFAULT_VOICE = "bf_isabella"
 
 _tts = None
@@ -103,7 +105,29 @@ def serve_client(conn: socket.socket) -> None:
             pass
 
 
+def acquire_singleton_lock() -> None:
+    """Exit silently if another dic-daemon is already running.
+
+    Without this, a client-side spawn fallback or a launchd restart
+    racing an orphaned process produces two daemons fighting over
+    /tmp/dic.sock — the symptom is silent TTS (the surviving socket
+    binds, but the wrong daemon serves). The lock fd stays open for
+    the life of the process; the OS releases it on exit.
+    """
+    fd = os.open(LOCK_PATH, os.O_RDWR | os.O_CREAT, 0o600)
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        print("dic-daemon: another instance already running, exiting", flush=True)
+        sys.exit(0)
+    os.ftruncate(fd, 0)
+    os.write(fd, f"{os.getpid()}\n".encode())
+    globals()["_singleton_lock_fd"] = fd
+
+
 def main() -> None:
+    acquire_singleton_lock()
+
     if os.path.exists(SOCKET_PATH):
         try:
             os.unlink(SOCKET_PATH)
