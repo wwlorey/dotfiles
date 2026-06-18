@@ -23,6 +23,9 @@
     "filesystem": {
       "allowWrite": [
         "~/.cache/prek",
+        "~/.cache/uv",
+        "~/.cache/face-reading",
+        "~/.local/share/uv",
         "~/.cargo",
         "~/.pnpm-store",
         "~/Library/Caches/ms-playwright",
@@ -42,6 +45,9 @@
         "*.crates.io",
         "registry.npmjs.org",
         "registry.yarnpkg.com",
+        "pypi.org",
+        "files.pythonhosted.org",
+        "storage.googleapis.com",
         "api.instantdb.com",
         "api.openai.com"
       ],
