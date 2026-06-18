@@ -138,9 +138,9 @@ The skill exists for agents the moment its frontmatter is valid and it is
 deployed — no registration step (the index is generated from frontmatter).
 Follow the config skill to deploy: verify in the repo, call
 `mcp__unsandboxed-runner__save_config`, confirm with `agent ls`. Then run
-the cohesion ripple below before reporting done.
+the ripple check below before reporting done.
 
-## Cohesion ripple
+## Ripple check
 
 After every skill edit — whether new skill, body rewrite, or one-line
 tweak — run a local-first fan-out to verify the edit coheres with the
