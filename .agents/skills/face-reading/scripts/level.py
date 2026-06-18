@@ -13,9 +13,13 @@ Front-facing portrait pre-processing for face reading. Mirror halves
 and feature-by-feature comparisons assume a vertical face midline;
 head tilt breaks both. This script detects the iris pair via MediaPipe
 FaceLandmarker (478-landmark topology), computes the eye-line angle
-from horizontal, and rotates the image so the eyes are level. The
-canvas expands to avoid cropping the face; bare corners are filled
-black.
+from horizontal, and rotates the image so the eyes are level.
+
+The canvas stays the same dimensions as the input (Pillow rotate with
+expand=False). Bare corners at the rotation edges are filled by
+sampling the original image's edge pixels — no black bars, no JPEG
+re-encoding artifacts in the face region. The face sits in the middle
+and is unaffected by any corner clipping at practical tilt angles.
 
 Front-facing photos only. Side-profile or extreme three-quarter
 angles have unreliable iris detection — when the detector finds no
@@ -53,6 +57,27 @@ def _ensure_landmarker_model():
           file=sys.stderr)
     urllib.request.urlretrieve(MODEL_URL, MODEL_CACHE)
     return str(MODEL_CACHE)
+
+
+def _edge_fill_color(img):
+    """Median color of the input's outer-pixel ring.
+
+    Used as the rotation fill color so the corners exposed by rotating
+    with expand=False blend into the existing background instead of
+    cutting in as black bars.
+    """
+    import numpy as np
+    arr = np.array(img)
+    if arr.ndim != 3 or arr.shape[2] < 3:
+        return (0, 0, 0)
+    h, w = arr.shape[:2]
+    ring = np.concatenate([
+        arr[0, :, :3].reshape(-1, 3),
+        arr[h - 1, :, :3].reshape(-1, 3),
+        arr[:, 0, :3].reshape(-1, 3),
+        arr[:, w - 1, :3].reshape(-1, 3),
+    ])
+    return tuple(int(c) for c in np.median(ring, axis=0))
 
 
 def detect_iris_pair(img):
@@ -144,10 +169,14 @@ def main():
     rotated = img.rotate(
         angle_deg,
         resample=Image.BICUBIC,
-        expand=True,
-        fillcolor=(0, 0, 0),
+        expand=False,
+        fillcolor=_edge_fill_color(img),
     )
-    rotated.save(args.output_image)
+    save_kwargs = {}
+    if Path(args.output_image).suffix.lower() in {".jpg", ".jpeg"}:
+        save_kwargs["quality"] = 95
+        save_kwargs["subsampling"] = 0
+    rotated.save(args.output_image, **save_kwargs)
     print(f"level.py: applied {angle_deg:.2f}° rotation; "
           f"output {rotated.size[0]}x{rotated.size[1]}",
           file=sys.stderr)
