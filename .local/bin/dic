@@ -136,12 +136,23 @@ def main() -> int:
     p.add_argument("-l", "--lang", default=None, help="Language code.")
     p.add_argument("--voices", action="store_true",
                    help="List available voices and exit.")
+    p.add_argument("--reset", action="store_true",
+                   help="Tell the daemon to drop its loaded TTS instance "
+                        "(re-initializes the audio device on the next call). "
+                        "Use to recover from silent audio without restarting "
+                        "the daemon.")
     p.add_argument("--verbose", action="store_true",
                    help="Show progress and daemon responses on stderr.")
     args = p.parse_args()
 
     if args.format and args.format.lower() != "wav":
         print(f"dic: format '{args.format}' unsupported; using wav", file=sys.stderr)
+
+    if args.reset:
+        resp = request({"action": "reset"})
+        if not resp.get("ok"):
+            sys.exit(f"dic: {resp.get('error')}")
+        return 0
 
     if args.voices:
         resp = request({"action": "list_voices"})

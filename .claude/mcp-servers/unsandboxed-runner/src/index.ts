@@ -408,7 +408,7 @@ server.tool(
 
 server.tool(
   "run_dic",
-  "Speak text aloud using the dic TTS wrapper. Runs outside the sandbox so it can access audio output and model files. Streams progress via logging notifications. When output is provided, saves audio to a file instead of playing aloud.",
+  "Speak text aloud (or render to file) via the dic TTS wrapper. Runs outside the sandbox for audio + model-file access. Waits for playback to complete and surfaces audio-device errors as a failure result. On a detected audio error, transparently resets the daemon and retries once before failing.",
   {
     text: z.string().describe("The text to speak aloud."),
     voice: z.string().optional().describe("Voice to use (default: bf_isabella). Run with --voices flag to list available voices."),
@@ -427,7 +427,7 @@ server.tool(
     if (output) args.unshift("-o", output);
     if (format) args.unshift("-f", format);
 
-    const result = await new Promise<RunResult>((resolve) => {
+    const runDic = (): Promise<RunResult> => new Promise<RunResult>((resolve) => {
       let stdout = "";
       let stderr = "";
       let timedOut = false;
@@ -478,6 +478,15 @@ server.tool(
         });
       });
     });
+
+    let result = await runDic();
+    if (!result.success && /dic: audio:/i.test(result.stderr)) {
+      // Daemon detected a PortAudio failure inside Kokoro. Reset the
+      // daemon's TTS instance (re-initializes the audio device) and
+      // retry once before surfacing the failure.
+      spawnSync("dic", ["--reset"], { stdio: "ignore" });
+      result = await runDic();
+    }
 
     return {
       content: [{ type: "text", text: result.success ? "Done." : JSON.stringify(result, null, 2) }],

@@ -19,6 +19,7 @@ import os
 import signal
 import socket
 import sys
+import tempfile
 import threading
 import traceback
 
@@ -43,9 +44,60 @@ def get_tts():
         return _tts
 
 
+_AUDIO_ERROR_MARKERS = ("PaMacCore", "AUHAL", "PortAudio", "err='-")
+
+
+def _speak_with_audio_check(tts, text: str, **kwargs) -> str:
+    """Run tts.speak with fd-level stderr capture.
+
+    PortAudio errors (e.g. AUHAL `err='-50'`) come from C code and bypass
+    Python's sys.stderr — `redirect_stderr` won't catch them, so we dup2
+    a temp file onto fd 2 for the duration of the call and scan the
+    capture for known audio-failure signatures afterward. Returns a
+    short error string when an audio error was detected, "" otherwise.
+    """
+    saved_fd = os.dup(2)
+    tmp = tempfile.TemporaryFile(mode="w+b")
+    try:
+        sys.stderr.flush()
+        os.dup2(tmp.fileno(), 2)
+        try:
+            tts.speak(text, stream=True, **kwargs)
+        finally:
+            sys.stderr.flush()
+            os.dup2(saved_fd, 2)
+        tmp.seek(0)
+        captured = tmp.read().decode("utf-8", errors="replace")
+    finally:
+        tmp.close()
+        os.close(saved_fd)
+
+    if captured:
+        sys.stderr.write(captured)
+        sys.stderr.flush()
+
+    if any(m in captured for m in _AUDIO_ERROR_MARKERS):
+        for line in captured.splitlines():
+            line = line.strip()
+            if line and any(m in line for m in _AUDIO_ERROR_MARKERS):
+                return line[:200]
+        return captured.strip()[:200]
+    return ""
+
+
 def handle(req: dict) -> dict:
     action = req.get("action", "speak")
     if action == "ping":
+        return {"ok": True}
+    if action == "reset":
+        # Drop the loaded TTS instance so the next speak/save call
+        # rebuilds it from the on-disk model cache. Fast (seconds, not
+        # the cold-start 30s) and re-initializes any wedged PortAudio
+        # device along with it. Held under both locks so an in-flight
+        # synth finishes before the reset takes effect.
+        global _tts
+        with _tts_lock, _synth_lock:
+            _tts = None
         return {"ok": True}
     if action == "list_voices":
         return {"ok": True, "voices": get_tts().list_voices()}
@@ -71,7 +123,9 @@ def handle(req: dict) -> dict:
             tts.save(text, path, **kwargs)
             return {"ok": True, "output": path}
         if action == "speak":
-            tts.speak(text, stream=True, **kwargs)
+            audio_err = _speak_with_audio_check(tts, text, **kwargs)
+            if audio_err:
+                return {"ok": False, "error": f"audio: {audio_err}"}
             return {"ok": True}
     return {"ok": False, "error": f"unknown action: {action}"}
 
