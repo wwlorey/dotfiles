@@ -22,7 +22,24 @@ The user gives you a list of items they want done — bullets, numbered list, or
 
 Statuses: `planning`, `waiting-for-approval`, `approved`, `implementing`, `committed`, `blocked`.
 
-Before fanning out, **de-duplicate** the list: if two items describe the same change in different words, collapse them or flag the suspected duplication to the user before spawning. Spawning two workers against the same change wastes context and produces conflicting plans.
+Before fanning out, run two pre-flight passes on the list.
+
+**De-duplicate.** If two items describe the same change in different words, collapse them or flag the suspected duplication to the user before spawning. Spawning two workers against the same change wastes context and produces conflicting plans.
+
+**Split coarse items.** What you pass to a `change` worker must be small and atomic: one fix, one planner, one commit. If an item bundles N independently-verifiable fixes — distinct symptoms, distinct files, distinct planning surfaces — break it into N items. Bundles cost context (the planner researches more than it needs), cost rework (one shaky finding contaminates the whole plan), and cost bisect (a coarse commit is not a clean revert unit).
+
+Signs an item should split:
+- "Fix these N findings in spec X" → one item per finding.
+- "Update A and B in module Y" → split if A and B have independent failure modes.
+- A description with multiple `and`-joined action verbs ("rename foo, refactor bar, document baz") → split per verb.
+- The item arrived from an external source (audit report, code review, TODO list) rather than a user typing "do these together."
+
+Signs an item is already atomic — leave alone:
+- One symptom, one code path, one verifiable behavior change.
+- Splitting would force a coordinated revert (the parts only make sense together).
+- The user supplied the bundle deliberately and named the grouping.
+
+Flag the split decision to the user when ambiguous; do not silently fan out a dozen workers from a one-line request, and do not silently bundle a dozen findings into one worker.
 
 ### 2. Fan out planning
 
@@ -106,6 +123,7 @@ When all items are `committed` or `blocked`:
 
 ## Hard rules
 
+- **Keep what reaches `change` small and atomic.** Run the split pass in step 1 before fanout, and again before any late-arriving item enters the queue. One fix, one planner, one commit.
 - **Never implement two items simultaneously.** Even if they look independent, serialize. Backpressure runs must observe a clean tree.
 - **Never send multiple approve-or-resume signals in one turn.** Each implementation worker runs to its commit before the next is unblocked.
 - **Every implementation briefing must explicitly require specs-alongside-code** (no defer with an issue). This is the `change` skill's rule; the orchestrator's job is to make sure each implementation worker carries it forward.
