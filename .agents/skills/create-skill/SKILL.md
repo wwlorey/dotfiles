@@ -124,6 +124,14 @@ Flat name, no prefix. The skill name is the verb a user would say
 (`build`, `change`, `spec`). Discoverability comes from the description
 triggers, not the name.
 
+When a single verb is ambiguous in the skill index (because several
+pipelines or operations share related verbs) or genuinely less
+self-documenting than a compound noun-phrase, a compound name is
+acceptable. See `spec-to-issues`, `youtube-transcript`,
+`end-of-turn-report`, `generate-image` for the precedent. The bar: the
+compound must explain itself to a reader scanning the index, not just
+be a description that happens to read as a name.
+
 ### Inlining vs referencing
 
 The conventions above are baked into each pipeline skill at create time,
