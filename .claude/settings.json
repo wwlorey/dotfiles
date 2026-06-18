@@ -18,7 +18,8 @@
       "pnpm run test:e2e*",
       "node*export.js*",
       "cargo*",
-      "agent*"
+      "agent*",
+      "*face-reading/scripts/*"
     ],
     "filesystem": {
       "allowWrite": [
