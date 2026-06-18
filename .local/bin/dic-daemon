@@ -8,6 +8,11 @@
 # here to avoid that runtime call entirely.
 set -euo pipefail
 
+if ! command -v ffplay >/dev/null 2>&1; then
+    echo "dic-daemon: ffplay not found in PATH; install with 'brew install ffmpeg'" >&2
+    exit 1
+fi
+
 VENV="$HOME/.local/share/dic-venv"
 PY="$VENV/bin/python"
 PKG_SPEC="kokoro-mlx==0.1.2"

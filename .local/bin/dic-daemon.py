@@ -18,20 +18,25 @@ import json
 import os
 import signal
 import socket
+import subprocess
 import sys
-import tempfile
 import threading
+import time
 import traceback
+
+import numpy as np
 
 SOCKET_PATH = "/tmp/dic.sock"
 LOCK_PATH = "/tmp/dic-daemon.lock"
 DEFAULT_VOICE = "bf_isabella"
+SAMPLE_RATE = 24000
+PLAYBACK_TIMEOUT = 300.0  # wall-clock cap on a single synth+play
 
 _tts = None
 _tts_lock = threading.Lock()
-# kokoro_mlx.generate_stream is not lock-protected internally, and the
-# audio device can only voice one stream at a time, so serialize every
-# synthesis call across the whole daemon.
+# kokoro_mlx.generate_stream is not lock-protected internally, so serialize
+# every synthesis call across the whole daemon. (Audio device contention used
+# to also require this; now ffplay owns the device in a child process.)
 _synth_lock = threading.Lock()
 
 
@@ -44,45 +49,55 @@ def get_tts():
         return _tts
 
 
-_AUDIO_ERROR_MARKERS = ("PaMacCore", "AUHAL", "PortAudio", "err='-")
+def _speak_via_ffplay(tts, text: str, **kwargs) -> str:
+    """Synthesize *text* with kokoro and play through an ffplay subprocess.
 
-
-def _speak_with_audio_check(tts, text: str, **kwargs) -> str:
-    """Run tts.speak with fd-level stderr capture.
-
-    PortAudio errors (e.g. AUHAL `err='-50'`) come from C code and bypass
-    Python's sys.stderr — `redirect_stderr` won't catch them, so we dup2
-    a temp file onto fd 2 for the duration of the call and scan the
-    capture for known audio-failure signatures afterward. Returns a
-    short error string when an audio error was detected, "" otherwise.
+    PortAudio lives inside ffplay's process, never the daemon's. A CoreAudio
+    wedge — e.g. AudioOutputUnitStop hanging after device hot-swap or
+    sleep/wake — gets cleared by killing the child rather than bringing down
+    the daemon. Returns "" on success or a short error string on failure.
     """
-    saved_fd = os.dup(2)
-    tmp = tempfile.TemporaryFile(mode="w+b")
+    ff = subprocess.Popen(
+        [
+            "ffplay", "-nodisp", "-autoexit", "-loglevel", "error",
+            "-f", "s16le", "-ar", str(SAMPLE_RATE),
+            "-ch_layout", "mono", "-i", "pipe:0",
+        ],
+        stdin=subprocess.PIPE,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.PIPE,
+    )
+    deadline = time.monotonic() + PLAYBACK_TIMEOUT
     try:
-        sys.stderr.flush()
-        os.dup2(tmp.fileno(), 2)
+        for chunk in tts.generate_stream(text, **kwargs):
+            if time.monotonic() > deadline:
+                return "playback timed out during synth"
+            pcm = (np.clip(chunk, -1.0, 1.0) * 32767.0).astype(np.int16).tobytes()
+            try:
+                ff.stdin.write(pcm)
+            except BrokenPipeError:
+                err = (ff.stderr.read() or b"").decode("utf-8", errors="replace")
+                return f"ffplay died: {err.strip()[:200]}"
         try:
-            tts.speak(text, stream=True, **kwargs)
-        finally:
-            sys.stderr.flush()
-            os.dup2(saved_fd, 2)
-        tmp.seek(0)
-        captured = tmp.read().decode("utf-8", errors="replace")
+            ff.stdin.close()
+        except BrokenPipeError:
+            pass
+        remaining = max(0.5, deadline - time.monotonic())
+        try:
+            ff.wait(timeout=remaining)
+        except subprocess.TimeoutExpired:
+            return "ffplay teardown wedged (CoreAudio); killed"
+        if ff.returncode != 0:
+            err = (ff.stderr.read() or b"").decode("utf-8", errors="replace")
+            return f"ffplay exit {ff.returncode}: {err.strip()[:200]}"
+        return ""
     finally:
-        tmp.close()
-        os.close(saved_fd)
-
-    if captured:
-        sys.stderr.write(captured)
-        sys.stderr.flush()
-
-    if any(m in captured for m in _AUDIO_ERROR_MARKERS):
-        for line in captured.splitlines():
-            line = line.strip()
-            if line and any(m in line for m in _AUDIO_ERROR_MARKERS):
-                return line[:200]
-        return captured.strip()[:200]
-    return ""
+        if ff.poll() is None:
+            ff.kill()
+            try:
+                ff.wait(timeout=2)
+            except subprocess.TimeoutExpired:
+                pass
 
 
 def handle(req: dict) -> dict:
@@ -123,9 +138,9 @@ def handle(req: dict) -> dict:
             tts.save(text, path, **kwargs)
             return {"ok": True, "output": path}
         if action == "speak":
-            audio_err = _speak_with_audio_check(tts, text, **kwargs)
-            if audio_err:
-                return {"ok": False, "error": f"audio: {audio_err}"}
+            err = _speak_via_ffplay(tts, text, **kwargs)
+            if err:
+                return {"ok": False, "error": f"audio: {err}"}
             return {"ok": True}
     return {"ok": False, "error": f"unknown action: {action}"}
 
