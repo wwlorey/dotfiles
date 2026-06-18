@@ -1,4 +1,12 @@
-#!/usr/bin/env python3
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.10,<3.13"
+# dependencies = [
+#   "mediapipe",
+#   "pillow",
+#   "numpy",
+# ]
+# ///
 """Render left-left and right-right composites of a face.
 
 Mirrors each half of a face across the vertical midline so the user sees
@@ -13,11 +21,18 @@ convention). This script accounts for that, so the labels track anatomy
 rather than image coordinates.
 
 Usage:
-    python3 halves.py <input_image> <midline_x> <output_dir>
+    python3 halves.py <input_image> <output_dir> [--midline X]
 
-`midline_x` is the integer pixel x-coordinate of the vertical face midline
-(roughly the centerline of the nose tip / philtrum / chin tip). Determine
-it by inspecting the photo.
+The midline is the integer pixel x-coordinate of the vertical face
+midline (centerline through the iris midpoint / nose tip / philtrum /
+chin tip). When `--midline` is omitted, the script auto-detects it via
+MediaPipe FaceMesh (iris midpoint, refine_landmarks=True). If MediaPipe
+isn't installed or no face is detected, falls back to the image
+horizontal center and warns on stderr. Pass `--midline X` to override
+the detector for hard cases (heavy off-axis tilt, partial occlusion).
+
+The midline actually used is printed to stdout on the first line as
+`midline=<int>` so callers can cite it.
 
 Outputs three files in <output_dir>:
 - halves-left.png   : subject's left half mirrored to make a symmetric face
@@ -25,10 +40,85 @@ Outputs three files in <output_dir>:
 - halves-side-by-side.png : the two composites stacked horizontally with labels
 """
 
+import argparse
 import sys
 from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont, ImageOps
+
+
+MODEL_URL = (
+    "https://storage.googleapis.com/mediapipe-models/face_landmarker/"
+    "face_landmarker/float16/1/face_landmarker.task"
+)
+MODEL_CACHE = Path.home() / ".cache" / "face-reading" / "face_landmarker.task"
+
+
+def _ensure_landmarker_model():
+    """Download the FaceLandmarker .task model on first use, cache under ~/.cache."""
+    if MODEL_CACHE.exists():
+        return str(MODEL_CACHE)
+    import urllib.request
+    MODEL_CACHE.parent.mkdir(parents=True, exist_ok=True)
+    print(f"halves.py: downloading face_landmarker model to {MODEL_CACHE}",
+          file=sys.stderr)
+    urllib.request.urlretrieve(MODEL_URL, MODEL_CACHE)
+    return str(MODEL_CACHE)
+
+
+def detect_midline(img):
+    """Return the face midline x-coordinate via MediaPipe FaceLandmarker, or None.
+
+    Uses the iris-midpoint landmark pair (478-landmark topology, indices
+    468 and 473) as the primary signal — robust to small head tilt and
+    beard / chin occlusion. Returns None if MediaPipe is not installed,
+    the .task model can't be downloaded, or no face is detected.
+
+    Uses the new MediaPipe Tasks API rather than the legacy `solutions`
+    namespace, because the macOS arm64 wheel ships Tasks only.
+    """
+    try:
+        import mediapipe as mp
+        from mediapipe.tasks import python as mp_python
+        from mediapipe.tasks.python import vision as mp_vision
+    except ImportError:
+        print(
+            "halves.py: mediapipe not installed; "
+            "install with `pip3 install mediapipe` for auto-detect",
+            file=sys.stderr,
+        )
+        return None
+
+    import numpy as np
+
+    arr = np.array(img)
+    h, w = arr.shape[:2]
+
+    try:
+        model_path = _ensure_landmarker_model()
+    except Exception as e:
+        print(f"halves.py: failed to obtain landmarker model: {e}",
+              file=sys.stderr)
+        return None
+
+    options = mp_vision.FaceLandmarkerOptions(
+        base_options=mp_python.BaseOptions(model_asset_path=model_path),
+        num_faces=1,
+    )
+    with mp_vision.FaceLandmarker.create_from_options(options) as detector:
+        mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=arr)
+        result = detector.detect(mp_image)
+
+    if not result.face_landmarks:
+        print("halves.py: no face detected; falling back to image center",
+              file=sys.stderr)
+        return None
+
+    lm = result.face_landmarks[0]
+    iris_r = lm[468]
+    iris_l = lm[473]
+    midline_norm = (iris_r.x + iris_l.x) / 2
+    return int(round(midline_norm * w))
 
 
 def load_font(size):
@@ -127,31 +217,47 @@ def side_by_side(left_img, right_img, gap=20):
 
 
 def main():
-    if len(sys.argv) != 4:
-        print("usage: halves.py <input_image> <midline_x> <output_dir>",
-              file=sys.stderr)
-        sys.exit(2)
+    parser = argparse.ArgumentParser(
+        prog="halves.py",
+        description="Render left-left and right-right mirror composites of a face.",
+    )
+    parser.add_argument("input_image")
+    parser.add_argument("output_dir")
+    parser.add_argument(
+        "-m", "--midline", type=int, default=None,
+        help="Override the auto-detected face midline x-coordinate (pixels).",
+    )
+    args = parser.parse_args()
 
-    in_path = sys.argv[1]
-    try:
-        midline_x = int(sys.argv[2])
-    except ValueError:
-        print(f"midline_x must be an integer pixel coordinate, got {sys.argv[2]!r}",
-              file=sys.stderr)
-        sys.exit(2)
-    out_dir = Path(sys.argv[3])
+    in_path = args.input_image
+    out_dir = Path(args.output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 
     img = Image.open(in_path).convert("RGB")
     w, h = img.size
+
+    if args.midline is not None:
+        midline_x = args.midline
+        source = "manual override"
+    else:
+        detected = detect_midline(img)
+        if detected is not None:
+            midline_x = detected
+            source = "mediapipe iris midpoint"
+        else:
+            midline_x = w // 2
+            source = "image center fallback"
+
     margin = max(1, w // 10)
     if not (margin < midline_x < w - margin):
         print(
-            f"midline_x={midline_x} is too close to the image edge "
-            f"(image width {w}, require {margin} < midline_x < {w - margin})",
+            f"midline={midline_x} ({source}) is too close to the image edge "
+            f"(image width {w}, require {margin} < midline < {w - margin})",
             file=sys.stderr,
         )
         sys.exit(2)
+
+    print(f"halves.py: midline={midline_x} ({source})", file=sys.stderr)
 
     left_full = mirror_half(img, midline_x, "left")
     right_full = mirror_half(img, midline_x, "right")
@@ -177,6 +283,7 @@ def main():
     right_cap = add_caption(right_padded, "RIGHT × 2 — outer / presented self", font_size=font_size)
     side_by_side(left_cap, right_cap).save(sbs_path)
 
+    print(f"midline={midline_x}")
     for p in (left_path, right_path, sbs_path):
         print(p)
 

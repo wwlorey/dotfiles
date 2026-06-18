@@ -95,10 +95,12 @@ Prosopa's asymmetry doctrine: **left side = inner self / who they came into the 
 Build the two halves with the script:
 
 ```bash
-python3 scripts/halves.py <input_image> <midline_x> <output_dir>
+scripts/halves.py <input_image> <output_dir> [--midline X]
 ```
 
-`midline_x` is the integer pixel x-coordinate of the vertical face midline (centerline through nose tip / philtrum / chin tip). Determine it by inspecting the photo. The script writes `halves-left.png`, `halves-right.png`, and `halves-side-by-side.png` to `output_dir`. Output labels are **anatomical** (the subject's own left and right) — `halves-left.png` doubles the subject's left side, which in a front-facing photo sits on the image-right half.
+The script is a PEP 723 inline-script — the shebang routes through `uv run --script`, so `uv` (required) provisions Python 3.10–3.12 and the MediaPipe / Pillow / NumPy dep set automatically on first run (cached after). No venv or manual install.
+
+The midline is auto-detected via MediaPipe FaceLandmarker (iris midpoint, 478-landmark topology). The script writes the midline it used to stderr and to stdout as `midline=<int>` — cite that value in the reading. Pass `--midline X` to override the detector for hard cases (heavy off-axis tilt, partial occlusion, multiple faces). If detection fails (no face in frame, or `uv` itself isn't available), the script falls back to the image horizontal center and warns on stderr; for an off-center photo that fallback will be wrong, so pass `--midline` explicitly. Outputs: `halves-left.png`, `halves-right.png`, and `halves-side-by-side.png` to `output_dir`. Labels are **anatomical** (the subject's own left and right) — `halves-left.png` doubles the subject's left side, which in a front-facing photo sits on the image-right half.
 
 In the reading text, describe what each composite shows. Patterns to look for:
 - **"Predator disguised as prey" / "wolf in sheep's clothing"** — the halves look like two different characters (Sydney Sweeney read).
