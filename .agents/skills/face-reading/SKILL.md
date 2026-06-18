@@ -20,14 +20,27 @@ His causal claim: genes pleiotropically code for both physical features and ment
 
 ## Inputs (preflight checklist)
 
-Address each item before reading. Do not proceed to Step 1 until every line is either acquired or explicitly waived in the output with a stated reason.
+Address each item before reading. None of these block the reading — a missing item lowers confidence and gets called out in the output, but the reading proceeds.
 
-- [ ] **Front-facing photo, neutral expression, head level, good lighting.** Smiling distorts mouth shape, lip line, and cheek volume.
-- [ ] **Side profile.** Prosopa's temperament call depends on it — forehead slope, chin projection, jaw line angle, "bow of melancholy" vs flat vs concave curve. Without one, infer cautiously from front-view cues and flag temperament confidence as moderate or lower.
-- [ ] **Smile photo, for known subjects — non-skippable.** Gummy smile, tooth proportions, tooth gap, and lip-corner shape are load-bearing when present and the neutral photo may not capture them. For any subject with public photos available, pull one.
-- [ ] **Youth photo, for older subjects.** Aging trajectory (Venus → Mars, Saturn → Sun) and the original face-shape archetype both depend on the younger face.
+- [ ] **Front-facing photo, neutral expression, head level, good lighting.** Required. Smiling distorts mouth shape, lip line, and cheek volume.
+- [ ] **Side profile.** Strongly preferred — Prosopa's temperament call depends on it (forehead slope, chin projection, jaw line angle, "bow of melancholy" vs flat vs concave curve). Without one, infer cautiously from front-view cues and flag temperament confidence as moderate or lower.
+- [ ] **Smile photo, for known subjects.** Preferred when available — gummy smile, tooth proportions, tooth gap, and lip-corner shape are load-bearing when present and the neutral photo may not capture them. If none is supplied, note its absence and proceed without it.
+- [ ] **Youth photo, for older subjects.** Preferred — aging trajectory (Venus → Mars, Saturn → Sun) and the original face-shape archetype both depend on the younger face. If none is supplied, note the trajectory you'd want to verify and proceed.
 
 If the photo set is poor, name the cues you can't read confidently and proceed only with the rest.
+
+## Photo catalog (required output element)
+
+When more than one photo is in the input set, the most common failure mode is silently using one and dropping the rest. Before Step 1, build a catalog of every photo handed over and slot each one. Include the table in the reading output so the user can audit the coverage.
+
+| Photo | Role (front / profile / smile / youth / other-front / 3-quarter / unused) | Used? | If unused, why |
+
+Rules:
+
+- One row per file, no exceptions — including photos that ended up unused.
+- "If unused, why" must be substantive (e.g. "duplicate front-facing, lower lighting" or "3/4 view, no profile contribution beyond OIP-4123040153"), not blank.
+- For any role that has more than one candidate photo, pick the one used and explain in that row's "If unused, why" for the others.
+- If a single photo is in scope, this section reduces to one line — still produce it.
 
 ## Preprocessing — level the front-facing photo
 
@@ -49,6 +62,8 @@ Before walking the rubric, look for the one observation that *defines* this face
 
 **Calibrate toward extremes, not midpoints.** Prosopa rarely calls a feature "moderate" — he picks an end of the spectrum (flat or splayed, deep or protruding, thin or full) and reads accordingly, or skips the cue. A "moderate" call usually means you haven't looked hard enough. Either commit to an end or drop the row from the trace table.
 
+**Any two-character split claim requires a second halves pass — no exception.** Pixel-mirroring visually amplifies asymmetry: a modest "different modes for different parts of life" split can look like a two-character predator/prey divergence in a single composite. Before naming "wolf in sheep's clothing," "predator disguised as prey," "split face shape," "Mark of Cain," "the prophet and the man," "two Petersons," or any equivalent two-character phrasing anywhere in the reading, run `scripts/halves.py` on a second photo (different expression, angle, or lighting) and confirm the same direction of asymmetry survives. Cite the second composite in the asymmetry section as a second `composite:` artifact line. If the second pass disagrees with the first, downgrade to "modest asymmetry" and name the *direction* without dramatizing the *magnitude*.
+
 ### Step 1 — Phenotype
 
 Prosopa opens every reading with phenotype. Identify the subject's phenotype using his **-id taxonomy** (Nordid, Alpinid, Mediterranid, plus sub-types and contact types). The diagnostic feature stack: skin/hair (low weight) → **skull shape (dolichocephalic vs brachycephalic, large vs small)** → nose → body.
@@ -68,6 +83,8 @@ Describe the whole face in one or two sentences. Note dominant zone of the **fac
 Pick one of choleric, sanguine, phlegmatic, melancholic — or a mixed call if regions diverge (e.g. "choleric with a sanguine forehead"). Prosopa allows compound temperaments: forehead carries the intellect's humor; chin carries the **initial energy of action**; jaw carries the **long-term endurance energy of action**.
 
 Add the side-profile curvature overlay: convex (bird/bullet) = "bow of melancholy" (sensitivity, reactivity, creativity); flat = balanced; concave ("moonman crescent") = dull, unperceptive, overbearing.
+
+**When a side-profile photo is in the input set, run `scripts/overlay.py` on it.** Draw the profile curvature line as a `lines` entry (forehead-top → brow ridge → nose tip → mouth → chin tip), the forehead-slope line, and the jaw line. Cite the side-profile overlay as a second `overlay:` artifact line. Eyeballing the curvature in prose without an annotated artifact is unauditable. If only a 3/4 view is available, use the most profile-leaning shot, draw what's visible, and call out the angle in the trace.
 
 Full cues in `references/temperaments.md`.
 
