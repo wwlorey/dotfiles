@@ -11,6 +11,7 @@ missing this client falls back to spawning the daemon inline (slow path,
 from __future__ import annotations
 
 import argparse
+import fcntl
 import json
 import os
 import socket
@@ -21,8 +22,37 @@ import time
 SOCKET_PATH = "/tmp/dic.sock"
 DEFAULT_VOICE = "bf_isabella"
 DAEMON_BIN = os.path.expanduser("~/.local/bin/dic-daemon")
+LOCK_PATH = os.path.expanduser("~/.cache/dic.lock")
 CONNECT_TIMEOUT = 30.0  # seconds; covers daemon cold start + model load
 REQUEST_TIMEOUT = 3600.0  # seconds; covers long-form streaming playback
+
+
+def acquire_lock() -> int:
+    """Block until this process owns the dic lock, then return its fd.
+
+    The daemon is a single Kokoro worker behind one Unix socket. Two
+    clients hitting it concurrently can race — one stream gets closed
+    mid-playback and the other client reads zero bytes and crashes on
+    JSON-decoding the empty response. fcntl.flock(LOCK_EX) ensures only
+    one client holds the daemon at a time; late callers wait their turn
+    rather than getting their playback cut off. The lock is held for
+    the entire request including playback, since the daemon only sends
+    its final JSON ack after audio streaming completes.
+
+    fcntl locks release automatically on fd close, including abnormal
+    process exit — no stale-lock recovery needed.
+    """
+    os.makedirs(os.path.dirname(LOCK_PATH), exist_ok=True)
+    fd = os.open(LOCK_PATH, os.O_RDWR | os.O_CREAT, 0o644)
+    fcntl.flock(fd, fcntl.LOCK_EX)
+    return fd
+
+
+def release_lock(fd: int) -> None:
+    try:
+        fcntl.flock(fd, fcntl.LOCK_UN)
+    finally:
+        os.close(fd)
 
 
 def connect(timeout: float = CONNECT_TIMEOUT) -> socket.socket:
@@ -57,19 +87,28 @@ def ensure_daemon() -> None:
 
 def request(req: dict) -> dict:
     ensure_daemon()
-    s = connect()
+    lock_fd = acquire_lock()
     try:
-        s.sendall((json.dumps(req) + "\n").encode("utf-8"))
-        buf = b""
-        while b"\n" not in buf:
-            chunk = s.recv(65536)
-            if not chunk:
-                break
-            buf += chunk
-        line = buf.split(b"\n", 1)[0]
-        return json.loads(line.decode("utf-8"))
+        s = connect()
+        try:
+            s.sendall((json.dumps(req) + "\n").encode("utf-8"))
+            buf = b""
+            while b"\n" not in buf:
+                chunk = s.recv(65536)
+                if not chunk:
+                    break
+                buf += chunk
+            line = buf.split(b"\n", 1)[0]
+            if not line:
+                raise RuntimeError(
+                    "dic-daemon closed the connection without responding; "
+                    "the worker may have crashed mid-request"
+                )
+            return json.loads(line.decode("utf-8"))
+        finally:
+            s.close()
     finally:
-        s.close()
+        release_lock(lock_fd)
 
 
 def read_text(arg: str | None) -> str:
