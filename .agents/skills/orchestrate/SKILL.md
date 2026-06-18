@@ -1,6 +1,6 @@
 ---
 name: orchestrate
-description: Spawning a subagent via the Agent tool, including a single one-off delegation. Consult before every Agent call — no bottom limit, no exceptions; don't talk yourself out of consulting because the spawn feels small or fast. Also consult whenever the user says "orchestrate", "delegate", "fan out", "parallelize", "spawn workers", "batch", or asks for a Ralph loop.
+description: Spawning a subagent via the Agent tool, AND reading task-notifications / worker returns. Consult before every Agent call — no bottom limit, no exceptions; don't talk yourself out of consulting because the spawn feels small or fast. ALSO consult before acting on any task-notification or worker return — `status: completed` events have a failure mode (interim snapshots that look terminal) that mistakes mid-execution for finished work. Also consult whenever the user says "orchestrate", "delegate", "fan out", "parallelize", "spawn workers", "batch", or asks for a Ralph loop.
 ---
 
 # Orchestrate
@@ -39,6 +39,17 @@ Workers spawned via the Agent tool do NOT inherit the MEMENTO, the skills index,
    > You are a worker, not an orchestrator. Do NOT produce a spoken end-of-turn report. Do NOT call any TTS / voice / `run_dic` tool. Do NOT spawn further workers via the Agent tool — return your result directly. Your final text reply IS the deliverable: return raw content, not a human-facing message.
 
 Keep briefings tight. Too much wastes tokens; too little drifts off-task. The six items above are the minimum bar.
+
+## Reading worker responses & notifications
+
+A `task-notification` with `status: completed` is **not** necessarily terminal. The harness fires these events whenever a background worker emits new output; the `status: completed` field reads like a terminal event but actually means "the worker has emitted output, here's the latest snapshot." The same worker can fire multiple notifications over its lifetime, and only the last one carries the worker's structured return.
+
+Distinguish:
+
+- **Interim snapshot.** `result` is a sentence-fragment thought ("Let me wait for…", "Good. Let me…", "File hasn't been written in 12 min…"). The worker is mid-execution. Do nothing; wait for the next notification or verify the artifact before acting.
+- **Terminal return.** `result` matches the structured format your briefing asked for (`## Summary`, `## Files changed`, etc.). The worker has finished its iteration.
+
+When uncertain between the two, **verify the artifact** — git log, tree state, file written, whatever output the briefing promised — not the notification text. Treating an interim snapshot as terminal is the most common mistake: it triggers premature escalation (spawning a finish-the-job worker, prescribing a skill fix, debugging a non-failure) while the original worker quietly succeeds in the background.
 
 ## Synthesis and end-of-turn
 

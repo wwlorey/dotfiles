@@ -19,6 +19,7 @@
       "node*export.js*",
       "cargo*",
       "agent*",
+      "open *",
       "*face-reading/scripts/*"
     ],
     "filesystem": {
@@ -243,6 +244,15 @@
   },
   "hooks": {
     "PreToolUse": [
+      {
+        "matcher": "Agent",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 $HOME/.claude/hooks/agent-spawn-reminder.py"
+          }
+        ]
+      },
       {
         "matcher": "Bash",
         "hooks": [
