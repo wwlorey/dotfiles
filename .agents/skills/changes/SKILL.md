@@ -16,13 +16,11 @@ This is a pipeline. The conventions below are inlined here, not pulled in by ref
 
 ## Procedure
 
-### 1. Receive the list
+### 1. Receive and decompose the list
 
-The user gives you a list of items they want done — bullets, numbered list, or a paragraph that names several changes. Number each item internally (Item 01, Item 02, …) and keep a running table of `(item-id, brief description, status)` throughout the session.
+The user gives you a list of items they want done — bullets, numbered list, or a paragraph that names several changes. **Treat the list as raw material, not the final item slate.** Your first job is to convert it into atomic change items. A 5-item user list often becomes a 20-item atomic slate after decomposition. The split is not optional.
 
-Statuses: `planning`, `waiting-for-approval`, `approved`, `implementing`, `committed`, `blocked`.
-
-Before fanning out, run two pre-flight passes on the list.
+Run two pre-flight passes on the raw list before numbering anything.
 
 **De-duplicate.** If two items describe the same change in different words, collapse them or flag the suspected duplication to the user before spawning. Spawning two workers against the same change wastes context and produces conflicting plans.
 
@@ -40,6 +38,10 @@ Signs an item is already atomic — leave alone:
 - The user supplied the bundle deliberately and named the grouping.
 
 Flag the split decision to the user when ambiguous; do not silently fan out a dozen workers from a one-line request, and do not silently bundle a dozen findings into one worker.
+
+Once the slate is atomic, number the items (Item 01, Item 02, …) and keep a running table of `(item-id, brief description, status)` throughout the session.
+
+Statuses: `planning`, `waiting-for-approval`, `approved`, `implementing`, `committed`, `blocked`.
 
 ### 2. Fan out planning
 
@@ -153,6 +155,18 @@ Item B depends on Item A when B's plan can only be evaluated against the post-A 
 Plan both in parallel: the planning workers can investigate concurrently against the current tree, and B's worker can note its assumption "this plan assumes Item A lands first." Then enforce the sequencing in the implementation queue: A implements first, then B. If A's implementation materially changes the surface B planned against, re-spawn B's planner with the post-A state before approval.
 
 If the dependency is one-way and minor (B mentions A but does not require it), the queue ordering alone is enough. If the dependency is tight (B is meaningless without A), make it explicit in the approved plan so the user sees the coupling.
+
+## When NOT to push back
+
+**Size of the work is not a pushback reason.** A multi-day, multi-deliverable plan is exactly what this skill is for. Decomposition is the core job. If the shape is "list of changes" (however many items result), decompose and proceed. Reserve pushback for genuine skill mismatch — see "Skill fit by shape" below.
+
+## Skill fit by shape (not size)
+
+- "User supplied a list of changes" → `changes` (this skill). Size irrelevant.
+- "Approved specs need to become a backlog" → `spec-to-issues`.
+- "Claim and ship from an existing backlog" → `build`.
+
+**Worked counter-example.** User hands you a 5-phase, 30-deliverable, ~17-day plan. This is NOT 5 items and NOT "too big for changes." It's ~30 atomic items with sequencing — decompose into atomic items, fan out planning, serialize implementation. The size of the project is irrelevant to the shape decision.
 
 ## Edge cases
 
