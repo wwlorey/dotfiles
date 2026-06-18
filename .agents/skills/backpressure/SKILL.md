@@ -1,11 +1,11 @@
 ---
 name: backpressure
-description: Running the full verification gauntlet for a project's stack — build, lint, type-check, unit tests, integration tests, format, coverage. Consult before reporting code work complete, before committing, before pushing, before opening a PR, before claiming a feature is ready, and whenever the user asks for a check / verification / lint+test / "is this ready to ship" pass. Also consult as the final step of any procedure that touched code, before the commit lands.
+description: Running full backpressure for a project's stack — build, lint, type-check, unit tests, integration tests, format, coverage. Consult before reporting code work complete, before committing, before pushing, before opening a PR, before claiming a feature is ready, and whenever the user asks for a check / verification / lint+test / "is this ready to ship" pass. Also consult as the final step of any procedure that touched code, before the commit lands.
 ---
 
 # Backpressure
 
-You are about to run the full verification gauntlet for the current project. The gauntlet's purpose is to push back on bad work — formatter residue, lint failures, broken tests, type errors — before the change leaves your hands.
+You are about to run full backpressure for the current project. Its purpose is to push back on bad work — formatter residue, lint failures, broken tests, type errors — before the change leaves your hands.
 
 ## Procedure
 
@@ -14,7 +14,7 @@ You are about to run the full verification gauntlet for the current project. The
    - `package.json` with React / Vite / Tailwind → frontend (`references/frontend.md`)
    - `package.json` plus `src-tauri/` → Tauri (`references/tauri.md`)
 
-   Multiple may apply (a Tauri app has frontend + Rust). Run the gauntlet for each. If the project's stack is not covered above, name the gap to the user — don't silently improvise.
+   Multiple may apply (a Tauri app has frontend + Rust). Run backpressure for each. If the project's stack is not covered above, name the gap to the user — don't silently improvise.
 
 2. **Read the matching reference file** in this skill's `references/` directory. It lists the canonical commands for that stack, what they do, and which are required vs optional.
 
@@ -36,13 +36,13 @@ You are about to run the full verification gauntlet for the current project. The
 
 A failing gate is a real failure. Do not:
 - Skip a gate because "it's flaky"
-- Comment out a test to make the gauntlet pass
+- Comment out a test to make backpressure pass
 - Report work complete with the failure unmentioned
 
 Do:
 - Read the failure
 - Fix the underlying issue
-- Re-run the gauntlet until it passes
+- Re-run backpressure until it passes
 
 If a gate is genuinely broken in a way unrelated to your change (a pre-existing failure on the branch), say so explicitly in your report. Don't paper over it.
 

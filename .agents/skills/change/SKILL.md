@@ -51,9 +51,54 @@ For each spec affected:
 
 If no specs are affected, skip this step — but be honest about whether one *should* be affected. A surface-level "no specs touched" answer when the change crosses a documented boundary is wrong.
 
+### 4.5. Ripple check — walk the spec graph from the touched specs
+
+After updating the specs in step 4, check the neighborhood for cascading drift. A change that updates spec A may have invalidated claims in specs that reference A, or specs that share code surface with A. Find those and update them in the same commit.
+
+If step 4 touched no specs, skip this step — no neighborhood to ripple through.
+
+For each spec touched in step 4:
+- Find outgoing neighbors: read the spec's `refs:` frontmatter list.
+- Find incoming neighbors: `grep -l "<stem>" specs/*.md` to find specs that mention this one (filter the grep hits to actual `refs:` entries or prose mentions).
+
+Deduplicate the union of neighbors. For each neighbor, ask: *did my change invalidate any claim here?*
+
+When the neighborhood is small (≤2 neighbors), inspect inline. When larger, use the `orchestrate` skill and spawn one worker per neighbor with this briefing template. Substitute `<NEIGHBOR_STEM>` and `<DIFF_SUMMARY>` (a few sentences naming what changed in step 4: which types, functions, behaviors).
+
+```
+Goal: Determine whether a recent spec change could have invalidated claims in `<repo>/specs/<NEIGHBOR_STEM>.md`. Report any drift it caused.
+
+Scope: READ-ONLY. Read the neighbor spec, read the relevant code paths it names. Do NOT edit any files.
+
+The change just landed:
+<DIFF_SUMMARY>
+
+Procedure:
+1. Read `specs/<NEIGHBOR_STEM>.md`.
+2. Identify any claim in the neighbor spec that could be affected by the change above (shared types, shared modules, shared behavior, dependency on the changed surface).
+3. Verify each affected claim against current code.
+4. Report ONLY drift caused by the change in question. Pre-existing drift is out of scope here — ignore it.
+
+Return format:
+
+SPEC: <NEIGHBOR_STEM>
+RIPPLE: <yes|no>
+Findings:
+- [HIGH|MED|LOW] <section>: <claim> | reality: <what code shows> | <file:line>
+Summary: <one sentence>
+
+If no ripple, return just: SPEC: <NEIGHBOR_STEM> / RIPPLE: no / Summary: No ripple from this change.
+
+You are a worker, not an orchestrator. Do NOT produce a spoken end-of-turn report. Do NOT call any TTS / voice / `run_dic` tool. Do NOT spawn further workers via the Agent tool — return your result directly. Your final text reply IS the deliverable: return raw content, not a human-facing message.
+```
+
+Apply any drift the ripple surfaced as additional edits to the affected specs, in the same commit as the rest of the change. Re-run `specs/validate` after the edits.
+
+For a full-library audit (every spec vs all code), use the `audit-specs` skill — not this step. The ripple here is intentionally scoped to the change's neighborhood.
+
 ### 5. Run backpressure
 
-Consult the `backpressure` skill and run the full gauntlet for the project's stack. Fix every failure before continuing.
+Consult the `backpressure` skill and run full backpressure for the project's stack. Fix every failure before continuing.
 
 ### 6. Log the tracking issue
 

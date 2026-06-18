@@ -81,4 +81,4 @@ Each harden iteration: re-read the draft specs, apply the checklist, present har
 - **No code in this pipeline.** Specs only. Code happens in the `build` or `change` pipelines, against `approved` specs.
 - **Use Edit/Write directly** on `specs/<stem>.md`. The `specs` skill is the schema, not a wrapper tool.
 - **Always run `specs/validate`** before committing to catch structural breakage.
-- **No backpressure step.** This pipeline does not touch code, so the verification gauntlet does not apply. The validation here is `specs/validate` plus the harden checklist.
+- **No backpressure step.** This pipeline does not touch code, so full backpressure does not apply. The validation here is `specs/validate` plus the harden checklist.

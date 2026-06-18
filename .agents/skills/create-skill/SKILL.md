@@ -102,10 +102,10 @@ Non-iterating pipelines omit the section entirely.
 
 ### Backpressure-as-final-step (when the pipeline touches code)
 
-Pipelines that produce code changes end by running the verification
-gauntlet. Inline as a final step in the body: "After implementing,
-consult the `backpressure` skill and run the gauntlet for this stack.
-Do not commit or report work complete until backpressure passes."
+Pipelines that produce code changes end by running full backpressure.
+Inline as a final step in the body: "After implementing, consult the
+`backpressure` skill and run it for this stack. Do not commit or report
+work complete until backpressure passes."
 
 Pipelines that don't touch code (a pure analysis pipeline, a reporting
 pipeline) omit this.
@@ -132,10 +132,77 @@ copies the relevant patterns (ralph loop section, backpressure-as-final
 step, etc.) into the new SKILL.md. This keeps every pipeline skill a
 clean standalone artifact with no runtime cross-skill dependency.
 
-## After creating a skill
+## After creating or editing a skill
 
 The skill exists for agents the moment its frontmatter is valid and it is
 deployed — no registration step (the index is generated from frontmatter).
 Follow the config skill to deploy: verify in the repo, call
-`mcp__unsandboxed-runner__save_config`, confirm with `agent ls`. New skill
-appears in the listing → done.
+`mcp__unsandboxed-runner__save_config`, confirm with `agent ls`. Then run
+the cohesion ripple below before reporting done.
+
+## Cohesion ripple
+
+After every skill edit — whether new skill, body rewrite, or one-line
+tweak — run a local-first fan-out to verify the edit coheres with the
+rest of the library. Skills don't have a formal cross-reference graph the
+way specs do; the fan-out uses grep to find the neighborhood.
+
+For each edited skill `<edited>`:
+
+1. **Edited file itself.** Re-read the whole SKILL.md you just changed,
+   not only the diff. Confirm the edit reads coherently with the rest of
+   the body (vocabulary consistent, sections still in order, no leftover
+   references to prior phrasing or renamed tools).
+2. **Outgoing neighbors.** Skills the edited body references. Grep:
+   `` grep -oE '`[a-z][a-z0-9-]*` skill' ~/.agents/skills/<edited>/SKILL.md ``
+   plus any bareword skill mentions you can spot by eye. Verify each
+   referenced skill still does what the edit assumes it does.
+3. **Incoming neighbors.** Skills that mention the edited one. Grep:
+   `` grep -l '<edited>' ~/.agents/skills/*/SKILL.md ``
+   For each hit, read the mention in context and verify the edit didn't
+   invalidate what the neighbor claims about `<edited>` (procedure
+   it points at, output format it expects, vocabulary it assumes).
+
+When the neighborhood is small (≤2 neighbors), inspect inline. When
+larger or the edit is non-trivial, use the `orchestrate` skill and spawn
+one worker per neighbor. Inline this briefing template; substitute
+`<EDITED>`, `<NEIGHBOR>`, and `<DIFF_SUMMARY>` (a few sentences naming
+what changed: section moved, term renamed, procedure altered, frontmatter
+shape changed).
+
+```
+Goal: Determine whether a recent change to `~/.agents/skills/<EDITED>/SKILL.md` invalidates anything `~/.agents/skills/<NEIGHBOR>/SKILL.md` says about it. Report any drift.
+
+Scope: READ-ONLY. Read both files. Do NOT edit either.
+
+The change just landed in `<EDITED>`:
+<DIFF_SUMMARY>
+
+Procedure:
+1. Read `<NEIGHBOR>/SKILL.md`.
+2. Find every mention of `<EDITED>` in the neighbor — by name, by procedure pointer, by vocabulary that came from `<EDITED>`.
+3. For each mention, check: does the change in `<EDITED>` still make this mention accurate? Does the neighbor still describe `<EDITED>` correctly?
+4. Report ONLY drift caused by this change. Pre-existing drift, ignore.
+
+Return format:
+
+SKILL: <NEIGHBOR>
+RIPPLE: <yes|no>
+Findings:
+- <section or quoted line>: <what the neighbor claims> | reality after the change: <what's now true>
+Summary: <one sentence>
+
+If no ripple: SKILL: <NEIGHBOR> / RIPPLE: no / Summary: No ripple from this change.
+
+You are a worker, not an orchestrator. Do NOT produce a spoken end-of-turn report. Do NOT call any TTS / voice / `run_dic` tool. Do NOT spawn further workers via the Agent tool — return your result directly. Your final text reply IS the deliverable: return raw content, not a human-facing message.
+```
+
+Apply any drift the ripple surfaced as additional skill edits before
+reporting the work done. Re-deploy via `save_config` after the follow-up
+edits and re-confirm with `agent ls`.
+
+If the edit was a pure rename (vocabulary substitution across the
+library, e.g. one term replaced by another), the ripple's job is to
+catch the cases the find-and-replace missed — awkward phrasings ("the X
+Y" doublings), references in places the grep didn't reach, and cross-
+skill mentions that read incoherently with the new wording.

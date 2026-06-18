@@ -23,7 +23,7 @@ Single-crate variants: drop `--workspace` and use `-p <crate>` to target one cra
 
 ## Project wrappers
 
-Before running the canonical commands, check `justfile` / `Makefile` for project-wrapped targets — projects often expose `just test`, `just check`, `just ci` that bundle the gauntlet. Use the wrapper if it exists.
+Before running the canonical commands, check `justfile` / `Makefile` for project-wrapped targets — projects often expose `just test`, `just check`, `just ci` that bundle backpressure. Use the wrapper if it exists.
 
 ## CLI E2E tests (Tuistory)
 
@@ -34,6 +34,6 @@ Some Rust crates run terminal-level e2e tests via [Tuistory](https://github.com/
 
 ## Gotchas
 
-- **Default target.** Some crates have build flags that differ by OS (e.g. `metal` feature on macOS). Confirm the default build still works on the user's OS before claiming the gauntlet passed.
-- **Newly authored slow tests.** If a new test is unreasonably slow, gate it behind `#[ignore]` and run via `cargo test -- --ignored` in a separate optional pass. Don't slow the default gauntlet.
+- **Default target.** Some crates have build flags that differ by OS (e.g. `metal` feature on macOS). Confirm the default build still works on the user's OS before claiming backpressure passed.
+- **Newly authored slow tests.** If a new test is unreasonably slow, gate it behind `#[ignore]` and run via `cargo test -- --ignored` in a separate optional pass. Don't slow default backpressure.
 - **Formatter residue is normal.** `cargo fmt` may touch files beyond your diff. Commit the residue separately so review stays clean.

@@ -36,7 +36,7 @@ Accepts optional `cwd` (relative to project root) and `timeout_secs` (default 30
 ## Project wrappers
 
 Before running canonical commands, read `package.json` `scripts`. Projects commonly add:
-- `pnpm run check` — full gauntlet bundle
+- `pnpm run check` — full backpressure bundle
 - `pnpm run ci` — what the CI pipeline runs
 - `pnpm run validate` — typecheck + lint + test
 
@@ -47,7 +47,7 @@ Use the project wrapper when present.
 Some projects use Ladle for component isolation. Stories live as `*.stories.tsx` next to components.
 
 - Dev: `pnpm run storybook`
-- Build (gauntlet-worthy): `pnpm run storybook:build` — catches broken stories
+- Build (worth running): `pnpm run storybook:build` — catches broken stories
 
 ## Gotchas
 

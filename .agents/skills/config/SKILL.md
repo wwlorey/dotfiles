@@ -92,6 +92,12 @@ skills, MEMENTO.md, CLAUDE.md, slash commands.
 3. Deploy with `mcp__unsandboxed-runner__save_config`.
 4. Confirm post-deployment: run `agent ls` (catches bad frontmatter in the
    now-deployed copies).
+5. For skill edits specifically — including routine tweaks — also run the
+   cohesion ripple from the `create-skill` skill's "Cohesion ripple"
+   section. The ripple is a local-first fan-out: re-read the edited skill,
+   then check neighbors that reference it (or that it references) for
+   drift. Apply any drift surfaced as follow-up edits before reporting
+   done.
 5. Report under a `**Config changes:**` header as a brief bullet list,
    one bullet per wrap-up step that ran. Each bullet is one of these
    strings copied verbatim: `deployed`, `audited`, `committed`, `pushed`.

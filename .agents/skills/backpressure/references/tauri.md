@@ -4,7 +4,7 @@ For Tauri desktop apps (root has `package.json` plus `src-tauri/Cargo.toml`). A 
 
 ## Required gates
 
-Run the **frontend** gauntlet (`references/frontend.md`) and the **Rust** gauntlet (`references/rust.md`) for the `src-tauri/` crate, then add the Tauri-specific gates below.
+Run **frontend backpressure** (`references/frontend.md`) and **Rust backpressure** (`references/rust.md`) for the `src-tauri/` crate, then add the Tauri-specific gates below.
 
 | Gate | Command | Notes |
 |---|---|---|
@@ -29,15 +29,15 @@ Bare invocations fail inside the sandbox and tempt `dangerouslyDisableSandbox` r
 
 Tauri apps may have multiple build outputs:
 - **Tauri desktop:** `run_tauri_build` MCP tool
-- **Web build:** `pnpm run build` (also runs as part of the frontend gauntlet)
+- **Web build:** `pnpm run build` (also runs as part of frontend backpressure)
 - **Mobile (Expo):** `pnpm run expo export --platform all` if the project has Expo
 
-Run the targets the change actually affects. Don't gauntlet-build mobile if you only changed desktop UI.
+Run the targets the change actually affects. Don't run full backpressure on mobile if you only changed desktop UI.
 
 ## Order
 
-1. Frontend gauntlet (typecheck, lint, build, unit tests, format)
-2. Rust gauntlet for `src-tauri/` (build, test, clippy, fmt)
+1. Frontend backpressure (typecheck, lint, build, unit tests, format)
+2. Rust backpressure for `src-tauri/` (build, test, clippy, fmt)
 3. `smoke_test_tauri` to confirm the app boots
 4. Optional: `run_tauri_build` for full distributable, `run_playwright` for e2e
 
