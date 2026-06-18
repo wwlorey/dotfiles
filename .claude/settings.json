@@ -62,7 +62,8 @@
       "Read(~/.cargo/*)",
       "Bash(pnpm install*)",
       "Bash(pnpm add*)",
-      "Bash(pnpm run test:e2e*)"
+      "Bash(pnpm run test:e2e*)",
+      "Bash(open:*)"
     ],
     "deny": [
       "Read ~/.ssh/**",
