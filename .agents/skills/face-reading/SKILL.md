@@ -29,6 +29,16 @@ Address each item before reading. Do not proceed to Step 1 until every line is e
 
 If the photo set is poor, name the cues you can't read confidently and proceed only with the rest.
 
+## Preprocessing — level the front-facing photo
+
+Before any feature work or artifact generation, level the front-facing photo so the inter-iris line is horizontal. Mirror halves, canthal-tilt reads, brow-arch symmetry, and the left/right asymmetry doctrine all assume a vertical face midline; even a few degrees of head tilt corrupts those reads. This step applies to **front-facing** shots only — side-profile and three-quarter angles aren't leveled here.
+
+```bash
+scripts/level.py <input_image> <leveled_image>
+```
+
+PEP 723 inline-script (uv self-bootstraps the env). Prints the applied rotation to stdout as `angle=<float>` (CCW degrees) and writes the leveled image to `<leveled_image>`. If MediaPipe finds no face, or the measured tilt exceeds `--max-angle` (default 25°, the practical front-facing limit), the script copies the input through unchanged and prints `angle=0 (skipped: ...)`. Always use `<leveled_image>` as the input for halves.py and overlay.py, and as the reference image when describing features in the prose steps. Cite the applied angle in the reading when non-zero.
+
 ## Reading procedure
 
 Follow Prosopa's actual order. Each step gets a paragraph in the output.
@@ -95,7 +105,7 @@ Prosopa's asymmetry doctrine: **left side = inner self / who they came into the 
 Build the two halves with the script:
 
 ```bash
-scripts/halves.py <input_image> <output_dir> [--midline X]
+scripts/halves.py <leveled_image> <output_dir> [--midline X]
 ```
 
 The script is a PEP 723 inline-script — the shebang routes through `uv run --script`, so `uv` (required) provisions Python 3.10–3.12 and the MediaPipe / Pillow / NumPy dep set automatically on first run (cached after). No venv or manual install.
@@ -125,7 +135,7 @@ Three artifacts ship with every reading.
 Gather your observations as JSON and call:
 
 ```bash
-python3 scripts/overlay.py <input_image> <observations.json> <output_image>
+python3 scripts/overlay.py <leveled_image> <observations.json> <output_image>
 ```
 
 Schema and example in `references/overlay-schema.md`. Draw the three facial thirds as boxes, jaw line, brow arch, eye-corner markers, philtrum endpoints, nose midline. Keep markers sparse.
