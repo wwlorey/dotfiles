@@ -58,3 +58,31 @@ Available references:
 - `references/rust.md` — Rust workspace (cargo)
 - `references/frontend.md` — TypeScript / React / Vite / Tailwind
 - `references/tauri.md` — Tauri desktop apps
+
+## Spec-compliance check
+
+When a code change touches an `implemented`-status spec — either directly editing the spec or modifying code the spec describes — run a spec-compliance check before reporting done. Any `MISSING` finding fails backpressure. This is the structural defense against visually-unimplemented spec items: spec promises a UI element (a control, a label, a section), implementation drops it, no other test catches the gap.
+
+### How to run the check
+
+Read each affected spec at `status: implemented`, drive the surface(s) the spec describes — page, screen, CLI output, TUI panel, or whatever the running app exposes — and report visible promises that don't appear there.
+
+Drive each surface's responsive variants if any (e.g., desktop + mobile for a web page). For surfaces without variants, one drive is enough.
+
+Non-visual specs (library API, server endpoint with no client surface): skip — this check covers visible promises only. For specs that mix visual and non-visual concerns, check only the visible portions.
+
+For each visible thing the spec asserts — a button, control, label, section, layout choice, count, order, sequence — check the running surface. Report gaps as `MISSING: <what the spec says> | observed: <what's actually there>`. Be conservative — don't flag stylistic interpretation differences as MISSING; flag only obvious mismatches.
+
+### Resolution paths when MISSING is found
+
+Decide which is true:
+
+- Implementation is wrong → fix the code in the same commit.
+- Spec is stale → fix the spec text in the same commit, and call out the removal in the commit message. Don't silently un-promise content.
+- Code is intentionally not there yet → demote the spec from `implemented` to `approved`.
+
+All three resolutions land in the same commit per the specs-alongside-code rule. Don't reflexively change code when the spec is the bug; don't silently delete spec content to pass the check.
+
+### Why this scope
+
+Specs at `status: approved` or `draft` are intentional design-ahead-of-code and are NOT checked. Promoting a spec to `implemented` IS the impl worker's claim that the spec describes shipped reality; backpressure holds them to it. The `audit-specs` skill periodically catches drift that escapes this layer.

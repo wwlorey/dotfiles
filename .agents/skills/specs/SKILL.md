@@ -82,6 +82,8 @@ That's the whole schema. No other frontmatter, no other required sections. Add s
 
 There is no `verified` status. Whether code is *correct* per the spec is a different question (tested, observed, audited) that is not tracked here. If a spec needs to be reopened because the design itself changed, drop back to `draft` and commit with the reason.
 
+If implementation drifts from an `implemented` spec — the design is still right but the code no longer delivers what the spec promises — drop back to `approved` and surface the gap. Drop to `draft` only when the design itself changes. The `backpressure` skill's spec-compliance check catches this drift on every change that touches an implemented spec.
+
 ## Operations
 
 | Action | How |
