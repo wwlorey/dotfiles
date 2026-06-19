@@ -246,6 +246,25 @@ server.tool(
 );
 
 server.tool(
+  "run_cargo",
+  "Run any cargo command outside the sandbox. Handles long-running compiles and tests that would exceed Bash's in-sandbox timeout. Pass the cargo argv (e.g. ['test', '--workspace']); the cargo binary is prepended.",
+  {
+    args: z.array(z.string()).describe("Cargo argv, e.g. ['test', '--workspace', '--no-fail-fast'] or ['clippy', '--workspace', '--all-targets', '--', '-D', 'warnings'] or ['fmt', '--all', '--', '--check']."),
+    cwd: z.string().optional().describe("Working directory relative to project root."),
+    timeout_secs: z.number().optional().describe("Timeout in seconds (default 300, max 600)."),
+  },
+  async ({ args, cwd, timeout_secs }) => {
+    const resolvedCwd = resolveCwd(cwd);
+    const timeout = clampTimeout(timeout_secs);
+
+    const result = await runCommand("cargo", args, resolvedCwd, timeout);
+    return {
+      content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+    };
+  }
+);
+
+server.tool(
   "smoke_test_tauri",
   "Start cargo tauri dev, wait for the app to boot successfully, then kill it. Catches runtime panics at the Tauri/Rust boundary that cargo build misses (unimplemented!(), wrong async context, etc.).",
   {

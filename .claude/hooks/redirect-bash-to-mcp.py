@@ -26,6 +26,7 @@ import sys
 
 REDIRECTS = {
     "save-config": "mcp__unsandboxed-runner__save_config",
+    "cargo": "mcp__unsandboxed-runner__run_cargo",
 }
 
 SEPARATOR_TOKENS = {"&&", "||", ";", "|", "&"}

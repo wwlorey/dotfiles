@@ -55,7 +55,7 @@ A worker's turn ends when it emits text without a pending tool call. The harness
 
 In every worker briefing, include this rule:
 
-> **Foreground long-running work; never end your turn while waiting for background tasks.** Run `cargo test`, `cargo tauri build`, full backpressure, and similar minute-scale commands as **foreground** Bash calls — your turn blocks until they finish, which is what you want. If you absolutely must background a task, keep your turn alive by polling its output file (periodic `Bash` reads, or `Monitor`) — DO NOT emit text like "I'll wait for the notification" with no pending tool call. There is no listener.
+> **Long-running commands use MCP wrappers, not raw Bash.** For any cargo command, use `mcp__unsandboxed-runner__run_cargo` — pass argv as a string array (e.g. `args: ["test", "--workspace"]`, `args: ["clippy", "--workspace", "--all-targets", "--", "-D", "warnings"]`). For tauri build, use `mcp__unsandboxed-runner__run_tauri_build`. For pnpm, use `mcp__unsandboxed-runner__run_pnpm`. The wrappers run outside the sandbox and bypass the in-sandbox Bash timeout entirely. Raw `cargo` via Bash is blocked by a PreToolUse hook (`redirect-bash-to-mcp.py`). NEVER end your turn while waiting on a backgrounded task — the harness treats final text without a pending tool call as turn-end, the worker goes dormant, and completion notifications don't wake it.
 
 ## Reading worker responses & notifications
 
