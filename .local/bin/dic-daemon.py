@@ -62,7 +62,7 @@ def _speak_via_ffplay(tts, text: str, **kwargs) -> str:
             "ffplay", "-nodisp", "-autoexit", "-loglevel", "error",
             "-f", "s16le", "-ar", str(SAMPLE_RATE),
             "-ch_layout", "mono", "-i", "pipe:0",
-            "-af", "apad=pad_dur=0.4",
+            "-af", "adelay=400,apad=pad_dur=0.4",
         ],
         stdin=subprocess.PIPE,
         stdout=subprocess.DEVNULL,
