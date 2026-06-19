@@ -49,6 +49,14 @@ Workers spawned via the Agent tool do NOT inherit the MEMENTO, the skills index,
 
 Keep briefings tight. Too much wastes tokens; too little drifts off-task. The six items above are the minimum bar.
 
+## Worker turn lifecycle
+
+A worker's turn ends when it emits text without a pending tool call. The harness has no "wait for event" state outside of tool calls — if a worker emits `"I'll wait for the test to finish via notification"` and then makes no further tool call, the turn ends and the worker goes dormant. A backgrounded task's completion notification may never wake a dormant worker, stranding the work and the tree mid-state.
+
+In every worker briefing, include this rule:
+
+> **Foreground long-running work; never end your turn while waiting for background tasks.** Run `cargo test`, `cargo tauri build`, full backpressure, and similar minute-scale commands as **foreground** Bash calls — your turn blocks until they finish, which is what you want. If you absolutely must background a task, keep your turn alive by polling its output file (periodic `Bash` reads, or `Monitor`) — DO NOT emit text like "I'll wait for the notification" with no pending tool call. There is no listener.
+
 ## Reading worker responses & notifications
 
 A `task-notification` with `status: completed` is **not** necessarily terminal. The harness fires these events whenever a background worker emits new output; the `status: completed` field reads like a terminal event but actually means "the worker has emitted output, here's the latest snapshot." The same worker can fire multiple notifications over its lifetime, and only the last one carries the worker's structured return.

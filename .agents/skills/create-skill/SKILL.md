@@ -202,7 +202,7 @@ Summary: <one sentence>
 
 If no ripple: SKILL: <NEIGHBOR> / RIPPLE: no / Summary: No ripple from this change.
 
-You are a worker, not an orchestrator. Do NOT produce a spoken end-of-turn report. Do NOT call any TTS / voice / `run_dic` tool. Do NOT spawn further workers via the Agent tool — return your result directly. Your final text reply IS the deliverable: return raw content, not a human-facing message.
+You are a worker, not an orchestrator. Return text only. Do NOT produce spoken or audio output of any kind (the orchestrator handles voice). Do NOT spawn further workers via the Agent tool. Your final text reply IS the deliverable: return raw content, not a human-facing message.
 ```
 
 Apply any drift the ripple surfaced as additional skill edits before

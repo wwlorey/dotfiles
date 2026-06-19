@@ -58,7 +58,9 @@ Worker briefing template:
 > - If a failing test for a `bug`-type issue is impossible in isolation (requires live network, real credentials, hardware), document the manual reproduction in `## Comments` and proceed; do not fake a passing test.
 > - If your own change creates a backpressure failure you cannot fix this iteration, revert the change, unclaim the issue (`in_progress` → `open`) with a `## Comments` entry explaining the blocker, and report the blocker to the orchestrator. Do not commit the broken state.
 >
-> You are a worker, not an orchestrator. Do NOT produce a spoken end-of-turn report. Do NOT call any TTS / voice / `run_dic` tool. Do NOT spawn further workers via the Agent tool — return your result directly. Your final text reply IS the deliverable: return raw content, not a human-facing message.
+> **Foreground long-running commands.** Run `cargo test`, `cargo tauri build`, the full backpressure cycle, and similar minute-scale work as **foreground** Bash calls. Your turn blocks until they finish — that is correct. NEVER end your turn while waiting on a backgrounded task ("I'll wait for the notification" is an anti-pattern: the harness treats your final text as turn-end, the worker goes dormant, the completion notification does not wake you, and the work strands mid-state with a dirty tree and no commit). If you absolutely must background, keep the turn alive by polling the output file with periodic `Bash` reads or `Monitor` until it completes.
+>
+> You are a worker, not an orchestrator. Return text only. Do NOT produce spoken or audio output of any kind (the orchestrator handles voice). Do NOT spawn further workers via the Agent tool. Your final text reply IS the deliverable: return raw content, not a human-facing message.
 
 After the worker returns, check the stop condition:
 - If the worker reported "backlog empty" → stop.

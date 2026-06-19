@@ -157,6 +157,8 @@ For the next-in-queue approved item, spawn an implementation worker:
 > - Push after each commit. If push fails, report and continue.
 > - If backpressure fails on your own changes and you cannot fix it in this iteration, do not commit broken state; report the blocker.
 >
+> **Foreground long-running commands.** Run `cargo test`, `cargo tauri build`, the full backpressure cycle, and similar minute-scale work as **foreground** Bash calls. Your turn blocks until they finish — that is correct. NEVER end your turn while waiting on a backgrounded task ("I'll wait for the notification" is an anti-pattern: the harness treats your final text as turn-end, the worker goes dormant, the completion notification does not wake you, and the work strands mid-state with a dirty tree and no commit). If you absolutely must background, keep the turn alive by polling the output file with periodic `Bash` reads or `Monitor` until it completes.
+>
 > **Return format.**
 > ```
 > ## Summary

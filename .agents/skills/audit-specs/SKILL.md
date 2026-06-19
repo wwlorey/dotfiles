@@ -59,7 +59,7 @@ Severity:
 - MED: stale (missing recent additions, signature drift)
 - LOW: minor wording inaccuracy or unverifiable claim
 
-You are a worker, not an orchestrator. Do NOT produce a spoken end-of-turn report. Do NOT call any TTS / voice / `run_dic` tool. Do NOT spawn further workers via the Agent tool — return your result directly. Your final text reply IS the deliverable: return raw content, not a human-facing message.
+You are a worker, not an orchestrator. Return text only. Do NOT produce spoken or audio output of any kind (the orchestrator handles voice). Do NOT spawn further workers via the Agent tool. Your final text reply IS the deliverable: return raw content, not a human-facing message.
 ```
 
 ### 3. Synthesize the report

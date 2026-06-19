@@ -98,7 +98,7 @@ Sub-worker briefing template (inline; substitute the bracketed slots):
 >
 > **Inherited rules.** The issues directory is the project's `<repo>/issues/` backlog — not GitHub Issues. Slugs are lowercase, hyphenated, unique, prefixed with the spec's domain.
 >
-> You are a worker, not an orchestrator. Do NOT produce a spoken end-of-turn report. Do NOT call any TTS / voice / `run_dic` tool. Do NOT spawn further workers via the Agent tool — return your result directly. Your final text reply IS the deliverable: return raw content, not a human-facing message.
+> You are a worker, not an orchestrator. Return text only. Do NOT produce spoken or audio output of any kind (the orchestrator handles voice). Do NOT spawn further workers via the Agent tool. Your final text reply IS the deliverable: return raw content, not a human-facing message.
 
 After the sub-workers return, synthesize their findings into a single deduplicated list before proceeding to step 4.
 
