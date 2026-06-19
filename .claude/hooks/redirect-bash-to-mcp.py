@@ -50,20 +50,37 @@ def find_redirect(command: str) -> tuple[str, str] | None:
     tokens = _tokenize(command)
     if tokens is None:
         # Malformed shell — boundary regex on the raw command, fail closed.
+        # Skip the check entirely if the command looks like `git commit` so a
+        # redirect-name word inside a commit message body doesn't false-positive.
+        if re.search(r"\bgit\s+commit\b", command):
+            return None
         for name, wrapper in REDIRECTS.items():
             if re.search(rf"(?:^|[;&|]\s*|\s)\s*{re.escape(name)}(?:\s|$|[;&|])", command):
                 return name, wrapper
         return None
 
     # A token is a real invocation iff it sits at a command-start position:
-    # index 0, or immediately after a separator token.
+    # index 0, or immediately after a separator token. After detecting
+    # `git commit` at a command-start position, skip every subsequent token
+    # in that pipeline segment — the commit message body may legitimately
+    # contain words that match REDIRECTS (e.g. "cargo" in prose).
     at_start = True
+    in_commit_segment = False
+    prev_tok: str | None = None
     for tok in tokens:
         if tok in SEPARATOR_TOKENS:
             at_start = True
+            in_commit_segment = False
+            prev_tok = None
+            continue
+        if in_commit_segment:
+            prev_tok = tok
             continue
         if at_start and tok in REDIRECTS:
             return tok, REDIRECTS[tok]
+        if prev_tok == "git" and tok == "commit":
+            in_commit_segment = True
+        prev_tok = tok
         at_start = False
     return None
 
