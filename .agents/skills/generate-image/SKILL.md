@@ -17,7 +17,7 @@ Use OpenAI's GPT Image models to turn a rough request into a finished image. Def
    - Icons, logos, symmetric subjects → `1024x1024`
    - The user can override with explicit dimensions.
 4. **Generate at `low`.** Call the API via curl (see *API Calls* below). Every call in the iteration loop runs at `low`. Never raise the quality without explicit user permission for that specific output.
-5. **Save and open.** Save to `./YYYY-MM-DD-HH:MM:SS-short-description.png` and run `open -g <path>` so the user sees it immediately. (MEMENTO's surface-files rule handles printing the clickable URL.) Use `open -g` — never bare `open`. Bare `open <path>` from the Bash tool subprocess intermittently fails with `Error -600 procNotFound: no eligible process` (Launch Services foregrounding hiccup); `open -g` (open in background) succeeds cleanly. The file is always saved either way; the failure is purely the GUI hand-off.
+5. **Save and open.** Save to `./YYYY-MM-DD-HH:MM:SS-short-description.png`, then call `mcp__unsandboxed-runner__open_file` with the absolute path so the user sees it immediately. (MEMENTO's surface-files rule handles printing the clickable URL.) Use the MCP wrapper — never call `open` via Bash. The in-sandbox Bash subprocess intermittently fails with `Error -600 procNotFound: no eligible process` (Launch Services can't reach the GUI session); the MCP runs outside the sandbox and avoids the issue entirely.
 6. **Iterate at `low`.** Ask for feedback. When the user requests changes, regenerate (or use edit — see below) at `low`. Stay at `low` for every iteration including quality-feeling tweaks ("make it crisper", "sharpen it"). Only after the user has approved a specific image ("ship it", "I like that one") may you ask whether they want a `medium` or `high` final — and only after they say yes does the higher-quality call happen.
 7. **Finalize via `/edits` on the approved file.** When the user authorizes a `medium`/`high` final, pass the approved low-quality file to `/images/edits` rather than calling `/images/generations` again. Use `gpt-image-1.5` with `input_fidelity="high"` — the user picked this exact composition, so preservation matters more than freedom. Quality is the parameter being changed; everything else stays as-is. Some detail will still reroll (see the Edit section).
 
@@ -135,7 +135,7 @@ fi
 - **Path:** `./YYYY-MM-DD-HH:MM:SS-short-description.png`
   - Timestamp is generation time.
   - `short-description` is a 2-4 word kebab-case slug (e.g. `golden-retriever-field`, `neon-city-street`, `logo-concept`).
-- **Auto-open:** always `open -g <path>` after saving. The `-g` (background) flag avoids the intermittent `procNotFound` Launch Services error that bare `open` hits from the Bash subprocess.
+- **Auto-open:** always call `mcp__unsandboxed-runner__open_file` with the absolute path after saving. Do not call `open` via Bash — the in-sandbox subprocess can't reliably reach Launch Services and intermittently errors with `Error -600 procNotFound`.
 - Surface the file per MEMENTO's rule (`image: file:///…` with `:` encoded as `%3A`).
 
 ## Prompt Engineering

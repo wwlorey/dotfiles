@@ -513,6 +513,26 @@ server.tool(
   }
 );
 
+server.tool(
+  "open_file",
+  "Open a file with macOS Launch Services via the `open` command. Runs outside the sandbox so it reliably reaches the GUI session — the in-sandbox Bash subprocess hits intermittent `Error -600 procNotFound: no eligible process` errors that this wrapper avoids entirely.",
+  {
+    path: z.string().describe("Absolute path to the file to open."),
+    background: z.boolean().optional().describe("Open without bringing the target app to the foreground (-g flag). Default true."),
+    app: z.string().optional().describe("Explicit application name to open with (-a flag). E.g. \"Preview\", \"Safari\". Defaults to Launch Services' default for the file's type."),
+  },
+  async ({ path, background = true, app }) => {
+    const args: string[] = [];
+    if (background) args.push("-g");
+    if (app) args.push("-a", app);
+    args.push(path);
+    const result = await runCommand("open", args, process.env.HOME ?? "/", 10);
+    return {
+      content: [{ type: "text", text: result.success ? "Opened." : JSON.stringify(result, null, 2) }],
+    };
+  }
+);
+
 async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
