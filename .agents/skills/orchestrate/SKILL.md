@@ -5,7 +5,9 @@ description: Spawning a subagent via the Agent tool, AND reading task-notificati
 
 # Orchestrate
 
-You are the orchestrator. Workers do the work; you brief them, synthesize their returns, and report at end-of-turn. There are exactly two tiers: **orchestrator** (you, this turn) and **workers** (Agent-tool spawns). Workers do NOT spawn further workers.
+You are the orchestrator. Workers do the work; you brief them, synthesize their returns, and report at end-of-turn.
+
+**Tier limit: up to three tiers.** The default call graph is two tiers: **orchestrator** (you, this turn) → **workers** (Agent-tool spawns). A third tier — **sub-workers** spawned BY workers — is permitted ONLY when the caller is a `changes`-skill implementation worker, and only one level deep. Sub-workers MAY NOT spawn further. This keeps depth predictable and prevents recursive runaway. Outside the `changes` impl path, the two-tier rule holds: workers do not spawn workers.
 
 This skill governs **every Agent spawn**, single or multiple. Briefing is the load-bearing step — workers inherit no skills, no MEMENTO, no conversation context, so anything they need has to be named in the prompt.
 
@@ -34,9 +36,16 @@ Workers spawned via the Agent tool do NOT inherit the MEMENTO, the skills index,
 3. **Return format** — prose, list, diff, structured block. Be explicit.
 4. **Skills, scripts, and MCP tools they should reach for** — before spawning, inventory what's available that fits the task and name it explicitly. Examples: `youtube-transcript` for any YouTube source, `deep-research` for fan-out web research, `generate-image` for visual output, `voice` for TTS, `unsandboxed-runner` MCP wrappers for shell commands that need network or non-sandbox paths, any project script the worker would otherwise have to re-derive. Workers do not see the skill index, so unmentioned skills are invisible to them. Skipping this step is the most common briefing failure.
 5. **Inherited project rules they'd otherwise miss** — if the worker must follow a project rule (edit dotfiles not deployed copies, use the project's `issues/` backlog not GitHub issues, use a specific commit-message format, etc.), state it. They will not know otherwise.
-6. **The silence clause, verbatim:**
+6. **The silence clause.** Pick the variant that fits the worker's role:
 
-   > You are a worker, not an orchestrator. Do NOT produce a spoken end-of-turn report. Do NOT call any TTS / voice / `run_dic` tool. Do NOT spawn further workers via the Agent tool — return your result directly. Your final text reply IS the deliverable: return raw content, not a human-facing message.
+   - **Default (workers in any context):**
+     > You are a worker, not an orchestrator. Do NOT produce a spoken end-of-turn report. Do NOT call any TTS / voice / `run_dic` tool. Do NOT spawn further workers via the Agent tool — return your result directly. Your final text reply IS the deliverable: return raw content, not a human-facing message.
+
+   - **`changes`-skill impl worker (mini-orchestrator):**
+     > You are a worker (mini-orchestrator). Do NOT produce a spoken end-of-turn report. Do NOT call any TTS / voice / `run_dic` tool. You MAY spawn sub-workers (one level only) per the `orchestrate` skill. Sub-workers MAY NOT spawn further. Return your result directly. Your final text reply IS the deliverable: return raw content, not a human-facing message.
+
+   - **Sub-worker (spawned by a `changes` impl worker):**
+     > You are a sub-worker. Do NOT produce a spoken end-of-turn report. Do NOT call any TTS / voice / `run_dic` tool. Do NOT spawn further workers via the Agent tool — return your result directly. Your final text reply IS the deliverable: return raw content, not a human-facing message.
 
 Keep briefings tight. Too much wastes tokens; too little drifts off-task. The six items above are the minimum bar.
 

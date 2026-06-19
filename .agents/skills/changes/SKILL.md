@@ -1,30 +1,36 @@
 ---
 name: changes
-description: Orchestrating multiple change requests in parallel through their planning phases and serially through their implementation phases. Consult whenever the user supplies multiple distinct items to add/change/fix ("here are 5 things I want done", a bulleted list of changes, a backlog they want worked through). For a single change item, use the change skill instead. Do not consult for issue-backlog work (which uses build) — this is for user-supplied lists of changes, not for the issues/ tracker.
+description: Handling change requests — add a feature, fix a bug, modify behavior — from initial framing through planning, implementation, spec updates, verification, and commit. Consult whenever the user says "I want to add/change/fix X", describes a piece of work conversationally, supplies a bulleted list of changes, hands you a multi-phase plan, or asks for any focused code work that needs discussion before implementation. Size and item count are irrelevant — decomposition is the core job. Do not consult for issue-backlog work (which uses build) — this is for user-described work, not for the issues/ tracker.
 ---
 
 # Changes
 
-You are about to orchestrate several independent change requests from a user-supplied list. Each item walks through the same lifecycle as the `change` skill — discuss, plan, get approval, implement, update specs, run backpressure, log issue, commit — but the orchestration interleaves: planning runs in parallel across items, implementation runs serially one item at a time.
+You are about to handle one or more change requests. The pipeline:
+
+**decompose → plan (parallel workers) → user approval per item → implement (serial across items, with sub-worker fan-out within each item) → many small commits → push.**
+
+A single user request often decomposes into many atomic items. Each item may itself land as many small commits via sub-worker fan-out. Atomicity is enforced at the sub-piece (commit) level, not the item level.
 
 This is a pipeline. The conventions below are inlined here, not pulled in by reference.
 
 ## Why this shape
 
-- **Planning in parallel** is safe and fast — multiple workers can investigate, draft plans, and surface clarifying questions concurrently. The user can answer questions interleaved.
-- **Implementation in serial** keeps the repo state coherent — two workers editing the codebase simultaneously create merge pain and obscure failures. Serial implementation also keeps backpressure runs honest: each commit is verified against a known-clean tree.
+- **Decomposition first.** The user's input is raw material — a "fix this bug" can decompose into 8 atomic items. The slate IS the decomposed atomic set, not the user's literal phrasing.
+- **Planning in parallel.** Multiple workers investigate, draft plans, and surface clarifying questions concurrently. The user answers interleaved.
+- **Serial implementation across items.** Two impl workers editing the codebase simultaneously create merge pain and obscure failures. Serial keeps backpressure runs honest.
+- **Sub-worker fan-out within an item.** When an item's implementation is genuinely multi-part, the impl worker spawns sub-workers (3-tier max: orchestrator → impl worker → sub-workers). Sub-workers research/draft; the impl worker applies + verifies + commits each sub-piece as its own atomic commit. This pushes atomicity down to the sub-piece level — even a coarse item lands as many small commits.
 
 ## Procedure
 
-### 1. Receive and decompose the list
+### 1. Receive and decompose
 
-The user gives you a list of items they want done — bullets, numbered list, or a paragraph that names several changes. **Treat the list as raw material, not the final item slate.** Your first job is to convert it into atomic change items. A 5-item user list often becomes a 20-item atomic slate after decomposition. The split is not optional.
+**Treat the user's input as raw material, not the final item slate.** Your first job is to convert it into atomic change items. A 5-item user list often becomes a 20-item atomic slate after decomposition. A single conversational "fix this bug" can decompose into 8 items. The split is not optional.
 
-Run two pre-flight passes on the raw list before numbering anything.
+Run two pre-flight passes on the raw input before numbering anything.
 
-**De-duplicate.** If two items describe the same change in different words, collapse them or flag the suspected duplication to the user before spawning. Spawning two workers against the same change wastes context and produces conflicting plans.
+**De-duplicate.** If two items describe the same change in different words, collapse them or flag the suspected duplication to the user. Spawning two workers against the same change wastes context and produces conflicting plans.
 
-**Split coarse items.** What you pass to a `change` worker must be small and atomic: one fix, one planner, one commit. If an item bundles N independently-verifiable fixes — distinct symptoms, distinct files, distinct planning surfaces — break it into N items. Bundles cost context (the planner researches more than it needs), cost rework (one shaky finding contaminates the whole plan), and cost bisect (a coarse commit is not a clean revert unit).
+**Split coarse items.** What you pass to a planning worker must be small and atomic: one fix, one planner, one approved plan. If an item bundles N independently-verifiable fixes — distinct symptoms, distinct files, distinct planning surfaces — break it into N items.
 
 Signs an item should split:
 - "Fix these N findings in spec X" → one item per finding.
@@ -37,7 +43,9 @@ Signs an item is already atomic — leave alone:
 - Splitting would force a coordinated revert (the parts only make sense together).
 - The user supplied the bundle deliberately and named the grouping.
 
-Flag the split decision to the user when ambiguous; do not silently fan out a dozen workers from a one-line request, and do not silently bundle a dozen findings into one worker.
+**When the input is too vague to decompose** (e.g. "add some kind of analytics"), spawn ONE planning worker as a discovery worker. Brief it to investigate and propose a decomposition along with the plan. Relay back to the user for approval of the decomposition AND the plan.
+
+Flag the split decision to the user when ambiguous. Do not silently fan out a dozen workers from a one-line request, and do not silently bundle a dozen findings into one worker.
 
 Once the slate is atomic, number the items (Item 01, Item 02, …) and keep a running table of `(item-id, brief description, status)` throughout the session.
 
@@ -45,21 +53,40 @@ Statuses: `planning`, `waiting-for-approval`, `approved`, `implementing`, `commi
 
 ### 2. Fan out planning
 
-For each item, spawn one worker via the `orchestrate` skill (Agent-tool spawn). Workers run concurrently. Each worker's briefing must include the full `change` procedure inlined (workers don't see other skills' bodies).
+For each item, spawn one worker via the `orchestrate` skill (Agent-tool spawn). Workers run concurrently. The briefing must be self-contained — workers inherit no skills, no context.
 
-Worker briefing template (paste the body of the `change` skill into the briefing, then add):
+Worker briefing template:
 
-> **Goal.** Take this single item through discussion and produce a plan. **Stop before implementing.** Return: (a) the proposed plan, numbered, (b) any clarifying questions for the user, (c) which specs are likely affected.
+> **Goal.** Take this single item through investigation and produce a plan. **Stop before implementing.** Return: (a) the proposed plan, numbered, (b) any clarifying questions for the user, (c) which specs are likely affected, (d) the exit condition (a verifiable command + expected outcome that proves the item is shippable).
 >
-> **Override on the inlined change body.** The inlined `change` skill body describes the full lifecycle through commit. **Ignore steps 3 onward** of the inlined change body — your job ends at presenting a plan. Do not implement, do not update specs, do not run the step 4.5 ripple check, do not run backpressure, do not log an issue, do not commit. Stop at the plan.
->
-> **Item:** <verbatim from user's list>
+> **Item:** \<verbatim decomposed item>
 >
 > **Scope.** READ-ONLY. You may read any file in the repo to investigate, but do not edit, create, move, or delete any file. Plans only.
 >
-> **Skills, scripts, and MCP tools to reach for.** `specs` (schema and locations of any spec your plan would touch), `issues` (so you can name related backlog issues in your plan), the `mcp__unsandboxed-runner__*` wrappers (`run_pnpm`, `run_playwright`, `run_tauri_build`, `smoke_test_tauri`, etc.) for any read-only shell command the sandbox blocks during investigation.
+> **The lifecycle this plan feeds into (so your plan anticipates downstream).** After approval, an implementation worker takes this plan and: writes the code (possibly fanning out sub-workers for multi-part work) → updates affected specs in the same commit as the code → runs a ripple check on neighbor specs → runs full backpressure → logs a closed tracking issue in `<repo>/issues/` → commits and pushes. Many small commits per item is the norm. Your plan should be specific enough that the implementation worker doesn't need to re-design; it should name files to touch, specs to update, and the exit condition that proves the item is done.
 >
-> **Return format.** Structured: `## Plan`, `## Questions for user`, `## Specs likely affected`. If no questions, omit the section.
+> **Skills, scripts, and MCP tools to reach for.** `specs` (schema + locations of any spec your plan would touch), `issues` (so you can name related backlog issues in your plan), `backpressure` (so the plan accounts for what verification will run), the `mcp__unsandboxed-runner__*` wrappers (`run_pnpm`, `run_playwright`, `run_tauri_build`, `smoke_test_tauri`, etc.) for any read-only shell command the sandbox blocks during investigation.
+>
+> **Return format.** Structured:
+> ```
+> ## Plan
+> 1. ...
+>
+> ## Files to create/modify
+> - path: purpose
+>
+> ## Design decisions
+> - ...
+>
+> ## Specs likely affected
+> - specs/<stem>.md: sections that may need updating, or "no update needed" with reasoning
+>
+> ## Exit condition
+> A verifiable command + expected outcome that proves this item is shippable (e.g. `bash e2e/foo.sh exits 0`, `pytest passes`, `grep finds X in path`).
+>
+> ## Questions for user
+> - ... (omit section if no questions)
+> ```
 >
 > You are a worker, not an orchestrator. Do NOT produce a spoken end-of-turn report. Do NOT call any TTS / voice / `run_dic` tool. Do NOT spawn further workers via the Agent tool — return your result directly. Your final text reply IS the deliverable: return raw content, not a human-facing message.
 
@@ -70,107 +97,153 @@ When a worker returns:
 
 ### 2b. Challenge the plan before approval
 
-Every returned plan goes through this gate before you present it to the user — not just refined plans. Walk this checklist against the plan; if the worker can't answer, send the plan back for refinement before approval:
+Every returned plan goes through this gate before you present it to the user — not just refined plans. Walk this checklist; if the worker can't answer, send the plan back for refinement.
 
-1. **Trace the full path.** From trigger to symptom (or input to output), end-to-end, naming every file and condition. If the worker can't trace it, the analysis is incomplete.
-2. **Question magic numbers.** If the fix changes thresholds or constants, demand evidence or reasoning for the specific values chosen. "Lower X" is not a plan.
-3. **Enumerate triggers.** Are there multiple code paths producing this symptom? Has the worker confirmed which one is actually firing?
+1. **Trace the full path.** From trigger to symptom (or input to output), end-to-end, naming every file and condition.
+2. **Question magic numbers.** If the fix changes thresholds or constants, demand evidence or reasoning for the values chosen. "Lower X" is not a plan.
+3. **Enumerate triggers.** Multiple code paths producing this symptom? Confirmed which fires?
 4. **Edge cases.** What inputs should STILL trigger the original behavior? Make the worker prove the fix doesn't break those.
-5. **Silent failures.** Does the fix add observability (logs / metrics / errors that propagate) so the next person debugging a similar issue has breadcrumbs?
+5. **Silent failures.** Does the fix add observability so future debugging has breadcrumbs?
+6. **Exit condition.** Is it verifiable? If you can't write a check that proves done, the plan isn't ready — send back.
 
 When the plan survives the checklist, present it to the user for explicit approval before moving the item to `approved`.
 
-### 3. Serialize implementation
+### 3. Serial implementation across items, sub-worker fan-out within each
 
-Once an item is `approved`, queue it for implementation. **Only one item implements at a time.**
+Once an item is `approved`, queue it. **Only one item implements at a time across the slate.** Within an item, the impl worker may fan out sub-workers (one level of nesting; sub-workers do NOT spawn further — 3 tiers max).
 
-For the next-in-queue approved item, spawn a worker with the full `change` skill body inlined plus:
+For the next-in-queue approved item, spawn an implementation worker:
 
-> **Goal.** Implement the approved plan for this item end-to-end: write the code, update specs alongside (no defer), run the step 4.5 ripple check on touched specs, run full backpressure, log the tracking issue, commit, push. Return a one-paragraph summary of what shipped.
+> **Goal.** Implement the approved plan for this item end-to-end. Each logical sub-piece lands as its own atomic commit; many small commits per item is the norm. Stop only when the exit condition is met. Return a summary of what shipped.
 >
-> **Item:** <description>
-> **Approved plan:** <numbered plan from the planning phase>
+> **Item:** \<description>
+> **Approved plan:** \<numbered plan>
+> **Exit condition:** \<verifiable command + expected outcome from the plan>
 >
-> **Scope.** You may touch any file in the repo required to implement this single approved plan, including the specs the plan named as affected and any neighbors the step 4.5 ripple check surfaces. You may NOT work any other item from the user's list, absorb unrelated pre-existing failures into this commit (log a separate issue instead), or commit with backpressure failures unaddressed.
+> **Scope.** You may touch any file in the repo required to implement this approved plan, including specs the plan named and any ripple neighbors. You may NOT work any other item from the slate, absorb unrelated pre-existing failures into your commits (log a separate issue instead), or commit with backpressure failures unaddressed.
 >
-> **Specs alongside code — non-negotiable.** Update every affected spec in the same commit as the code, per the `change` skill's step 4. Do not defer with an issue saying "circle back to update the spec." After step 4, run the step 4.5 ripple check on the touched specs and apply any cascading drift in the same commit.
+> **Sub-worker fan-out — permitted.** When the work splits into independent sub-pieces (e.g. multiple sources to cache, multiple files to write, multiple specs to update independently), spawn sub-workers per the `orchestrate` skill. Sub-workers research/draft per `orchestrate`'s default — they do NOT apply changes. You apply, verify, and commit each sub-piece separately. **One logical sub-piece = one commit.** Do not bundle unrelated sub-pieces into one commit. Sub-workers may NOT spawn further workers (3-tier max). When briefing a sub-worker, include this verbatim: *"You are a sub-worker. You may NOT spawn further Agent-tool workers. Return raw content for the orchestrator to apply."*
 >
-> **Skills, scripts, and MCP tools to reach for.** `specs` (schema, validation, ripple), `issues` (schema and operations for the tracking issue), `backpressure` (full backpressure for the stack), `orchestrate` (you are spawned via it; if step 4.5 ripple surfaces multiple neighbors you may fan out workers per its template), the `mcp__unsandboxed-runner__*` wrappers (`run_pnpm`, `run_playwright`, `run_tauri_build`, `smoke_test_tauri`, etc.) for any shell command the sandbox blocks (network access, non-sandbox paths, long-running builds).
+> **Per-sub-piece lifecycle** (apply each in sequence; commit at the end of each):
+> 1. Implement the sub-piece (write code yourself, or fan out sub-workers for research/draft).
+> 2. Update affected specs alongside code in this commit. Specs live at `<repo>/specs/<stem>.md`. Verify each claim against the new code. If you're rewriting more than half a section, rewrite the whole section. If a spec was `approved` and code now matches it, set frontmatter `status: implemented`. Run `specs/validate` to catch structural problems.
+> 3. Ripple check the touched specs' neighbors (outgoing `refs:` list + incoming `grep -l "<stem>" specs/*.md`). When the neighborhood is small (≤2), inspect inline. When larger, fan out sub-workers per the ripple template inlined below. Apply any drift in this same commit.
+> 4. Run full backpressure for the project's stack. Fix every failure before continuing. If you fan out for parallel checks, inline the `backpressure` skill body into sub-worker briefings.
+> 5. Log a tracking issue at `<repo>/issues/<slug>.md` with `status: closed`, capturing what changed, design decisions, specs updated. Skip if a sub-piece is genuinely part of a larger logical change that warrants one issue at the end — your call per sub-piece, but err toward one issue per commit.
+> 6. Commit (code + specs + issue) with an imperative <72-char message. Push. If push fails, report and continue — the commit is safe locally.
+>
+> Loop: pick the next sub-piece from the plan; repeat the lifecycle. Stop when the exit condition is met.
+>
+> **Ripple check briefing template** (for sub-workers when neighborhood is large):
+> ```
+> Goal: Determine whether a recent spec change could have invalidated claims in `<repo>/specs/<NEIGHBOR_STEM>.md`. Report any drift it caused.
+> Scope: READ-ONLY. Read the neighbor spec, read the relevant code paths it names. Do NOT edit any files.
+> The change just landed: <DIFF_SUMMARY>
+> Procedure:
+> 1. Read `specs/<NEIGHBOR_STEM>.md`.
+> 2. Identify any claim that could be affected by the change above.
+> 3. Verify each affected claim against current code.
+> 4. Report ONLY drift caused by the change. Pre-existing drift, ignore.
+> Return format:
+> SPEC: <NEIGHBOR_STEM>
+> RIPPLE: <yes|no>
+> Findings: - [HIGH|MED|LOW] <section>: <claim> | reality: <what code shows> | <file:line>
+> Summary: <one sentence>
+> You are a sub-worker. You may NOT spawn further Agent-tool workers. Do NOT call TTS / voice / run_dic. Return raw content.
+> ```
 >
 > **Inherited rules.**
-> - Project commit conventions and issue/spec locations as inlined in the `change` body.
-> - Push after the commit. If push fails (no upstream, network, conflict), report the failure and continue — the commit is safe locally.
-> - If backpressure fails on your own changes and you cannot fix it this spawn, do not commit broken state; report the blocker.
+> - Specs alongside code — non-negotiable. Do not defer with an issue.
+> - Push after each commit. If push fails, report and continue.
+> - If backpressure fails on your own changes and you cannot fix it in this iteration, do not commit broken state; report the blocker.
 >
-> **Return format.** `## Summary`, `## Files changed`, `## Specs updated`, `## Backpressure outcome`, `## Push outcome`.
+> **Return format.**
+> ```
+> ## Summary
+> ## Commits shipped
+> - <short-sha> <subject>
+> ## Specs updated
+> ## Backpressure outcome
+> ## Push outcome
+> ## Exit condition state
+> met | not met + reason
+> ```
 >
-> You are a worker, not an orchestrator. Do NOT produce a spoken end-of-turn report. Do NOT call any TTS / voice / `run_dic` tool. Do NOT spawn further workers via the Agent tool — return your result directly. Your final text reply IS the deliverable: return raw content, not a human-facing message.
+> You are a worker (mini-orchestrator). Do NOT produce a spoken end-of-turn report. Do NOT call any TTS / voice / `run_dic` tool. You MAY spawn sub-workers (one level only) per the `orchestrate` skill. Sub-workers MAY NOT spawn further. Return your result directly. Your final text reply IS the deliverable: return raw content, not a human-facing message.
 
-When the worker returns with a commit (and a push attempt — failure is non-blocking), mark the item `committed`, then dequeue the next approved item.
+When the impl worker returns with commits and the exit condition met, mark the item `committed`, then dequeue the next approved item.
 
-Before dequeueing the next item, **check the tree is clean** (`git status`). If the previous worker died mid-implement and left a dirty tree, do not start the next item — see the edge cases below.
+Before dequeueing the next item, **check the tree is clean** (`git status`). Worker died mid-implement → see Edge cases.
 
 ### 4. Throughout: communicate the state
 
-After every meaningful event (plan ready for approval, item implementing, item committed, item blocked), give the user a brief status snapshot — which items are at which status. The user is the loop's referee; they need to see progress to direct it.
+After every meaningful event (plan ready for approval, item implementing, commit landed, item committed, item blocked), give the user a brief status snapshot — which items are at which status, commit count per item. The user is the loop's referee.
 
 ### 5. On completion
 
 When all items are `committed` or `blocked`:
 
-- Summarize what landed (committed items, one line each).
+- Summarize what landed (committed items + commit count + leading sha, one line each).
 - Surface any blocked items with the reason.
-- Surface any items whose worker reported push failure (committed locally, not on the remote yet) so the user can push or investigate.
+- Surface any items whose worker reported push failure.
 - Do not silently swallow a blocker.
 
 ## Hard rules
 
-- **Keep what reaches `change` small and atomic.** Run the split pass in step 1 before fanout, and again before any late-arriving item enters the queue. One fix, one planner, one commit.
-- **Never implement two items simultaneously.** Even if they look independent, serialize. Backpressure runs must observe a clean tree.
-- **Never send multiple approve-or-resume signals in one turn.** Each implementation worker runs to its commit before the next is unblocked.
-- **Every implementation briefing must explicitly require specs-alongside-code** (no defer with an issue). This is the `change` skill's rule; the orchestrator's job is to make sure each implementation worker carries it forward.
+- **Decompose before anything else.** The user's input is raw material. Never fan out planning without running the decomposition pass.
+- **Never implement two items simultaneously.** Even if they look independent, serialize across items. Within an item, sub-worker fan-out is allowed and encouraged for multi-part work.
+- **Atomicity at the sub-piece (commit) level.** Many small commits per item is the norm. One logical sub-piece = one commit. Bundled commits are a bug.
+- **Sub-workers may NOT spawn further workers.** 3-tier max: orchestrator → impl worker → sub-workers.
 - **Surface plans before implementing.** Each item must reach explicit user approval before its implementation worker spawns.
-- **If a worker auto-implements** (skips the plan-approval checkpoint and ships code in what was supposed to be a planning spawn), surface this to the user immediately and stop the queue — do not silently accept the work. Investigate whether to revert, re-spawn against a tighter briefing, or accept on explicit user override. A worker that ignored the "stop before implementing" override on the planning briefing is a briefing failure to diagnose, not a free implementation to bank.
+- **Specs alongside code — non-negotiable.** Every impl-worker briefing must explicitly require this. No "circle back" issues.
+- **Every plan names an exit condition.** A verifiable command + expected outcome. If a planner can't write one, the plan isn't ready.
+- **If a worker auto-implements** (skips the plan-approval checkpoint and ships code from what was supposed to be a planning spawn), surface this immediately and stop the queue. Do not silently accept the work. Investigate, revert if needed, re-spawn with tighter briefing.
 
 ## Stay above the work
 
-You are the orchestrator. Investigation, analysis, and implementation belong to workers; your job is to brief, relay, and synthesize. Default to delegating:
+You are the top-level orchestrator. Investigation, analysis, implementation, and ripple checks belong to workers (planning) and impl workers + their sub-workers (impl). Default to delegating:
 
-- **Don't go fishing in source.** No exploratory Grep/Glob/Agent sweeps to "understand the codebase" yourself — that's a worker task.
-- **Don't pre-investigate before briefing.** If you read code first, your briefing biases the worker. Frame the goal, let the worker investigate.
-- **Don't implement.** Code changes happen inside the spawned implementation worker, not in the orchestrator.
+- **Don't go fishing in source.** No exploratory Grep/Glob/Agent sweeps to "understand the codebase" yourself.
+- **Don't pre-investigate before briefing.** If you read code first, your briefing biases the worker.
+- **Don't implement.** Code changes happen inside the spawned impl worker (and its sub-workers), not in the orchestrator.
 
-Exception: a single targeted `Read` on a known file is fair when a worker asks a one-line clarifying question and a spawn would be obvious overkill (e.g. "does file X export function Y?"). Resist scope creep — one file, one check, then back to orchestration.
+Exception: a single targeted `Read` on a known file is fair when a worker asks a one-line clarifying question (e.g. "does file X export function Y?"). Resist scope creep — one file, one check, then back to orchestration.
 
 ## When to push back
 
 ### When items conflict
 
-Two items conflict when one undoes the other, or they touch overlapping code with incompatible designs. Surface this immediately — do not plan both in parallel as if independent, and do not let the user discover the collision at implementation time. Ask the user to clarify which one wins, drop one, or merge the two into a single redrawn item before fanning out.
+Two items conflict when one undoes the other, or they touch overlapping code with incompatible designs. Surface this immediately — do not plan both in parallel as if independent. Ask the user which wins, drop one, or merge into a single redrawn item before fanning out.
 
 ### When items have dependencies
 
-Item B depends on Item A when B's plan can only be evaluated against the post-A state of the codebase (B reads a file A creates, B modifies an API A introduces, B's tests rely on A's behavior). Dependent items are not in conflict — both should ship — but they need sequencing.
+Item B depends on Item A when B's plan can only be evaluated against post-A state (B reads a file A creates, B modifies an API A introduces). Dependents are not in conflict — both should ship — but they need sequencing.
 
-Plan both in parallel: the planning workers can investigate concurrently against the current tree, and B's worker can note its assumption "this plan assumes Item A lands first." Then enforce the sequencing in the implementation queue: A implements first, then B. If A's implementation materially changes the surface B planned against, re-spawn B's planner with the post-A state before approval.
+Plan both in parallel; the planning workers investigate concurrently. B's worker notes "this plan assumes Item A lands first." Enforce sequencing in the implementation queue: A first, then B. If A's implementation materially changes the surface B planned against, re-spawn B's planner with the post-A state before approval.
 
-If the dependency is one-way and minor (B mentions A but does not require it), the queue ordering alone is enough. If the dependency is tight (B is meaningless without A), make it explicit in the approved plan so the user sees the coupling.
+If the dependency is one-way and minor (B mentions A but does not require it), queue ordering alone is enough. If tight (B is meaningless without A), make it explicit in the approved plan so the user sees the coupling.
 
 ## When NOT to push back
 
-**Size of the work is not a pushback reason.** A multi-day, multi-deliverable plan is exactly what this skill is for. Decomposition is the core job. If the shape is "list of changes" (however many items result), decompose and proceed. Reserve pushback for genuine skill mismatch — see "Skill fit by shape" below.
+**Size of the work is not a pushback reason.** A multi-day, multi-deliverable plan is exactly what this skill is for. Decomposition is the core job.
+
+**Item count is not a pushback reason.** Single conversational item or 30-item plan — same skill, same flow. The decomposition pass handles the count.
+
+Reserve pushback for genuine skill mismatch — see "Skill fit by shape" below.
 
 ## Skill fit by shape (not size)
 
-- "User supplied a list of changes" → `changes` (this skill). Size irrelevant.
+- "User described change(s) — single conversational or multi-item list or multi-phase plan" → `changes` (this skill). Size and count irrelevant.
 - "Approved specs need to become a backlog" → `spec-to-issues`.
 - "Claim and ship from an existing backlog" → `build`.
 
-**Worked counter-example.** User hands you a 5-phase, 30-deliverable, ~17-day plan. This is NOT 5 items and NOT "too big for changes." It's ~30 atomic items with sequencing — decompose into atomic items, fan out planning, serialize implementation. The size of the project is irrelevant to the shape decision.
+**Worked counter-example.** User hands you a 5-phase, 30-deliverable, ~17-day plan. This is NOT 5 items and NOT "too big for changes." It's ~30 atomic items with sequencing — decompose, fan out planning, serialize implementation. The size of the project is irrelevant to the shape decision.
 
 ## Edge cases
 
-- **Worker dies mid-implement.** Before dequeueing the next approved item, check `git status`. If the tree is dirty (uncommitted changes from the failed worker), do not start the next item — starting a new worker on a dirty tree compounds the failure. Inspect the staged work: if the file list matches the approved plan and the substantive edits look complete (the worker hit something like a timeout, a hung Monitor loop, or a confused tail message late in the run), default to spawning a **finish-the-job worker** scoped strictly to "verify backpressure on the staged work + commit + push, no redesign, no new files; apply only mechanical fixes (formatter, snapshot) along the way." This preserves the ~10–30 min of work already done and is the right call most of the time. Fall back to `git reset --hard HEAD` + re-spawn from scratch only when the staged work is genuinely incomplete or wrong. Surface the dirty tree to the user with the failing item's id and the recommended option (almost always finish-the-job); accept their override before acting.
-- **Duplicate items in the user's list.** De-dupe before fanning out (see step 1). If two items look similar but you're not sure they're duplicates, flag both to the user and ask before spawning. Two planning workers against the same change waste context and surface conflicting plans for the user to reconcile.
-- **Push failure during implementation worker's commit step.** The worker reports the push failure and continues per the `change` skill — the commit is safe locally. Mark the item `committed` (the substantive work shipped), but record the push-failure status separately and surface it in the on-completion summary so the user can push or investigate. Do not block the queue on a push failure; the next approved item can still proceed against the locally-committed tree.
-- **Blocked-then-unblocked items.** When the user later clarifies a blocker (answers a question, resolves a conflict, drops the competing item), re-queue the previously-blocked item. If the blocker shifted the item's scope (the user changed what they want, or the conflicting item landed and altered the surface), re-enter planning and spawn a fresh planning worker against the new state. If the blocker was purely external (waiting on a decision that's now made and the scope is unchanged), jump back into the approved queue directly. Do not lose the item silently between turns — keep it in the status table until it reaches `committed` or the user explicitly drops it.
+- **Worker dies mid-implement.** Before dequeueing the next approved item, check `git status`. If dirty: inspect staged work. If the file list matches the approved plan and edits look complete (worker hit a timeout late in the run), default to spawning a **finish-the-job worker** scoped strictly to "verify backpressure on the staged work + commit + push, no redesign, no new files; apply only mechanical fixes (formatter, snapshot)." Fall back to `git reset --hard HEAD` + re-spawn from scratch only when the staged work is genuinely incomplete or wrong. Surface the dirty tree to the user; accept their override before acting.
+- **Duplicate items.** De-dupe before fanning out (step 1). When ambiguous, flag both items to the user and ask.
+- **Push failure during a commit step.** The impl worker continues — commits are safe locally. Mark the item `committed`, record the push-failure status, surface in the on-completion summary.
+- **Blocked-then-unblocked items.** When the user clarifies a blocker, re-queue the item. If the blocker shifted scope, re-enter planning with a fresh spawn against the new state.
+- **Sub-worker attempts to spawn another worker.** This violates the 3-tier rule. The impl worker briefs sub-workers explicitly with "you may NOT spawn further Agent-tool workers." If a sub-worker violates anyway, treat its return as a failed iteration — investigate the briefing and re-spawn with tighter constraint.
+- **Conversational single-item case.** When the user describes one thing conversationally ("I want to add X"), the flow is the same: decompose (often to N=1 or N=2), spawn one planning worker, get approval, spawn impl worker. The planning worker handles clarifying-question round-trips via the orchestrator relay. Slight overhead vs in-loop conversation; accepted for uniformity + sub-piece atomicity throughout.

@@ -121,7 +121,7 @@ directly.
 ### Naming
 
 Flat name, no prefix. The skill name is the verb a user would say
-(`build`, `change`, `spec`). Discoverability comes from the description
+(`build`, `changes`, `spec`). Discoverability comes from the description
 triggers, not the name.
 
 When a single verb is ambiguous in the skill index (because several

@@ -1,6 +1,6 @@
 ---
 name: audit-specs
-description: Running a full-library semantic audit comparing every spec at `specs/<stem>.md` against the code it claims. Consult whenever the user says "audit all specs", "audit the spec library", "verify specs against code", "full-coverage spec review", or wants to surface every drift before a release or after a large refactor. For change-time targeted verification (just the specs the current change touched), use the ripple step inside the `change` skill — do not call this skill from inside `change`. For purely structural validation (frontmatter, H2s, refs resolving), use `specs/validate` instead — it is faster and free.
+description: Running a full-library semantic audit comparing every spec at `specs/<stem>.md` against the code it claims. Consult whenever the user says "audit all specs", "audit the spec library", "verify specs against code", "full-coverage spec review", or wants to surface every drift before a release or after a large refactor. For change-time targeted verification (just the specs the current change touched), use the ripple step inside the `changes` skill — do not call this skill from inside `changes`. For purely structural validation (frontmatter, H2s, refs resolving), use `specs/validate` instead — it is faster and free.
 ---
 
 # Audit Specs
@@ -70,7 +70,7 @@ Aggregate the workers' findings into a single table sorted by drift level. For e
 - Top 1–3 findings (collapse the rest by count)
 - One-line summary
 
-Highlight HIGH-severity findings prominently and any spec that flips from "none" to anything else since the last audit (if a prior audit log exists). Present to the user. **Do not auto-revise.** The user decides which specs to revise; they can hand the findings to `change` or a per-spec revision pipeline to apply edits.
+Highlight HIGH-severity findings prominently and any spec that flips from "none" to anything else since the last audit (if a prior audit log exists). Present to the user. **Do not auto-revise.** The user decides which specs to revise; they can hand the findings to `changes` or a per-spec revision pipeline to apply edits.
 
 ## When to use
 
@@ -81,6 +81,6 @@ Highlight HIGH-severity findings prominently and any spec that flips from "none"
 
 ## When NOT to use
 
-- During a single `change` — the change skill has a ripple step that scopes verification to the affected neighborhood
+- During a single `changes` run — the changes skill's implementation step has a ripple sub-step that scopes verification to the affected neighborhood per sub-piece
 - For structural validation — `specs/validate` is faster and free
 - When the spec library is empty or doesn't exist
