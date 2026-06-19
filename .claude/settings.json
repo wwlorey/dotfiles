@@ -244,6 +244,17 @@
     ]
   },
   "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 $HOME/.claude/hooks/skill-edit-ripple-reminder.py"
+          }
+        ]
+      }
+    ],
     "PreToolUse": [
       {
         "matcher": "Agent",

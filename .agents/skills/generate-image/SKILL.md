@@ -29,17 +29,26 @@ For creating from scratch.
 
 ```bash
 RESP="$TMPDIR/img-response.json"
-curl -s -X POST "https://api.openai.com/v1/images/generations" \
-  -H "Authorization: Bearer $OPENAI_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "gpt-image-2",
-    "prompt": "<ENGINEERED_PROMPT>",
-    "n": 1,
-    "size": "<WxH>",
-    "quality": "low",
-    "output_format": "png"
-  }' -o "$RESP"
+REQ_SIZE="<WxH>"
+REQ_QUALITY="low"
+REQ_PROMPT='<ENGINEERED_PROMPT>'
+
+for attempt in 1 2 3; do
+  PAYLOAD=$(jq -n --arg p "$REQ_PROMPT" --arg s "$REQ_SIZE" --arg q "$REQ_QUALITY" \
+    '{model:"gpt-image-2", prompt:$p, n:1, size:$s, quality:$q, output_format:"png"}')
+  curl -s -X POST "https://api.openai.com/v1/images/generations" \
+    -H "Authorization: Bearer $OPENAI_API_KEY" \
+    -H "Content-Type: application/json" \
+    -d "$PAYLOAD" -o "$RESP"
+
+  img_tokens=$(jq -r '.usage.input_tokens_details.image_tokens // 0' "$RESP")
+  ret_size=$(jq -r '.size // ""' "$RESP")
+  ret_quality=$(jq -r '.quality // ""' "$RESP")
+  if [ "$img_tokens" -eq 0 ] && [ "$ret_size" = "$REQ_SIZE" ] && [ "$ret_quality" = "$REQ_QUALITY" ]; then
+    break
+  fi
+  echo "gpt-image-2 silent coercion (attempt $attempt): image_tokens=$img_tokens size=$ret_size quality=$ret_quality — retrying" >&2
+done
 
 b64_len=$(jq -r '.data[0].b64_json // empty' "$RESP" | wc -c | tr -d ' ')
 if [ "$b64_len" -lt 100 ]; then
@@ -55,15 +64,27 @@ For transforming a reference image — style transfer, photo-to-illustration, mo
 
 ```bash
 RESP="$TMPDIR/img-response.json"
-curl -s -X POST "https://api.openai.com/v1/images/edits" \
-  -H "Authorization: Bearer $OPENAI_API_KEY" \
-  -F "model=gpt-image-2" \
-  -F "image=@<INPUT_IMAGE_PATH>" \
-  -F "prompt=<ENGINEERED_PROMPT>" \
-  -F "n=1" \
-  -F "size=<WxH>" \
-  -F "quality=low" \
-  -F "output_format=png" -o "$RESP"
+REQ_SIZE="<WxH>"
+REQ_QUALITY="low"
+
+for attempt in 1 2 3; do
+  curl -s -X POST "https://api.openai.com/v1/images/edits" \
+    -H "Authorization: Bearer $OPENAI_API_KEY" \
+    -F "model=gpt-image-2" \
+    -F "image=@<INPUT_IMAGE_PATH>" \
+    -F "prompt=<ENGINEERED_PROMPT>" \
+    -F "n=1" \
+    -F "size=$REQ_SIZE" \
+    -F "quality=$REQ_QUALITY" \
+    -F "output_format=png" -o "$RESP"
+
+  ret_size=$(jq -r '.size // ""' "$RESP")
+  ret_quality=$(jq -r '.quality // ""' "$RESP")
+  if [ "$ret_size" = "$REQ_SIZE" ] && [ "$ret_quality" = "$REQ_QUALITY" ]; then
+    break
+  fi
+  echo "gpt-image-2 silent coercion (attempt $attempt): size=$ret_size quality=$ret_quality — retrying" >&2
+done
 
 b64_len=$(jq -r '.data[0].b64_json // empty' "$RESP" | wc -c | tr -d ' ')
 if [ "$b64_len" -lt 100 ]; then
@@ -88,6 +109,7 @@ fi
 - Auth: `$OPENAI_API_KEY` from env. If unset, tell the user before calling.
 - Response is always base64. Pipe through `jq` and `base64 --decode`.
 - Always check `b64_json` length before decoding. A malformed or empty response otherwise produces a 0-byte PNG and no error surfaces — surface the response body to the user instead.
+- **The snippets above retry on silent coercion.** gpt-image-2 non-deterministically routes some calls through a multi-pass "Thinking mode" path that silently overrides `quality` (e.g. low → high, billed at high) and `size`, and can return abstract stylized art instead of the requested style. The fingerprint on `/v1/images/generations` is `usage.input_tokens_details.image_tokens > 0` on a text-only call; on both endpoints the returned `quality` or `size` not matching the request is also a tell. The loop retries up to 3 times before giving up. OpenAI exposes no parameter to disable this path.
 - **Quality is `low` unless the user explicitly authorizes higher.** Every generation, every edit, every iteration runs at `low` — including iterations that *feel* like quality bumps ("make it sharper", "crisper", "cleaner"). Only call at `medium` or `high` after asking the user and getting an explicit yes, and only for the specific image they greenlit.
   - `low` — cheapest, fast drafts. Default for every call.
   - `medium` — balanced, ~5–10x cost of low.
