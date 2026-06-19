@@ -88,7 +88,7 @@ Worker briefing template:
 > - ... (omit section if no questions)
 > ```
 >
-> You are a worker, not an orchestrator. Do NOT produce a spoken end-of-turn report. Do NOT call any TTS / voice / `run_dic` tool. Do NOT spawn further workers via the Agent tool — return your result directly. Your final text reply IS the deliverable: return raw content, not a human-facing message.
+> You are a worker, not an orchestrator. Return text only. Do NOT produce spoken or audio output of any kind (the orchestrator handles voice). Do NOT spawn further workers via the Agent tool. Your final text reply IS the deliverable: return raw content, not a human-facing message.
 
 When a worker returns:
 
@@ -149,7 +149,7 @@ For the next-in-queue approved item, spawn an implementation worker:
 > RIPPLE: <yes|no>
 > Findings: - [HIGH|MED|LOW] <section>: <claim> | reality: <what code shows> | <file:line>
 > Summary: <one sentence>
-> You are a sub-worker. You may NOT spawn further Agent-tool workers. Do NOT call TTS / voice / run_dic. Return raw content.
+> You are a sub-worker. Return text only. Do NOT produce spoken or audio output of any kind. You may NOT spawn further Agent-tool workers. Return raw content.
 > ```
 >
 > **Inherited rules.**
@@ -169,7 +169,7 @@ For the next-in-queue approved item, spawn an implementation worker:
 > met | not met + reason
 > ```
 >
-> You are a worker (mini-orchestrator). Do NOT produce a spoken end-of-turn report. Do NOT call any TTS / voice / `run_dic` tool. You MAY spawn sub-workers (one level only) per the `orchestrate` skill. Sub-workers MAY NOT spawn further. Return your result directly. Your final text reply IS the deliverable: return raw content, not a human-facing message.
+> You are a worker (mini-orchestrator). Return text only. Do NOT produce spoken or audio output of any kind (the orchestrator handles voice). You MAY spawn sub-workers (one level only) per the `orchestrate` skill. Sub-workers MAY NOT spawn further. Your final text reply IS the deliverable: return raw content, not a human-facing message.
 
 When the impl worker returns with commits and the exit condition met, mark the item `committed`, then dequeue the next approved item.
 

@@ -39,13 +39,13 @@ Workers spawned via the Agent tool do NOT inherit the MEMENTO, the skills index,
 6. **The silence clause.** Pick the variant that fits the worker's role:
 
    - **Default (workers in any context):**
-     > You are a worker, not an orchestrator. Do NOT produce a spoken end-of-turn report. Do NOT call any TTS / voice / `run_dic` tool. Do NOT spawn further workers via the Agent tool — return your result directly. Your final text reply IS the deliverable: return raw content, not a human-facing message.
+     > You are a worker, not an orchestrator. Return text only. Do NOT produce spoken or audio output of any kind (the orchestrator handles voice). Do NOT spawn further workers via the Agent tool. Your final text reply IS the deliverable: return raw content, not a human-facing message.
 
    - **`changes`-skill impl worker (mini-orchestrator):**
-     > You are a worker (mini-orchestrator). Do NOT produce a spoken end-of-turn report. Do NOT call any TTS / voice / `run_dic` tool. You MAY spawn sub-workers (one level only) per the `orchestrate` skill. Sub-workers MAY NOT spawn further. Return your result directly. Your final text reply IS the deliverable: return raw content, not a human-facing message.
+     > You are a worker (mini-orchestrator). Return text only. Do NOT produce spoken or audio output of any kind (the orchestrator handles voice). You MAY spawn sub-workers (one level only) per the `orchestrate` skill. Sub-workers MAY NOT spawn further. Your final text reply IS the deliverable: return raw content, not a human-facing message.
 
    - **Sub-worker (spawned by a `changes` impl worker):**
-     > You are a sub-worker. Do NOT produce a spoken end-of-turn report. Do NOT call any TTS / voice / `run_dic` tool. Do NOT spawn further workers via the Agent tool — return your result directly. Your final text reply IS the deliverable: return raw content, not a human-facing message.
+     > You are a sub-worker. Return text only. Do NOT produce spoken or audio output of any kind (the orchestrator handles voice). Do NOT spawn further workers via the Agent tool. Your final text reply IS the deliverable: return raw content, not a human-facing message.
 
 Keep briefings tight. Too much wastes tokens; too little drifts off-task. The six items above are the minimum bar.
 

@@ -30,9 +30,9 @@ Examples:
 
 ## How to deliver it
 
-Use the `voice` skill's **speak now** mode:
+Use the `voice` skill's **speak now** mode by calling the `mcp__unsandboxed-runner__run_dic` MCP tool directly. This is an MCP tool, not a Bash command — do not pipe via `echo` or run via Bash; pass `text` as a parameter.
 
-- Backgrounded `run_dic` call, no `output` param (so it plays immediately).
+- Backgrounded call, no `output` param (so it plays immediately).
 - Default voice (`bf_isabella`).
 - The spoken text is the format above — nothing more.
 

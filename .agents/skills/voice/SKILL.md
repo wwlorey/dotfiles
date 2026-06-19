@@ -5,7 +5,7 @@ description: Producing spoken audio — speaking text aloud in real time (realti
 
 # Voice
 
-Synthesize speech via the `run_dic` MCP tool (from `unsandboxed-runner`). Two modes, distinguished by whether the caller passes `output`:
+Synthesize speech via the `mcp__unsandboxed-runner__run_dic` MCP tool. This is an MCP tool, not a Bash command — call it directly with parameters; do not pipe via `echo` or shell-invoke. Two modes, distinguished by whether the caller passes `output`:
 
 - **Speak now** — plays immediately through the speakers. Used for realtime voice responses, ad-hoc spoken output, and the playback half of an end-of-turn report.
 - **Render to file** — saves audio to disk, no playback. Used by skills that need to assemble audio (e.g. `news` chunking themes into a daily WAV).
@@ -14,7 +14,7 @@ This skill is the synthesis primitive only — format, length, and trigger rules
 
 ## Speak now
 
-- **Omit `output`.** That tells `run_dic` to play immediately rather than save.
+- **Omit `output`.** That tells `mcp__unsandboxed-runner__run_dic` to play immediately rather than save.
 - **Run in background** (`run_in_background: true`) unless the caller specifically needs to wait. The audio is the user-facing artifact; blocking on it stalls the response text.
 - **Voice:** `bf_isabella` is the default. Only override if a downstream prompt asks for a different voice.
 - **Speed:** the `speed` param is optional; default playback rate is fine for most uses.
