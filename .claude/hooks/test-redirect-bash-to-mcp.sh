@@ -42,9 +42,26 @@ check ALLOW "git commit -F /tmp/msg.txt"
 # `git commit -m '...' && cargo test`: still DENY (cargo is its own segment).
 check DENY "git commit -m 'x' && cargo test"
 
+# Env-var-prefixed cargo invocations: still DENY (the prefix doesn't
+# disguise the real command name; the redirect check looks past assignment
+# tokens).
+check DENY "RUST_TEST_THREADS=1 cargo test"
+check DENY "RUST_TEST_THREADS=1 cargo test --workspace -- --ignored"
+check DENY "RUST_LOG=debug RUST_TEST_THREADS=1 cargo test"
+check DENY "cd /repo && RUST_TEST_THREADS=1 cargo test"
+check DENY "FOO=bar save-config"
+
+# Env-var prefix on git commit shouldn't unlock the message body either.
+check ALLOW "GIT_AUTHOR_NAME='Test' git commit -m 'fix cargo'"
+
 # Innocent uses of the redirect-target word: ALLOW
 check ALLOW "echo cargo is fine"
 check ALLOW "echo 'run save-config later'"
+# Env-var with a redirect-name-as-value: ALLOW (it's a value, not a command).
+check ALLOW "echo FOO=cargo"
+# Cargo arg containing an `=` (--feature=...) is NOT an env-prefix; still
+# DENY because cargo itself is at command-start.
+check DENY "cargo build --features=foo"
 
 if [[ $fail -ne 0 ]]; then
   echo

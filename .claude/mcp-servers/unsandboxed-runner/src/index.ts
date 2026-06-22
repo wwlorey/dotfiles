@@ -252,12 +252,14 @@ server.tool(
     args: z.array(z.string()).describe("Cargo argv, e.g. ['test', '--workspace', '--no-fail-fast'] or ['clippy', '--workspace', '--all-targets', '--', '-D', 'warnings'] or ['fmt', '--all', '--', '--check']."),
     cwd: z.string().optional().describe("Working directory relative to project root."),
     timeout_secs: z.number().optional().describe("Timeout in seconds (default 300, max 600)."),
+    env: z.record(z.string()).optional().describe("Extra env vars merged into process.env when spawning cargo (caller-supplied values override inherited ones). Use this when a per-crate `.cargo/config.toml [env]` setting must apply but the wrapper's workspace-root cwd doesn't trigger cargo's CWD-based config walk — e.g. {RUST_TEST_THREADS: '1'} for the lsr-llm GGUF parallel-OOM fence."),
   },
-  async ({ args, cwd, timeout_secs }) => {
+  async ({ args, cwd, timeout_secs, env }) => {
     const resolvedCwd = resolveCwd(cwd);
     const timeout = clampTimeout(timeout_secs);
+    const mergedEnv = env ? { ...process.env, ...env } : undefined;
 
-    const result = await runCommand("cargo", args, resolvedCwd, timeout);
+    const result = await runCommand("cargo", args, resolvedCwd, timeout, mergedEnv);
     return {
       content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
     };

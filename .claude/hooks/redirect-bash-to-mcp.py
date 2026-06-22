@@ -31,6 +31,13 @@ REDIRECTS = {
 
 SEPARATOR_TOKENS = {"&&", "||", ";", "|", "&"}
 
+# POSIX env-var assignment prefix at the start of a command, e.g.
+# `FOO=bar cargo test` or `RUST_TEST_THREADS=1 cargo test`. When such a token
+# appears at command-start, the NEXT non-assignment token is the real command
+# name — `at_start` must stay True past assignment tokens so the redirect
+# check fires on the actual command word.
+ENV_PREFIX_RE = re.compile(r"^[A-Za-z_]\w*=")
+
 
 def _tokenize(command: str) -> list[str] | None:
     lex = shlex.shlex(command, posix=True, punctuation_chars=True)
@@ -60,10 +67,13 @@ def find_redirect(command: str) -> tuple[str, str] | None:
         return None
 
     # A token is a real invocation iff it sits at a command-start position:
-    # index 0, or immediately after a separator token. After detecting
-    # `git commit` at a command-start position, skip every subsequent token
-    # in that pipeline segment — the commit message body may legitimately
-    # contain words that match REDIRECTS (e.g. "cargo" in prose).
+    # index 0, or immediately after a separator token. Env-var assignment
+    # tokens (`FOO=bar`) at command-start are skipped without flipping
+    # `at_start` so the real command word that follows still triggers the
+    # redirect check. After detecting `git commit` at a command-start
+    # position, skip every subsequent token in that pipeline segment — the
+    # commit message body may legitimately contain words that match
+    # REDIRECTS (e.g. "cargo" in prose).
     at_start = True
     in_commit_segment = False
     prev_tok: str | None = None
@@ -74,6 +84,13 @@ def find_redirect(command: str) -> tuple[str, str] | None:
             prev_tok = None
             continue
         if in_commit_segment:
+            prev_tok = tok
+            continue
+        if at_start and ENV_PREFIX_RE.match(tok):
+            # Env-var assignment prefix; the next non-assignment token is
+            # the real command word. Keep `at_start` True; advance `prev_tok`
+            # so a later `git commit` detector still works if the user does
+            # something exotic like `FOO=bar git commit ...`.
             prev_tok = tok
             continue
         if at_start and tok in REDIRECTS:
