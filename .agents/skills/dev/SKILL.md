@@ -69,6 +69,25 @@ Inject the session-close policy into the underlying lifecycle's invocation conte
 
 These replace what would otherwise be scheduled / cron gates. Session-close is the natural moment to run them because you know the working tree has stabilized. `dev`'s job at this layer is: (a) inject the policy on lifecycle invocation, (b) read the on-completion return to confirm the gates ran, (c) handle any drift findings per the gate-failure recovery shape below.
 
+### Policy injection wire format
+
+The three cadence policies above reach the underlying lifecycle via your invocation prompt — literal markdown text the lifecycle's body reads from its own invocation context. When invoking `changes` or `build`, include a block with these section headings (omit a heading if its policy is empty; omit the whole block if `dev` was bypassed):
+
+```
+## Per-item gate policy (from dev)
+- <gate> if <condition>
+
+## Per-batch gate policy (from dev)
+- <gate> if <condition>
+Mid-batch checkpoint:
+- <trigger condition>
+
+## Session-close gate policy (from dev)
+- <gate>
+```
+
+Populate the bullets from the matrices above. `changes` / `build` know to look for these three section headings in their invocation context (see their bodies). When the user invokes `/changes` or `/build` directly, no policy block appears — the lifecycle runs without injected gates, exactly as it does pre-`dev`.
+
 ## High-risk surfaces
 
 Plain-English concepts. Map to actual paths in the project at hand (a Rust+Tauri app's `src-tauri/src/commands/`; a Python service's `views/` or `api/`; a Node service's `routes/` or middleware — whatever the project's equivalent surface is).
@@ -124,13 +143,13 @@ Once stabilized, emit the end-of-turn report (per the `end-of-turn-report` skill
 
 ## Communicating with the user
 
-Throughout a session, surface state at every meaningful event:
+Throughout a session, surface state at every meaningful event. Most events happen inside the lifecycle (`changes` / `build`); `dev`'s job is to relay them from the lifecycle's progress updates / on-completion return.
 
-- Routing decision (which lifecycle was chosen and why).
-- Each item moving through the lifecycle (planning → approved → implementing → committed).
-- Per-batch gates starting / passing / firing fix-it workers.
-- Mid-batch checkpoint firing.
-- Session-close gates starting.
+- Routing decision (which lifecycle was chosen and why) — surfaced by `dev` directly, at routing time.
+- Each item moving through the lifecycle (planning → approved → implementing → committed) — relayed from the lifecycle's per-item status snapshots.
+- Per-batch gates starting / passing / firing fix-it workers — relayed from the lifecycle's mid-batch checkpoint or on-completion output.
+- Mid-batch checkpoint firing — relayed from the lifecycle.
+- Session-close gates starting — relayed from the lifecycle's on-completion path.
 
 Keep status updates brief — one or two sentences, factual. The end-of-turn report is the comprehensive summary; mid-session updates exist to let the user interrupt cheaply.
 

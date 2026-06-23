@@ -103,6 +103,3 @@ Also surface a top-level `## New work surfaced` section aggregating every per-sp
 - For structural validation — `specs/validate` is faster and free.
 - When the spec library is empty or doesn't exist.
 
-## When DIFF_CONTEXT is required
-
-When the caller is scoping to a recent change (typically `changes`'s ripple sub-step, but any caller that wants targeted verification rather than a full re-audit), ALWAYS supply a 1-3 sentence `DIFF_CONTEXT` describing what the recent diff did. Without `DIFF_CONTEXT` the worker walks every claim in the spec — correct behavior for a full audit, wasteful for a ripple check. Per-batch and per-session-close invocations from `dev` omit `DIFF_CONTEXT` because they ARE full audits scoped to a stem list, not change-scoped audits.

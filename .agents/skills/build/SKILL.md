@@ -15,6 +15,10 @@ Stop condition: `issues/ready` returns no slugs **OR** you have completed 30 ite
 
 Each iteration is one **sequentially** spawned worker via the `orchestrate` skill (Agent-tool spawn). The loop never runs two iterations in parallel. Fresh context per iteration. The worker's briefing covers exactly one issue.
 
+Before constructing the worker briefing, check your invocation context for caller-supplied policy (typically supplied by `dev`):
+
+- A `## Per-item gate policy (from dev)` section — its bullets become the contents of the briefing's "Required verification gates" section (per the `orchestrate` skill's 7th briefing-checklist item). If absent, omit "Required verification gates" from the briefing and the worker will skip step 9 of the procedure.
+
 Worker briefing template:
 
 > **Goal.** Implement one issue from the project backlog end-to-end.
@@ -41,7 +45,7 @@ Worker briefing template:
 >    If the project has build flags that differ by OS (e.g. Metal feature on macOS, CUDA on Linux), ensure the default build still works on the user's OS.
 >
 >    Re-run backpressure until it passes clean. Don't ship with unaddressed failures from your own changes.
-> 9. Run any **caller-required verification gates**. The orchestrator may have included a "Required verification gates" section in this briefing (per the `orchestrate` skill's briefing checklist) — for example, `dev` injects `verify` for issues that touched user-visible UI / IPC, and `code-review` for non-trivial diffs. Run each gate per its trigger condition. Treat a failing gate the same as a failing backpressure check — fix the underlying issue or revert; do not commit with a gate failure unaddressed. If no "Required verification gates" section is present, skip this step.
+> 9. Run any **caller-required verification gates**. The orchestrator may have included a "Required verification gates" section in this briefing (per the `orchestrate` skill's briefing checklist) — for example, `dev` injects `verify` for issues that touched user-visible UI / IPC, and `code-review` for non-trivial diffs. Run each gate per its trigger condition. Treat a failing gate the same as a failing backpressure check — fix the underlying issue or revert; do not commit with a gate failure unaddressed. **If the fix touches code, re-run full backpressure (step 8) to confirm nothing else broke before proceeding to step 10.** If no "Required verification gates" section is present, skip this step.
 > 10. Close the issue: edit frontmatter `status: in_progress` → `status: closed`. Add a `## Comments` entry summarizing what was done.
 > 11. Commit the implementation + spec updates + closure as one logical change (formatter residue may be a separate commit). Then `git push` so the iteration's work reaches the remote before the next iteration starts. If push fails (no upstream, network, conflict), report the failure and continue — the commit is safe locally and a later iteration or human can push it.
 >
@@ -66,7 +70,7 @@ Worker briefing template:
 After the worker returns, check the stop condition:
 - If the worker reported "backlog empty" → stop.
 - If you've spawned 30 workers → stop and report the cap was hit.
-- Otherwise, evaluate the **mid-iteration checkpoint** before spawning the next iteration. The caller (`dev` or the user direct) may have supplied a "Per-batch gate policy" specifying conditions (iteration count since last per-batch run, high-risk-surface touched in the most recent iteration) that fire per-batch gates. If the conditions are met, fire the gates before spawning the next iteration. A gate-failure is handled by auto-spawning a fix-it worker scoped strictly to the failure and continuing — surface the failure + fix in the on-completion report. If no policy was supplied, skip the checkpoint and spawn the next iteration as today.
+- Otherwise, evaluate the **mid-iteration checkpoint** before spawning the next iteration. Look in your invocation context for a `## Per-batch gate policy (from dev)` section — its bullets are the gates and the `Mid-batch checkpoint:` sub-section names the trigger conditions (typically "every 5 iterations since the last per-batch run" and "immediately after any iteration that touched a high-risk surface"). If the conditions are met, fire the gates before spawning the next iteration. A gate-failure is handled by auto-spawning a fix-it worker scoped strictly to the failure and continuing — surface the failure + fix in the on-completion report. If no policy section is present, skip the checkpoint and spawn the next iteration as today.
 
 ## On completion
 
@@ -75,6 +79,6 @@ When the loop exits (either condition), report to the user:
 - Whether the cap was hit, the backlog truly drained, or the backlog is blocked by unresolved deps (open issues exist but none are ready because their deps aren't closed)
 - Any failures left unaddressed (e.g. a backpressure failure on the last iteration that the worker couldn't fix)
 - **Aggregated new work surfaced.** Collect the `## New work surfaced` block from every iteration's worker return and surface it under a top-level `## New work surfaced` section in your own report — slug + one-line description per item, grouped by the iteration that surfaced it. This is the hook a caller like `dev` uses to detect whether the build session genuinely drained the queue or merely re-filled it with follow-ups.
-- **Session-close gates.** If the caller supplied a "Session-close gate policy," AND the aggregated `## New work surfaced` section contains nothing that would queue more iterations into the current session, fire the session-close gates now. Surface findings in the report. A failing session-close gate is handled by auto-spawning a fix-it worker — surface failure + fix in the summary. If no session-close policy was supplied, skip.
+- **Session-close gates.** Look in your invocation context for a `## Session-close gate policy (from dev)` section. If present, AND the aggregated `## New work surfaced` section contains nothing that would queue more iterations into the current session, fire those session-close gates now. Surface findings in the report. A failing session-close gate is handled by auto-spawning a fix-it worker — surface failure + fix in the summary. If no session-close policy section is present, skip.
 
 Do not silently move on if any iteration left the tree in a bad state.
