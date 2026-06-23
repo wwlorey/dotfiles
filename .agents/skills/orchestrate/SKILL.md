@@ -69,6 +69,24 @@ Distinguish:
 
 When uncertain between the two, **verify the artifact** — git log, tree state, file written, whatever output the briefing promised — not the notification text. Treating an interim snapshot as terminal is the most common mistake: it triggers premature escalation (spawning a finish-the-job worker, prescribing a skill fix, debugging a non-failure) while the original worker quietly succeeds in the background.
 
+## Detecting and recovering from dormant workers
+
+A separate failure mode from interim-snapshot confusion: the worker emits text without a pending tool call (often gate output like `/code-review` findings, or a deliberation snippet that *looks* like a conclusion), the harness ends its turn, and the worker goes dormant. Completion notifications don't wake a dormant worker. The notification looks `status: completed` but the `result` text doesn't match the structured return format you briefed for.
+
+**Detection** — when a `status: completed` notification arrives whose `result` does NOT match your briefed structured format:
+
+1. Verify the artifact (git log, tree state, files written) against the plan.
+2. If the artifact is complete → the worker actually finished but emitted bad-format text. Extract what you need from the artifact and move on.
+3. If the artifact is incomplete → check whether the worker's output-file size has grown over a meaningful interval (~5 minutes). If stable, the worker is dormant. If still growing, it's mid-execution; wait for the next notification.
+
+**Recovery decision tree (cheapest option first — do not default to the fresh spawn):**
+
+- **Trivial mechanical remainder** (commit a staged file, push, update tracker, format): orchestrator inlines it. Briefing cost exceeds work cost. Surface what was inlined in the end-of-turn report so the audit trail is explicit. Mark the item closed.
+- **Non-trivial remainder needing the worker's earned context** (multiple sub-pieces unfinished, design decisions in flight, mid-refactor state): use `SendMessage` with the worker's agentId to resume — the worker continues in its existing context, much cheaper than starting fresh. Brief the continuation prompt with (a) what specifically is left per the plan, (b) the verbatim reminder that gate output is not the terminal return, (c) the structured return format you still expect.
+- **Worker's context is poisoned** (wrong direction taken, scope creep, design mismatch, OR repeated dormancy after `SendMessage` resume): only then spawn a fresh `changes`-style finish-the-job worker, scoped strictly to recovery from the current tree state.
+
+The fresh-spawn option is a LAST resort. It discards the worker's hard-won context and costs the most. Try inline and `SendMessage` first.
+
 ## Synthesis and end-of-turn
 
 After workers return:
