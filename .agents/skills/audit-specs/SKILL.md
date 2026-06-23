@@ -1,6 +1,6 @@
 ---
 name: audit-specs
-description: Running a semantic audit comparing specs at `specs/<stem>.md` against the code they claim. Runs library-wide by default, or scoped to a caller-supplied list of stems. Consult whenever the user says "audit all specs", "audit the spec library", "verify specs against code", "full-coverage spec review", or wants to surface every drift before a release or after a large refactor. Also consult when `dev` (or any pipeline owning verification cadence policy) needs a scoped audit at per-batch or per-session-close cadence. Do NOT consult per-sub-piece inside `changes` — that scope is covered by the changes skill's ripple sub-step. For purely structural validation (frontmatter, H2s, refs resolving), use `specs/validate` instead — it is faster and free.
+description: Running a semantic audit comparing specs at `specs/<stem>.md` against the code they claim. Runs library-wide by default (every spec), scoped to a caller-supplied list of stems (per-batch / per-session-close from `dev`, or per-sub-piece from `changes`'s ripple). Supports an optional `DIFF_CONTEXT` parameter so callers scoping to a recent change get fast targeted verification instead of a full-spec walk. Consult whenever the user says "audit all specs", "audit the spec library", "verify specs against code", "full-coverage spec review", or wants to surface every drift before a release or after a large refactor. Also consult whenever any upstream pipeline (`dev`, `changes`'s ripple sub-step) needs scoped spec verification. For purely structural validation (frontmatter, H2s, refs resolving), use `specs/validate` instead — it is faster and free.
 ---
 
 # Audit Specs
@@ -32,15 +32,20 @@ Use the `orchestrate` skill. Spawn one general-purpose worker per stem in parall
 
 Inline this briefing template in each worker prompt. Substitute `<STEM>` and any path hints you derived from reading the spec's Architecture section yourself before spawning (e.g. "the spec names `crates/lsr/src/` — start there"). The hint shortens the worker's discovery phase without constraining it.
 
+The optional `<DIFF_CONTEXT>` parameter is the consolidation hook for change-time ripple usage. When the caller is `changes`'s ripple sub-step (or any other caller that wants to scope verification to a recent diff rather than re-audit the whole spec), supply a 1-3 sentence summary of what just changed. The worker then verifies ONLY the claims plausibly affected by that diff, returning much faster than a full-spec walk. When the caller is the library-wide or per-batch path, omit `<DIFF_CONTEXT>` (or pass an empty string) and the worker walks every claim as usual.
+
 ```
-Goal: Audit `<repo>/specs/<STEM>.md` against the actual code under the project. Report inconsistencies so the user can decide which specs to revise.
+Goal: Audit `<repo>/specs/<STEM>.md` against the actual code under the project. Report inconsistencies so the caller can decide which specs to revise.
 
 Scope: READ-ONLY. Read the spec, read the codebase. Do NOT edit any files.
+
+Diff context (optional — present only when the caller is scoping to a recent change; omit or empty for a full-spec audit):
+<DIFF_CONTEXT>
 
 Procedure:
 1. Read the spec file.
 2. Walk the relevant code paths the spec names (Architecture section, Dependencies, Testing entry points). Path hint: <PATH_HINT>.
-3. For each substantive claim — module/file paths exist, types and signatures match, behaviors implemented, deps listed in Cargo.toml / package.json match, tests entry points exist — verify against code.
+3. For each substantive claim — module/file paths exist, types and signatures match, behaviors implemented, deps listed in Cargo.toml / package.json match, tests entry points exist — verify against code. If `<DIFF_CONTEXT>` is supplied and non-empty, scope verification to ONLY the claims plausibly affected by the diff (touching the same files, the same types, the same behaviors). Pre-existing drift unrelated to the diff is out of scope for this invocation.
 4. Do NOT fabricate findings. Only report what you can verify is wrong.
 
 Return format (markdown):
@@ -93,6 +98,9 @@ Also surface a top-level `## New work surfaced` section aggregating every per-sp
 
 ## When NOT to use
 
-- **Per-sub-piece inside a `changes` run.** The changes skill's implementation step has a ripple sub-step that scopes verification to the affected neighborhood per sub-piece — running audit-specs at that granularity duplicates ripple's job. Per-batch (across the whole changes slate) and per-session-close (library-wide) ARE the correct cadences and run via `dev`.
 - For structural validation — `specs/validate` is faster and free.
 - When the spec library is empty or doesn't exist.
+
+## When DIFF_CONTEXT is required
+
+When the caller is scoping to a recent change (typically `changes`'s ripple sub-step, but any caller that wants targeted verification rather than a full re-audit), ALWAYS supply a 1-3 sentence `DIFF_CONTEXT` describing what the recent diff did. Without `DIFF_CONTEXT` the worker walks every claim in the spec — correct behavior for a full audit, wasteful for a ripple check. Per-batch and per-session-close invocations from `dev` omit `DIFF_CONTEXT` because they ARE full audits scoped to a stem list, not change-scoped audits.

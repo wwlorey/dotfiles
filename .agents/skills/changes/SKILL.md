@@ -127,31 +127,13 @@ For the next-in-queue approved item, spawn an implementation worker:
 > **Per-sub-piece lifecycle** (apply each in sequence; commit at the end of each):
 > 1. Implement the sub-piece (write code yourself, or fan out sub-workers for research/draft).
 > 2. Update affected specs alongside code in this commit. Specs live at `<repo>/specs/<stem>.md`. Verify each claim against the new code. If you're rewriting more than half a section, rewrite the whole section. If a spec was `approved` and code now matches it, set frontmatter `status: implemented`. Run `specs/validate` to catch structural problems.
-> 3. Ripple check the touched specs' neighbors (outgoing `refs:` list + incoming `grep -l "<stem>" specs/*.md`). When the neighborhood is small (≤2), inspect inline. When larger, fan out sub-workers per the ripple template inlined below. Apply any drift in this same commit.
+> 3. Ripple check the touched specs' neighbors (outgoing `refs:` list + incoming `grep -l "<stem>" specs/*.md`). When the neighborhood is small (≤2), inspect inline. When larger, invoke the `audit-specs` skill in scoped mode — pass the neighbor stems as the scope list and the 1-3 sentence diff summary as `DIFF_CONTEXT` so each worker scopes its claim-verification to only the claims plausibly affected by your change. Apply any HIGH/MED drift in this same commit. (See the audit-specs skill for the per-spec worker briefing template; do not re-author it inline.)
 > 4. Run full backpressure for the project's stack. Fix every failure before continuing. If you fan out for parallel checks, inline the `backpressure` skill body into sub-worker briefings.
 > 5. Run any **caller-required verification gates** for this sub-piece. The orchestrator may have included a "Required verification gates" section in this briefing (per the `orchestrate` skill's briefing checklist) — for example, `dev` injects `verify` for sub-pieces that touch user-visible UI / IPC, and `code-review` for non-trivial diffs. Run each gate per its trigger condition. Treat a failing gate the same as a failing backpressure check — fix the underlying issue or revert the sub-piece; do not commit a sub-piece with a gate failure unaddressed. If no "Required verification gates" section is present, skip this step.
 > 6. Log a tracking issue at `<repo>/issues/<slug>.md` with `status: closed`, capturing what changed, design decisions, specs updated. Skip if a sub-piece is genuinely part of a larger logical change that warrants one issue at the end — your call per sub-piece, but err toward one issue per commit.
 > 7. Commit (code + specs + issue) with an imperative <72-char message. Push. If push fails, report and continue — the commit is safe locally.
 >
 > Loop: pick the next sub-piece from the plan; repeat the lifecycle. Stop when the exit condition is met.
->
-> **Ripple check briefing template** (for sub-workers when neighborhood is large):
-> ```
-> Goal: Determine whether a recent spec change could have invalidated claims in `<repo>/specs/<NEIGHBOR_STEM>.md`. Report any drift it caused.
-> Scope: READ-ONLY. Read the neighbor spec, read the relevant code paths it names. Do NOT edit any files.
-> The change just landed: <DIFF_SUMMARY>
-> Procedure:
-> 1. Read `specs/<NEIGHBOR_STEM>.md`.
-> 2. Identify any claim that could be affected by the change above.
-> 3. Verify each affected claim against current code.
-> 4. Report ONLY drift caused by the change. Pre-existing drift, ignore.
-> Return format:
-> SPEC: <NEIGHBOR_STEM>
-> RIPPLE: <yes|no>
-> Findings: - [HIGH|MED|LOW] <section>: <claim> | reality: <what code shows> | <file:line>
-> Summary: <one sentence>
-> You are a sub-worker. Return text only. Do NOT produce spoken or audio output of any kind. You may NOT spawn further Agent-tool workers. Return raw content.
-> ```
 >
 > **Inherited rules.**
 > - Specs alongside code — non-negotiable. Do not defer with an issue.
