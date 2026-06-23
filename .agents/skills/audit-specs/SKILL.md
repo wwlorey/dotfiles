@@ -13,9 +13,9 @@ You are about to run a semantic audit of the project's spec library. By default 
 
 Determine the audit scope:
 
-- **Scoped invocation** (caller supplies a stem list, including the `dev`-per-batch case where the list is the union of touched-neighbor specs across the batch): audit exactly those stems.
-- **User-supplied stems** (e.g. the user types `audit-specs lsr lsr-app`): audit those stems.
-- **No args or `--all`**: audit every `specs/*.md` from the project root (library-wide, the per-session-close case and the default user invocation).
+- **Scoped invocation** (caller supplies a stem list, including the `dev`-per-batch case where the list is the union of touched-neighbor specs across the batch): audit exactly those stems. The caller MAY also supply a `DIFF_CONTEXT` parameter (1-3 sentences naming what just changed) — when present, each per-spec worker scopes verification to only claims plausibly affected by that diff; when absent, each worker walks every claim of its assigned spec. `changes`'s ripple sub-step always supplies `DIFF_CONTEXT`; `dev`'s per-batch / per-session-close paths typically omit it.
+- **User-supplied stems** (e.g. the user types `audit-specs lsr lsr-app`): audit those stems, no `DIFF_CONTEXT`.
+- **No args or `--all`**: audit every `specs/*.md` from the project root (library-wide, the per-session-close case and the default user invocation), no `DIFF_CONTEXT`.
 
 If `specs/` doesn't exist, the project hasn't adopted the spec library. Stop and tell the user.
 
@@ -30,9 +30,11 @@ Use the `orchestrate` skill. Spawn one general-purpose worker per stem in parall
 - For each substantive claim, verifies against current code
 - Returns a structured drift report
 
-Inline this briefing template in each worker prompt. Substitute `<STEM>` and any path hints you derived from reading the spec's Architecture section yourself before spawning (e.g. "the spec names `crates/lsr/src/` — start there"). The hint shortens the worker's discovery phase without constraining it.
+Inline this briefing template in each worker prompt. Substitute three slots per spawn:
 
-The optional `<DIFF_CONTEXT>` parameter is the consolidation hook for change-time ripple usage. When the caller is `changes`'s ripple sub-step (or any other caller that wants to scope verification to a recent diff rather than re-audit the whole spec), supply a 1-3 sentence summary of what just changed. The worker then verifies ONLY the claims plausibly affected by that diff, returning much faster than a full-spec walk. When the caller is the library-wide or per-batch path, omit `<DIFF_CONTEXT>` (or pass an empty string) and the worker walks every claim as usual.
+- `<STEM>` — the spec stem this worker audits.
+- `<PATH_HINT>` — any path hints you derived from reading the spec's Architecture section yourself before spawning (e.g. "the spec names `crates/lsr/src/` — start there"). The hint shortens the worker's discovery phase without constraining it.
+- `<DIFF_CONTEXT>` — the consolidation hook for change-time ripple usage. Forward whatever the caller supplied in their invocation (see step 1). When the caller is `changes`'s ripple sub-step (or any other caller that wants to scope verification to a recent diff rather than re-audit the whole spec), this is a 1-3 sentence summary of what just changed and the worker verifies ONLY the claims plausibly affected by that diff. When the caller is the library-wide or per-batch path, leave `<DIFF_CONTEXT>` empty and the worker walks every claim as usual.
 
 ```
 Goal: Audit `<repo>/specs/<STEM>.md` against the actual code under the project. Report inconsistencies so the caller can decide which specs to revise.
