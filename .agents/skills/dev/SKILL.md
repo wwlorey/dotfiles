@@ -137,7 +137,16 @@ A session is "closed" when ALL of:
 3. No new user message has queued work.
 4. Session-close gates (if any) have run AND any remediation workers they spawned have themselves returned with empty `## New work surfaced`.
 
-The fourth condition can loop: a remediation worker's findings may queue more work, which may surface more findings. Continue until the loop stabilizes (no new surfaced work for one full iteration). Cap at 5 loop iterations to prevent runaway; report `session-close did not stabilize` if hit.
+**When condition 2 is NOT met** (the aggregated section has entries), the session has not closed. Route the new work to an appropriate lifecycle and re-invoke with the same policy block injected:
+
+- Backlog-flavored items (slugs / new-issue language) → re-invoke `build`.
+- User-described follow-ups (items that need planning, not just claiming) → re-invoke `changes`.
+
+After the new invocation returns, re-evaluate all four session-close conditions from the top.
+
+**When condition 4 isn't yet stable** — a remediation worker's findings queued more work, which may surface more findings — let the loop run: the lifecycle's normal aggregation rolls the new findings into the next on-completion return, which feeds condition 2 above.
+
+Both the condition-2 re-invocation loop and the condition-4 remediation cascade share a combined cap of 5 iterations to prevent runaway. If the loop hasn't stabilized by then, stop and report `session-close did not stabilize` in the end-of-turn report along with the unresolved items.
 
 Once stabilized, emit the end-of-turn report (per the `end-of-turn-report` skill — orchestrators speak; workers do not).
 
@@ -146,10 +155,12 @@ Once stabilized, emit the end-of-turn report (per the `end-of-turn-report` skill
 Throughout a session, surface state at every meaningful event. Most events happen inside the lifecycle (`changes` / `build`); `dev`'s job is to relay them from the lifecycle's progress updates / on-completion return.
 
 - Routing decision (which lifecycle was chosen and why) — surfaced by `dev` directly, at routing time.
+- Lifecycle invocation (which lifecycle was invoked + the injected policy block) — surfaced by `dev` directly, right after routing. Lets the user see exactly which gates will fire and intervene before the lifecycle starts churning.
 - Each item moving through the lifecycle (planning → approved → implementing → committed) — relayed from the lifecycle's per-item status snapshots.
 - Per-batch gates starting / passing / firing remediation workers — relayed from the lifecycle's mid-batch checkpoint or on-completion output.
 - Mid-batch checkpoint firing — relayed from the lifecycle.
 - Session-close gates starting — relayed from the lifecycle's on-completion path.
+- Condition-2 re-invocation (when `## New work surfaced` was non-empty and dev re-routes for the new items) — surfaced by `dev` directly, naming which lifecycle is being re-invoked and the iteration count toward the cap of 5.
 
 Keep status updates brief — one or two sentences, factual. The end-of-turn report is the comprehensive summary; mid-session updates exist to let the user interrupt cheaply.
 
