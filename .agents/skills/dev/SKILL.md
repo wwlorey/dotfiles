@@ -176,7 +176,8 @@ Keep status updates brief — one or two sentences, factual. The end-of-turn rep
 ## Skills, scripts, and MCP tools to reach for
 
 - `orchestrate` — every spawn into an underlying lifecycle goes through orchestrate's briefing checklist. The 7th item ("Required verification gates") is the policy-injection hook.
-- `changes`, `build`, `spec`, `spec-to-issues`, `audit-specs` — the underlying lifecycles. Each consumes the gate policy via the orchestrate hook.
+- `changes`, `build` — code-touching lifecycles. Each consumes the gate policy via the orchestrate hook (per the wire format above) and fires gates at the documented cadences.
+- `spec`, `spec-to-issues`, `audit-specs` (standalone) — non-code-touching lifecycles. These run as-is; no gate policy is injected (per the routing-section note above).
 - `backpressure` — runs inside the impl-worker lifecycle as the mechanical pre-commit gate; not directly invoked by `dev`.
 - `end-of-turn-report` — produces the spoken end-of-session summary.
 - For any project-specific scripts and `mcp__unsandboxed-runner__*` MCP wrappers — these belong to the project, not to `dev`; the underlying lifecycle skills name them as needed.
