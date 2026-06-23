@@ -58,7 +58,7 @@ Fire per-batch gates immediately — without waiting for the slate / loop to fin
 - 5 items have closed since the last per-batch gate run, OR
 - The most recent item touched a high-risk surface
 
-After the gates run (and any fix-it worker completes), resume the slate / loop with a clean per-batch counter.
+After the gates run (and any remediation worker completes), resume the slate / loop with a clean per-batch counter.
 
 ### Session-close gates (when the queue is empty AND no new work surfaced)
 
@@ -86,7 +86,7 @@ Mid-batch checkpoint:
 - <gate>
 ```
 
-Populate the bullets from the matrices above. `changes` / `build` know to look for these three section headings in their invocation context (see their bodies). When the user invokes `/changes` or `/build` directly, no policy block appears — the lifecycle runs without injected gates, exactly as it does pre-`dev`.
+Populate the bullets from the per-item / per-batch / session-close gate tables above. The `Mid-batch checkpoint:` sub-section's triggers come from the "Mid-batch forced checkpoint" section, not from the per-batch table. `changes` / `build` know to look for these three section headings in their invocation context (see their bodies). When the user invokes `/changes` or `/build` directly, no policy block appears — the lifecycle runs without injected gates, exactly as it does pre-`dev`.
 
 ## High-risk surfaces
 
@@ -105,11 +105,11 @@ When in doubt, classify as high-risk. The cost of an extra security-review is on
 
 The shape `dev` defines; the orchestrating pipeline (`changes` or `build`) does the actual spawning. Every gate failure follows the same recovery shape regardless of cadence:
 
-1. **Auto-spawn a fix-it worker** scoped strictly to the failure. Do NOT absorb unrelated work into the fix. The briefing names exactly what the gate flagged, the file(s) involved, and the success criterion (the gate passes when re-run). The spawning actor is the active orchestrator (the pipeline that fired the gate — `changes` mid-batch or on-completion, `build` mid-iteration or on-completion). `dev` does not spawn fix-it workers directly; it inherits visibility of them via the lifecycle's return.
+1. **Auto-spawn a remediation worker** scoped strictly to the failure. Do NOT absorb unrelated work into the fix. The briefing names exactly what the gate flagged, the file(s) involved, and the success criterion (the gate passes when re-run). The spawning actor is the active orchestrator (the pipeline that fired the gate — `changes` mid-batch or on-completion, `build` mid-iteration or on-completion). `dev` does not spawn remediation workers directly; it inherits visibility of them via the lifecycle's return.
 2. **Continue the lifecycle.** Do not pause for user input. The fix is part of the work.
 3. **Record the failure + fix.** In the end-of-turn report (which `dev` owns) and in the close-comment of whatever issue the fix landed against. Explicit audit trail.
 
-Special case for `audit-specs`: HIGH-severity drift findings get fix-it workers (auto-routed into `changes`). MED/LOW drift goes into the on-completion report only — surface, don't block.
+Special case for `audit-specs`: HIGH-severity drift findings get remediation workers (auto-routed into `changes`). MED/LOW drift goes into the on-completion report only — surface, don't block.
 
 ## AFK / autonomy rules
 
@@ -135,9 +135,9 @@ A session is "closed" when ALL of:
 1. The most recent underlying-lifecycle invocation has returned (changes slate done, build loop exited, spec hardened, etc.).
 2. The aggregated `## New work surfaced` section from that return is empty (or contains only items the user has explicitly deferred). This section is produced by the underlying lifecycle per its on-completion return format — every impl worker contributes one and the lifecycle's orchestrator aggregates upward.
 3. No new user message has queued work.
-4. Session-close gates (if any) have run AND any fix-it workers they spawned have themselves returned with empty `## New work surfaced`.
+4. Session-close gates (if any) have run AND any remediation workers they spawned have themselves returned with empty `## New work surfaced`.
 
-The fourth condition can loop: a fix-it worker's findings may queue more work, which may surface more findings. Continue until the loop stabilizes (no new surfaced work for one full iteration). Cap at 5 loop iterations to prevent runaway; report `session-close did not stabilize` if hit.
+The fourth condition can loop: a remediation worker's findings may queue more work, which may surface more findings. Continue until the loop stabilizes (no new surfaced work for one full iteration). Cap at 5 loop iterations to prevent runaway; report `session-close did not stabilize` if hit.
 
 Once stabilized, emit the end-of-turn report (per the `end-of-turn-report` skill — orchestrators speak; workers do not).
 
@@ -147,7 +147,7 @@ Throughout a session, surface state at every meaningful event. Most events happe
 
 - Routing decision (which lifecycle was chosen and why) — surfaced by `dev` directly, at routing time.
 - Each item moving through the lifecycle (planning → approved → implementing → committed) — relayed from the lifecycle's per-item status snapshots.
-- Per-batch gates starting / passing / firing fix-it workers — relayed from the lifecycle's mid-batch checkpoint or on-completion output.
+- Per-batch gates starting / passing / firing remediation workers — relayed from the lifecycle's mid-batch checkpoint or on-completion output.
 - Mid-batch checkpoint firing — relayed from the lifecycle.
 - Session-close gates starting — relayed from the lifecycle's on-completion path.
 
@@ -158,7 +158,7 @@ Keep status updates brief — one or two sentences, factual. The end-of-turn rep
 - **Route deterministically.** One user request → one lifecycle. Do not split a single request across `changes` and `build` simultaneously.
 - **Inject gate policy into worker briefings — don't try to wedge it in after the worker returns.** The `orchestrate` skill's briefing checklist includes "Required verification gates" exactly for this. Populate that section per the policy above when spawning the impl worker.
 - **Per-batch and session-close gates run autonomously.** Never pause for permission. They are part of the work, not a checkpoint.
-- **Gate failures auto-spawn fix-it workers at the lifecycle layer.** The actor is the active orchestrator (`changes` or `build`), not `dev`. Never silently swallow a gate failure. Never block the lifecycle on one.
+- **Gate failures auto-spawn remediation workers at the lifecycle layer.** The actor is the active orchestrator (`changes` or `build`), not `dev`. Never silently swallow a gate failure. Never block the lifecycle on one.
 - **Do not pre-investigate.** Routing decisions come from the user's words, not from grep sweeps. If the user is ambiguous, ask once — do not investigate to disambiguate.
 - **Do not implement.** Implementation happens inside the underlying lifecycle's impl worker (and its sub-workers). `dev` is the orchestrator of orchestrators.
 
