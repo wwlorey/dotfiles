@@ -129,8 +129,9 @@ For the next-in-queue approved item, spawn an implementation worker:
 > 2. Update affected specs alongside code in this commit. Specs live at `<repo>/specs/<stem>.md`. Verify each claim against the new code. If you're rewriting more than half a section, rewrite the whole section. If a spec was `approved` and code now matches it, set frontmatter `status: implemented`. Run `specs/validate` to catch structural problems.
 > 3. Ripple check the touched specs' neighbors (outgoing `refs:` list + incoming `grep -l "<stem>" specs/*.md`). When the neighborhood is small (≤2), inspect inline. When larger, fan out sub-workers per the ripple template inlined below. Apply any drift in this same commit.
 > 4. Run full backpressure for the project's stack. Fix every failure before continuing. If you fan out for parallel checks, inline the `backpressure` skill body into sub-worker briefings.
-> 5. Log a tracking issue at `<repo>/issues/<slug>.md` with `status: closed`, capturing what changed, design decisions, specs updated. Skip if a sub-piece is genuinely part of a larger logical change that warrants one issue at the end — your call per sub-piece, but err toward one issue per commit.
-> 6. Commit (code + specs + issue) with an imperative <72-char message. Push. If push fails, report and continue — the commit is safe locally.
+> 5. Run any **caller-required verification gates** for this sub-piece. The orchestrator may have included a "Required verification gates" section in this briefing (per the `orchestrate` skill's briefing checklist) — for example, `dev` injects `verify` for sub-pieces that touch user-visible UI / IPC, and `code-review` for non-trivial diffs. Run each gate per its trigger condition. Treat a failing gate the same as a failing backpressure check — fix the underlying issue or revert the sub-piece; do not commit a sub-piece with a gate failure unaddressed. If no "Required verification gates" section is present, skip this step.
+> 6. Log a tracking issue at `<repo>/issues/<slug>.md` with `status: closed`, capturing what changed, design decisions, specs updated. Skip if a sub-piece is genuinely part of a larger logical change that warrants one issue at the end — your call per sub-piece, but err toward one issue per commit.
+> 7. Commit (code + specs + issue) with an imperative <72-char message. Push. If push fails, report and continue — the commit is safe locally.
 >
 > Loop: pick the next sub-piece from the plan; repeat the lifecycle. Stop when the exit condition is met.
 >
@@ -180,6 +181,8 @@ When the impl worker returns with commits and the exit condition met, mark the i
 
 Before dequeueing the next item, **check the tree is clean** (`git status`). Worker died mid-implement → see Edge cases.
 
+**Mid-batch checkpoint.** Before dequeueing, check whether per-batch gates should fire now. The caller (`dev` or the user direct) may have supplied a "Per-batch gate policy" in the invocation context — a list of gates and trigger conditions (e.g. "every 5 items closed since the last per-batch run" or "immediately after any item that touched a high-risk surface"). If the conditions are met, fire the gates before dequeueing the next item. A gate-failure is handled by auto-spawning a fix-it worker (scoped strictly to the failure; do not absorb unrelated work) and continuing — surface the failure + fix in the on-completion summary. If no policy was supplied, skip the checkpoint and dequeue as today.
+
 ### 4. Throughout: communicate the state
 
 After every meaningful event (plan ready for approval, item implementing, commit landed, item committed, item blocked), give the user a brief status snapshot — which items are at which status, commit count per item. The user is the loop's referee.
@@ -192,6 +195,7 @@ When all items are `committed` or `blocked`:
 - Surface any blocked items with the reason.
 - Surface any items whose worker reported push failure.
 - **Aggregate new work surfaced.** Collect the `## New work surfaced` block from every impl worker's return and surface it under a top-level `## New work surfaced` section in your own return — slug + one-line description per item, grouped by which item's worker reported it. This is the hook a caller like `dev` uses to detect "more work has surfaced from this run" for session-close decisions.
+- **Session-close gates.** If the caller supplied a "Session-close gate policy," AND the aggregated `## New work surfaced` section contains nothing that would queue more items into the current session, fire the session-close gates now. Surface findings in the on-completion summary. A failing session-close gate is handled by auto-spawning a fix-it worker — surface failure + fix in the summary. If no session-close policy was supplied, skip.
 - Do not silently swallow a blocker.
 
 ## Hard rules
