@@ -1,17 +1,21 @@
 ---
 name: audit-specs
-description: Running a full-library semantic audit comparing every spec at `specs/<stem>.md` against the code it claims. Consult whenever the user says "audit all specs", "audit the spec library", "verify specs against code", "full-coverage spec review", or wants to surface every drift before a release or after a large refactor. For change-time targeted verification (just the specs the current change touched), use the ripple step inside the `changes` skill — do not call this skill from inside `changes`. For purely structural validation (frontmatter, H2s, refs resolving), use `specs/validate` instead — it is faster and free.
+description: Running a semantic audit comparing specs at `specs/<stem>.md` against the code they claim. Runs library-wide by default, or scoped to a caller-supplied list of stems. Consult whenever the user says "audit all specs", "audit the spec library", "verify specs against code", "full-coverage spec review", or wants to surface every drift before a release or after a large refactor. Also consult when `dev` (or any pipeline owning verification cadence policy) needs a scoped audit at per-batch or per-session-close cadence. Do NOT consult per-sub-piece inside `changes` — that scope is covered by the changes skill's ripple sub-step. For purely structural validation (frontmatter, H2s, refs resolving), use `specs/validate` instead — it is faster and free.
 ---
 
 # Audit Specs
 
-You are about to run the full-library semantic audit. Every spec at `specs/<stem>.md` is compared, in parallel, against the code it claims. The output is a drift report sorted by severity, surfaced to the user for them to decide what to revise. **This is a pure analysis pipeline — no code or spec edits land from this skill.**
+You are about to run a semantic audit of the project's spec library. By default every spec at `specs/<stem>.md` is compared, in parallel, against the code it claims. When the caller supplies a list of stems (scoped mode), only those specs are audited — this is the shape `dev` invokes for per-batch checks scoped to touched-neighbor specs and for the per-session-close library-wide pass. The output is a drift report sorted by severity, surfaced to the user (or upward to `dev`) for the decision on what to revise. **This is a pure analysis pipeline — no code or spec edits land from this skill.**
 
 ## Procedure
 
 ### 1. Discover the spec set
 
-List every `specs/*.md` from the project root. If the user supplied stems (e.g. `audit-specs lsr lsr-app`), audit only those. With no args or `--all`, audit every spec.
+Determine the audit scope:
+
+- **Scoped invocation** (caller supplies a stem list, including the `dev`-per-batch case where the list is the union of touched-neighbor specs across the batch): audit exactly those stems.
+- **User-supplied stems** (e.g. the user types `audit-specs lsr lsr-app`): audit those stems.
+- **No args or `--all`**: audit every `specs/*.md` from the project root (library-wide, the per-session-close case and the default user invocation).
 
 If `specs/` doesn't exist, the project hasn't adopted the spec library. Stop and tell the user.
 
@@ -49,10 +53,16 @@ Findings:
 
 Summary: <one sentence on overall accuracy>
 
-If no findings, return just:
+## New work surfaced
+- <one bullet per HIGH-severity finding that warrants a follow-up change> — <one-line description naming the affected file(s) and what would need to change to bring code and spec into alignment>
+- ... (omit the bullets and write the literal text "none" under the heading if no HIGH findings, even if MED/LOW findings exist — MED/LOW are surfaced in the drift report only, not as auto-routable work)
+
+If no findings at all, return just:
 SPEC: <STEM>
 DRIFT: none
 Summary: Spec matches code.
+## New work surfaced
+none
 
 Severity:
 - HIGH: factually wrong (file doesn't exist, type renamed, wrong constant value, behavior changed)
@@ -70,7 +80,9 @@ Aggregate the workers' findings into a single table sorted by drift level. For e
 - Top 1–3 findings (collapse the rest by count)
 - One-line summary
 
-Highlight HIGH-severity findings prominently and any spec that flips from "none" to anything else since the last audit (if a prior audit log exists). Present to the user. **Do not auto-revise.** The user decides which specs to revise; they can hand the findings to `changes` or a per-spec revision pipeline to apply edits.
+Highlight HIGH-severity findings prominently and any spec that flips from "none" to anything else since the last audit (if a prior audit log exists). Present to the user (or upward to the caller — e.g. `dev`). **Do not auto-revise.** The decision on revisions lives with the caller; they can hand the findings to `changes` or a per-spec revision pipeline to apply edits.
+
+Also surface a top-level `## New work surfaced` section aggregating every per-spec worker's `## New work surfaced` bullets. Group by stem. If no spec produced HIGH findings, write the literal text `none` under the heading. This is the hook a caller like `dev` uses to auto-route HIGH drift into the changes pipeline (MED/LOW drift stays in the drift-report body for human review).
 
 ## When to use
 
@@ -81,6 +93,6 @@ Highlight HIGH-severity findings prominently and any spec that flips from "none"
 
 ## When NOT to use
 
-- During a single `changes` run — the changes skill's implementation step has a ripple sub-step that scopes verification to the affected neighborhood per sub-piece
-- For structural validation — `specs/validate` is faster and free
-- When the spec library is empty or doesn't exist
+- **Per-sub-piece inside a `changes` run.** The changes skill's implementation step has a ripple sub-step that scopes verification to the affected neighborhood per sub-piece — running audit-specs at that granularity duplicates ripple's job. Per-batch (across the whole changes slate) and per-session-close (library-wide) ARE the correct cadences and run via `dev`.
+- For structural validation — `specs/validate` is faster and free.
+- When the spec library is empty or doesn't exist.

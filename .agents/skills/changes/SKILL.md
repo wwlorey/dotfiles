@@ -169,6 +169,9 @@ For the next-in-queue approved item, spawn an implementation worker:
 > ## Push outcome
 > ## Exit condition state
 > met | not met + reason
+> ## New work surfaced
+> - <slug or one-line description> — <why it surfaced (pre-existing drift logged separately, sub-piece that became its own item, spec change that implies downstream work, etc.)>
+> - ... (omit the bullets and write the literal text "none" under the heading if nothing surfaced)
 > ```
 >
 > You are a worker (mini-orchestrator). Return text only. Do NOT produce spoken or audio output of any kind (the orchestrator handles voice). You MAY spawn sub-workers (one level only) per the `orchestrate` skill. Sub-workers MAY NOT spawn further. Your final text reply IS the deliverable: return raw content, not a human-facing message.
@@ -188,6 +191,7 @@ When all items are `committed` or `blocked`:
 - Summarize what landed (committed items + commit count + leading sha, one line each).
 - Surface any blocked items with the reason.
 - Surface any items whose worker reported push failure.
+- **Aggregate new work surfaced.** Collect the `## New work surfaced` block from every impl worker's return and surface it under a top-level `## New work surfaced` section in your own return — slug + one-line description per item, grouped by which item's worker reported it. This is the hook a caller like `dev` uses to detect "more work has surfaced from this run" for session-close decisions.
 - Do not silently swallow a blocker.
 
 ## Hard rules

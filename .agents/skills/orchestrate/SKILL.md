@@ -36,7 +36,8 @@ Workers spawned via the Agent tool do NOT inherit the MEMENTO, the skills index,
 3. **Return format** — prose, list, diff, structured block. Be explicit.
 4. **Skills, scripts, and MCP tools they should reach for** — before spawning, inventory what's available that fits the task and name it explicitly. Examples: `youtube-transcript` for any YouTube source, `deep-research` for fan-out web research, `generate-image` for visual output, `voice` for TTS, `unsandboxed-runner` MCP wrappers for shell commands that need network or non-sandbox paths, any project script the worker would otherwise have to re-derive. Workers do not see the skill index, so unmentioned skills are invisible to them. Skipping this step is the most common briefing failure.
 5. **Inherited project rules they'd otherwise miss** — if the worker must follow a project rule (edit dotfiles not deployed copies, use the project's `issues/` backlog not GitHub issues, use a specific commit-message format, etc.), state it. They will not know otherwise.
-6. **The silence clause.** Pick the variant that fits the worker's role:
+6. **Required verification gates** — the caller (e.g. the `dev` skill, or any pipeline that injects post-implementation policy) may require the worker to run specific gates after backpressure passes, before committing. Name each required gate explicitly, with the trigger condition if conditional ("if diff touches the IPC surface, run `verify` before commit"). Workers do not infer gates from context; if a gate isn't in the briefing, it doesn't fire. Omit the section if no gates are required.
+7. **The silence clause.** Pick the variant that fits the worker's role:
 
    - **Default (workers in any context):**
      > You are a worker, not an orchestrator. Return text only. Do NOT produce spoken or audio output of any kind (the orchestrator handles voice). Do NOT spawn further workers via the Agent tool. Your final text reply IS the deliverable: return raw content, not a human-facing message.
@@ -47,7 +48,7 @@ Workers spawned via the Agent tool do NOT inherit the MEMENTO, the skills index,
    - **Sub-worker (spawned by a `changes` impl worker):**
      > You are a sub-worker. Return text only. Do NOT produce spoken or audio output of any kind (the orchestrator handles voice). Do NOT spawn further workers via the Agent tool. Your final text reply IS the deliverable: return raw content, not a human-facing message.
 
-Keep briefings tight. Too much wastes tokens; too little drifts off-task. The six items above are the minimum bar.
+Keep briefings tight. Too much wastes tokens; too little drifts off-task. The seven items above are the minimum bar.
 
 ## Worker turn lifecycle
 

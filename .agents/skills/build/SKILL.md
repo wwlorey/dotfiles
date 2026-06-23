@@ -48,7 +48,7 @@ Worker briefing template:
 >
 > **Skills, scripts, and MCP tools to reach for.** `issues/ready` (the doctor + ready-slug script in the project's `issues/` directory), the `mcp__unsandboxed-runner__*` wrappers (`run_pnpm`, `run_playwright`, `run_tauri_build`, `smoke_test_tauri`, etc.) for any shell command the sandbox blocks (network access, non-sandbox paths, long-running builds), and the project's own scripts named in spec or issue refs.
 >
-> **Return format.** A one-paragraph summary: which slug was implemented, what changed, what the backpressure outcome was. If the backlog was empty or you hit a blocker, say so explicitly.
+> **Return format.** A one-paragraph summary: which slug was implemented, what changed, what the backpressure outcome was. If the backlog was empty or you hit a blocker, say so explicitly. End with a `## New work surfaced` section listing any new issues you logged during the iteration (slug + one-line description per item — pre-existing drift you filed instead of absorbing, sub-tasks you discovered, spec changes that imply downstream work). Write the literal text `none` under the heading if nothing surfaced.
 >
 > **Inherited rules.**
 > - Never reuse a slug.
@@ -73,5 +73,6 @@ When the loop exits (either condition), report to the user:
 - How many issues were implemented this run (slugs + one-line summary each)
 - Whether the cap was hit, the backlog truly drained, or the backlog is blocked by unresolved deps (open issues exist but none are ready because their deps aren't closed)
 - Any failures left unaddressed (e.g. a backpressure failure on the last iteration that the worker couldn't fix)
+- **Aggregated new work surfaced.** Collect the `## New work surfaced` block from every iteration's worker return and surface it under a top-level `## New work surfaced` section in your own report — slug + one-line description per item, grouped by the iteration that surfaced it. This is the hook a caller like `dev` uses to detect whether the build session genuinely drained the queue or merely re-filled it with follow-ups.
 
 Do not silently move on if any iteration left the tree in a bad state.
