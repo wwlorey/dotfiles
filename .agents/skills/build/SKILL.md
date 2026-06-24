@@ -78,10 +78,10 @@ When firing per-batch gates, pass the slate's commit range (SHAs covering iterat
 **Per-finding routing (per `dev`'s gate-failure recovery + no-loose-ends rule):**
 - HIGH severity → auto-spawn a remediation worker (scoped strictly to the failure; do not absorb unrelated work) and continue — surface the failure + fix in the on-completion report.
 - MED severity tagged INTRODUCED-BY-SLATE → auto-spawn a remediation worker (slate-introduced regression; same treatment as HIGH).
-- MED severity tagged PRE-EXISTING → file as a tracker issue at `<repo>/issues/<slug>.md` (status: open, mirror the project's existing issue format) before spawning the next iteration — do NOT remediate.
+- MED severity tagged PRE-EXISTING → file as a tracker issue at `<repo>/issues/<slug>.md` (status: open) before spawning the next iteration — do NOT remediate.
 - LOW severity (any tag) → file as a tracker issue. Do NOT remediate.
 
-Tracker filings can land in a single batched commit per mid-iteration round (e.g. `chore(issues): file N mid-iteration <round> gate findings`). If no policy section is present, skip the checkpoint and spawn the next iteration as today.
+**Mechanical filing from the worker's `## Trackers to file` block.** Gate worker briefings (per `dev`'s gate-policy injection) require workers to emit a `## Trackers to file` section with one ready-to-write blob per MED/LOW finding. The orchestrator's filing step is mechanical: for each `### issues/<slug>.md` header in the block, write the following content to disk verbatim and `git add`. No prose-to-file translation; no fields to invent. Filings land in a single batched commit per mid-iteration round. If no policy section is present, skip the checkpoint and spawn the next iteration as today.
 
 ## On completion
 

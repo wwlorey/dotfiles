@@ -113,7 +113,10 @@ The shape `dev` defines; the orchestrating pipeline (`changes` or `build`) does 
 
 Audit-specs MED/LOW drift was historically surface-only. That carve-out is folded into the general policy above — spec drift is now subject to the introduced/exposed test like other gate findings.
 
-When firing per-batch or session-close gate workers, the orchestrator MUST pass the slate's commit range in the worker briefing AND request each finding be tagged INTRODUCED-BY-SLATE or PRE-EXISTING with the git-log/git-blame evidence. The orchestrator uses the tag to route; if a worker omits the tag, the orchestrator runs the git check itself before routing.
+When firing per-batch or session-close gate workers, the orchestrator MUST:
+
+- Pass the slate's commit range in the worker briefing AND request each finding be tagged INTRODUCED-BY-SLATE or PRE-EXISTING with the git-log/git-blame evidence. If a worker omits the tag, the orchestrator runs the git check itself before routing.
+- Require the worker to emit a `## Trackers to file` block with one ready-to-write file blob per MED/LOW finding (HIGH goes through remediation, not filing). The blob format is documented in the `audit-specs` skill's per-spec worker briefing template — same shape applies to custom gate workers (security-review on a commit range, code-review at sweep level, ad-hoc workers I write). This makes the orchestrator's filing step mechanical: read each `### issues/<slug>.md` header, write the following blob to disk, `git add`. No prose-to-file translation; no fields to invent. The single biggest source of "loose-ends-lost-in-chat-history" is orchestrator translation cost — pushing the format requirement into the worker eliminates it.
 
 ## AFK / autonomy rules
 

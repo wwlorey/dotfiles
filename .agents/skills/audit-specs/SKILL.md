@@ -62,13 +62,63 @@ Summary: <one sentence on overall accuracy>
 
 ## New work surfaced
 - <one bullet per HIGH-severity finding that warrants a follow-up change> — <one-line description naming the affected file(s) and what would need to change to bring code and spec into alignment>
-- ... (omit the bullets and write the literal text "none" under the heading if no HIGH findings, even if MED/LOW findings exist — MED/LOW are surfaced in the drift report only, not as auto-routable work)
+- ... (omit the bullets and write the literal text "none" under the heading if no HIGH findings — MED/LOW go into the Trackers-to-file block below, not here)
 
-If no findings at all, return just:
+## Trackers to file
+
+For each MED or LOW finding above, emit ONE ready-to-write tracker file blob below. Each blob starts with a `### issues/<slug>.md` header naming the destination path, then the complete file contents starting with `---` frontmatter. The orchestrator copies each blob to disk verbatim — no translation needed. Mirror the project's existing issue format (look at any existing `issues/<project-prefix>-*.md` for the convention — frontmatter keys, section headers, severity/priority mapping).
+
+Schema for each blob:
+
+### issues/<project-prefix>-<short-descriptive-slug>.md
+
+---
+status: open
+priority: <p1|p2|p3 — match severity: MED→p2, LOW→p3>
+type: bug
+deps: []
+---
+
+# <title — short, action-oriented>
+
+## Symptom
+
+<2-3 sentence description of the drift>
+
+## Impact
+
+<1-2 sentences on what could go wrong / why it matters>
+
+## Source refs
+
+- <file:line>
+- <other refs>
+
+## Recommendation
+
+<2-3 sentences on the proposed fix; cite the surrounding spec/section>
+
+## Doc refs
+
+- <spec stem and section that drifted>
+
+## Comments
+
+### <today's date YYYY-MM-DD> — opened
+
+Surfaced by audit-specs library-wide / scoped run on <STEM>.
+
+---
+
+If there are no MED/LOW findings, emit the literal text `none` under the `## Trackers to file` heading. HIGH findings do NOT get a blob here — they go through the New-work-surfaced channel for orchestrator-driven remediation.
+
+If no findings at all, return:
 SPEC: <STEM>
 DRIFT: none
 Summary: Spec matches code.
 ## New work surfaced
+none
+## Trackers to file
 none
 
 Severity:
@@ -91,7 +141,9 @@ Highlight HIGH-severity findings prominently and any spec that flips from "none"
 
 Also surface a top-level `## New work surfaced` section aggregating every per-spec worker's `## New work surfaced` bullets. Group by stem. If no spec produced HIGH findings, write the literal text `none` under the heading. This is the hook a caller like `dev` uses to auto-route HIGH drift into the changes pipeline.
 
-**MED/LOW drift handling** (updated): MED/LOW drift findings are NOT to be left in the drift-report body alone. Per `dev`'s no-loose-ends rule, the caller (dev / changes / build) MUST file each MED/LOW finding as a tracker issue at `<repo>/issues/<slug>.md` before declaring session-close — otherwise the finding lives only in chat history and every future library-wide audit re-discovers it. This skill surfaces the findings; the caller (orchestrator) files them. To make filing mechanical, the per-spec worker's drift report MUST cite the affected `file:line` precisely so the orchestrator's tracker-filing step has the references it needs.
+**MED/LOW drift handling** (updated): MED/LOW drift findings are NOT to be left in the drift-report body alone. Per `dev`'s no-loose-ends rule, the caller (dev / changes / build) MUST file each MED/LOW finding as a tracker issue at `<repo>/issues/<slug>.md` before declaring session-close — otherwise the finding lives only in chat history and every future library-wide audit re-discovers it.
+
+To make filing mechanical, the per-spec worker's return includes a `## Trackers to file` section with ready-to-write file blobs (see the worker briefing template in step 2). The orchestrator aggregates these upward into the top-level synthesis (alongside the drift report and the `## New work surfaced` list) and copies each blob to disk verbatim. No prose-to-file translation; no fields to invent. Aggregate every per-spec worker's `## Trackers to file` block into a top-level `## Trackers to file` section in the synthesis return. The orchestrator's filing step is mechanical: for each `### issues/<slug>.md` header, write the following blob to disk and `git add` it.
 
 ## When to use
 
