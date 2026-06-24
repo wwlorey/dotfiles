@@ -20,7 +20,10 @@
       "cargo*",
       "agent*",
       "open *",
-      "*face-reading/scripts/*"
+      "*face-reading/scripts/*",
+      "git push*",
+      "git fetch*",
+      "git pull*"
     ],
     "filesystem": {
       "allowWrite": [
