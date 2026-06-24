@@ -9,6 +9,30 @@ Response: {"ok": true} or {"ok": false, "error": str}, terminated by newline.
 
 Model loads lazily on first speak/save/list_voices request so launchd
 startup stays fast.
+
+Playback architecture (the failure this design defends against is "alive but
+silent": a player process that keeps running while its CoreAudio output unit
+has gone dead after sleep/wake or a default-device change, so writes still
+succeed and nothing is ever heard). Two cooperating pieces, both keeping
+PortAudio out of this process — a CoreAudio wedge must be a bounded
+subprocess kill, never a daemon-wide deadlock:
+
+  * Warm-keeper — one long-lived ffplay fed continuous silence. Its only job
+    is to hold the audio route live so per-utterance playback starts into an
+    already-powered device (no cold-start head clip during the long idle gaps
+    agent turns leave between calls). It never carries speech, so if its unit
+    silently wedges the worst case is a single clipped syllable, never silent
+    speech.
+  * Per-utterance player — each `speak` plays through its OWN fresh
+    `ffplay -autoexit`. Spawning fresh per call means it binds to the CURRENT
+    default output device, exits when playback actually drains (so completion
+    is observable), and surfaces a device-open failure via exit code / stderr.
+    A duration gate catches the instant-exit silent case. This is why speech
+    cannot go permanently silent: the audible content never rides the
+    long-lived player that wedges.
+
+A sleep/wake watcher respawns the warm-keeper on wake — the primary trigger
+for a wedged unit — with no external dependency.
 """
 
 from __future__ import annotations
@@ -16,7 +40,6 @@ from __future__ import annotations
 import fcntl
 import json
 import os
-import queue
 import signal
 import socket
 import subprocess
@@ -33,14 +56,38 @@ DEFAULT_VOICE = "bf_isabella"
 SAMPLE_RATE = 24000
 PLAYBACK_TIMEOUT = 300.0  # wall-clock cap on a single synth+play
 
-# Cadence at which the writer pushes a silence frame when no real audio is
-# queued. Each frame is small enough that ffplay's input pipe never holds
-# more than a tick of latency, so a real utterance is heard within ~40ms of
-# being enqueued, while the constant flow keeps CoreAudio out of low-power
-# state and avoids the per-utterance device cold-start that used to clip
-# the head of every speak.
-PLAYER_IDLE_TICK_S = 0.04
-SILENCE_FRAME = bytes(int(SAMPLE_RATE * PLAYER_IDLE_TICK_S) * 2)  # mono int16
+# Silence padded onto every utterance.
+#   LEAD absorbs the first I/O cycles of the output device so the opening
+#   syllable is never clipped, even though the warm-keeper already holds the
+#   device live (belt and braces for a device that switched or just woke).
+#   TAIL covers CoreAudio's residual ring buffer: ffplay -autoexit exits on
+#   input EOF, which precedes the device finishing its drain; without a tail
+#   pad the last word is lost.
+LEAD_SILENCE_S = 0.2
+TAIL_SILENCE_S = 0.4
+LEAD_SILENCE = bytes(int(SAMPLE_RATE * LEAD_SILENCE_S) * 2)  # mono int16
+TAIL_SILENCE = bytes(int(SAMPLE_RATE * TAIL_SILENCE_S) * 2)
+
+# Warm-keeper cadence: a small silence frame per tick keeps the CoreAudio
+# output unit out of low-power state. Each frame is tiny so the pipe never
+# holds more than a tick of latency.
+WARMKEEP_TICK_S = 0.04
+WARMKEEP_FRAME = bytes(int(SAMPLE_RATE * WARMKEEP_TICK_S) * 2)
+
+# Sleep/wake detection without a dependency: if a WATCH_TICK_S sleep() spans
+# far more wall-clock than requested, the machine suspended in between. Sleep/
+# wake is the primary cause of a silently-wedged unit, so on detecting it we
+# respawn the warm-keeper to rebind a fresh unit on the now-awake device.
+WATCH_TICK_S = 2.0
+SLEEP_GAP_S = WATCH_TICK_S + 5.0
+
+# Markers ffplay/CoreAudio print to stderr when the output unit fails. Their
+# presence means the device errored even if the process exited 0.
+_AUDIO_ERR_MARKERS = ("PortAudio", "AUHAL", "PaMacCore", "kAudio", "CoreAudio")
+
+FFPLAY_INPUT = [
+    "-f", "s16le", "-ar", str(SAMPLE_RATE), "-ch_layout", "mono", "-i", "pipe:0",
+]
 
 _tts = None
 _tts_lock = threading.Lock()
@@ -48,16 +95,10 @@ _tts_lock = threading.Lock()
 # every synthesis call across the whole daemon.
 _synth_lock = threading.Lock()
 
-# A single long-lived ffplay owns the audio device for the daemon's lifetime.
-# All speakers funnel PCM through _audio_queue; the writer thread drains it
-# into ffplay's stdin and pushes silence frames when idle so the device never
-# closes. PortAudio still lives entirely inside the ffplay child, so a
-# CoreAudio wedge is a bounded subprocess kill (writer detects BrokenPipe
-# and respawns), not a daemon-wide deadlock.
-_player: subprocess.Popen | None = None
-_player_lock = threading.Lock()
-_audio_queue: queue.Queue = queue.Queue()
-_writer_thread: threading.Thread | None = None
+# Warm-keeper handle. Guarded by _warm_lock so the writer thread, the sleep
+# watcher, and `reset` don't race on respawn.
+_warm: subprocess.Popen | None = None
+_warm_lock = threading.Lock()
 
 
 def get_tts():
@@ -69,111 +110,112 @@ def get_tts():
         return _tts
 
 
-def _spawn_player() -> subprocess.Popen:
+def _spawn_warmkeeper() -> subprocess.Popen:
     return subprocess.Popen(
-        [
-            "ffplay", "-nodisp", "-loglevel", "error",
-            "-f", "s16le", "-ar", str(SAMPLE_RATE),
-            "-ch_layout", "mono", "-i", "pipe:0",
-        ],
+        ["ffplay", "-nodisp", "-loglevel", "error", *FFPLAY_INPUT],
         stdin=subprocess.PIPE,
         stdout=subprocess.DEVNULL,
-        stderr=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
     )
 
 
-def _ensure_player_alive() -> subprocess.Popen:
-    """Spawn ffplay if it isn't running; return the current handle."""
-    global _player
-    with _player_lock:
-        if _player is None or _player.poll() is not None:
-            _player = _spawn_player()
-        return _player
+def _restart_warmkeeper() -> None:
+    """Tear down the current warm-keeper and spawn a fresh one.
 
-
-def _kill_player() -> None:
-    """Tear down the current ffplay so the next write spawns a fresh one.
-
-    Used by `reset` to re-initialize the audio device after a CoreAudio
-    wedge (sleep/wake, device hot-swap).
+    Used on wake and on `reset` to rebind the output unit to the live device.
     """
-    global _player
-    with _player_lock:
-        if _player is not None and _player.poll() is None:
-            _player.kill()
+    global _warm
+    with _warm_lock:
+        if _warm is not None and _warm.poll() is None:
+            _warm.kill()
             try:
-                _player.wait(timeout=2)
+                _warm.wait(timeout=2)
             except subprocess.TimeoutExpired:
                 pass
-        _player = None
+        _warm = _spawn_warmkeeper()
 
 
-def _writer_loop() -> None:
-    """Drain _audio_queue into ffplay, streaming silence when idle.
+def _warmkeeper_loop() -> None:
+    """Push a silence frame each tick so the output device stays powered.
 
-    Continuous output keeps ffplay's stdin pipe active and CoreAudio's
-    output unit out of low-power state, eliminating the per-utterance
-    cold-start that clipped the head of every speak when agent turns
-    left long silent gaps between dic calls.
+    Respawns the warm-keeper if it dies (BrokenPipe). A wedged-but-alive
+    warm-keeper is harmless — it only plays silence — and is recovered by the
+    sleep/wake watcher.
     """
-    global _player
+    global _warm
     while True:
+        with _warm_lock:
+            if _warm is None or _warm.poll() is not None:
+                _warm = _spawn_warmkeeper()
+            w = _warm
         try:
-            item = _audio_queue.get(timeout=PLAYER_IDLE_TICK_S)
-            chunks, done_event, err_holder = item
-        except queue.Empty:
-            chunks, done_event, err_holder = [SILENCE_FRAME], None, None
-
-        err = ""
-        for pcm in chunks:
-            player = _ensure_player_alive()
-            try:
-                player.stdin.write(pcm)
-                player.stdin.flush()
-            except (BrokenPipeError, OSError) as e:
-                err = f"ffplay write failed: {e}"
-                with _player_lock:
-                    if _player is player:
-                        _player = None
-                break
-
-        if done_event is not None:
-            if err_holder is not None:
-                err_holder["err"] = err
-            done_event.set()
+            w.stdin.write(WARMKEEP_FRAME)
+            w.stdin.flush()
+        except (BrokenPipeError, OSError):
+            with _warm_lock:
+                if _warm is w:
+                    _warm = None
+        time.sleep(WARMKEEP_TICK_S)
 
 
-def _ensure_writer_started() -> None:
-    global _writer_thread
-    if _writer_thread is None or not _writer_thread.is_alive():
-        _writer_thread = threading.Thread(target=_writer_loop, daemon=True)
-        _writer_thread.start()
+def _sleep_watch_loop() -> None:
+    """Respawn the warm-keeper after the machine wakes from sleep."""
+    last = time.monotonic()
+    while True:
+        time.sleep(WATCH_TICK_S)
+        now = time.monotonic()
+        if now - last > SLEEP_GAP_S:
+            _restart_warmkeeper()
+        last = now
 
 
-def _speak_via_ffplay(tts, text: str, **kwargs) -> str:
-    """Synthesize *text* with kokoro and enqueue PCM to the shared writer.
+def _play_pcm(pcm: bytes) -> str:
+    """Play one utterance through a fresh, self-terminating ffplay.
 
-    Returns "" on success or a short error string on failure. The actual
-    write to ffplay happens on the writer thread; this function waits for
-    the writer to drain the utterance before returning, so the per-call
-    JSON ack still reflects playback completion.
+    Returns "" on success or a short error string. Speech rides its own
+    per-call `ffplay -autoexit` (not the warm-keeper) so the player binds to
+    the current default device, exits when playback drains, and reports
+    device failures. The warm-keeper having held the device live means this
+    fresh player does not cold-start clip.
     """
-    chunks: list[bytes] = []
-    deadline = time.monotonic() + PLAYBACK_TIMEOUT
-    for chunk in tts.generate_stream(text, **kwargs):
-        if time.monotonic() > deadline:
-            return "playback timed out during synth"
-        pcm = (np.clip(chunk, -1.0, 1.0) * 32767.0).astype(np.int16).tobytes()
-        chunks.append(pcm)
+    payload = LEAD_SILENCE + pcm + TAIL_SILENCE
+    expected_s = len(payload) / 2 / SAMPLE_RATE
 
-    done = threading.Event()
-    err_holder = {"err": ""}
-    _audio_queue.put((chunks, done, err_holder))
+    try:
+        player = subprocess.Popen(
+            ["ffplay", "-nodisp", "-loglevel", "error", "-autoexit", *FFPLAY_INPUT],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
+        )
+    except FileNotFoundError:
+        return "ffplay not found on PATH"
 
-    remaining = max(0.5, deadline - time.monotonic())
-    if not done.wait(timeout=remaining):
-        return "playback timed out waiting for writer"
-    return err_holder["err"]
+    start = time.monotonic()
+    try:
+        _, stderr = player.communicate(input=payload, timeout=PLAYBACK_TIMEOUT)
+    except subprocess.TimeoutExpired:
+        player.kill()
+        player.wait()
+        return "playback timed out"
+    elapsed = time.monotonic() - start
+
+    err_text = (stderr or b"").decode("utf-8", "replace").strip().replace("\n", " ")
+
+    if player.returncode != 0:
+        return (f"ffplay exited {player.returncode}: {err_text[:200]}"
+                if err_text else f"ffplay exited {player.returncode}")
+
+    if any(m in err_text for m in _AUDIO_ERR_MARKERS):
+        return f"output device error: {err_text[:200]}"
+
+    # Duration gate: ffplay plays in real time, so a clip that "completed" far
+    # faster than its own length was rendered into a dead/silent unit, not
+    # heard. Catches the alive-but-silent instant-drain case.
+    if elapsed < expected_s * 0.5:
+        return (f"returned in {elapsed:.2f}s for {expected_s:.2f}s of audio; "
+                "output device likely silent")
+    return ""
 
 
 def handle(req: dict) -> dict:
@@ -181,15 +223,15 @@ def handle(req: dict) -> dict:
     if action == "ping":
         return {"ok": True}
     if action == "reset":
-        # Drop the loaded TTS instance and tear down the player so the
-        # next speak/save call rebuilds Kokoro and reopens the audio
-        # device. Fast (seconds, model is on-disk) vs the cold-start 30s
-        # of a full launchctl bounce. Held under all three locks so an
-        # in-flight synth + write finishes before the reset takes effect.
+        # Drop the loaded TTS instance and rebind the audio device by
+        # respawning the warm-keeper. Fast (seconds; model is on-disk) vs the
+        # ~30s cold-start of a full launchctl bounce. The TTS drop is held
+        # under both synth-related locks so an in-flight synth finishes first;
+        # the warm-keeper respawn takes its own lock.
         global _tts
         with _tts_lock, _synth_lock:
             _tts = None
-            _kill_player()
+        _restart_warmkeeper()
         return {"ok": True}
     if action == "list_voices":
         return {"ok": True, "voices": get_tts().list_voices()}
@@ -215,7 +257,14 @@ def handle(req: dict) -> dict:
             tts.save(text, path, **kwargs)
             return {"ok": True, "output": path}
         if action == "speak":
-            err = _speak_via_ffplay(tts, text, **kwargs)
+            chunks: list[bytes] = []
+            deadline = time.monotonic() + PLAYBACK_TIMEOUT
+            for chunk in tts.generate_stream(text, **kwargs):
+                if time.monotonic() > deadline:
+                    return {"ok": False, "error": "audio: synth timed out"}
+                pcm = (np.clip(chunk, -1.0, 1.0) * 32767.0).astype(np.int16).tobytes()
+                chunks.append(pcm)
+            err = _play_pcm(b"".join(chunks))
             if err:
                 return {"ok": False, "error": f"audio: {err}"}
             return {"ok": True}
@@ -298,9 +347,11 @@ def main() -> None:
     signal.signal(signal.SIGTERM, shutdown)
     signal.signal(signal.SIGINT, shutdown)
 
-    # Start the writer up front so ffplay and CoreAudio are warm before
-    # the first speak request arrives.
-    _ensure_writer_started()
+    # Bring the audio device up front: the warm-keeper holds it warm and the
+    # sleep watcher rebinds it on wake, so the first real speak starts into a
+    # live device.
+    threading.Thread(target=_warmkeeper_loop, daemon=True).start()
+    threading.Thread(target=_sleep_watch_loop, daemon=True).start()
 
     print(f"dic-daemon listening on {SOCKET_PATH}", flush=True)
     while True:
