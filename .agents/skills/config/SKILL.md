@@ -31,6 +31,16 @@ in Bash with the same pointer.
   Selectively-managed parents (like `.claude/`, which contains both mirrored
   config and runtime state) are NOT prefixes — they fall back to exact-file
   match only.
+- **Mutate config with the Edit/Write tools, never from Bash.** A shell write
+  — `>`/`>>` redirect, `tee`, `sed -i`, `cp`/`mv` into the file, a `python3`
+  heredoc that opens it — bypasses the redirect hook above *and* trips the
+  sandbox's write-deny on these paths, producing a confusing failure instead
+  of an edit. Make the change in the repo source with Edit/Write, then deploy.
+  A PreToolUse hook at `.claude/hooks/redirect-bash-config-writes.py` denies
+  such Bash writes to managed paths with this same pointer; to READ a config
+  via Bash is fine, but prefer the Read tool. When you add a new fully-managed
+  prefix, mirror it into that hook's `MANAGED_PREFIXES` too (it keeps its own
+  list, independent of the Edit-side hook).
 
 ## Editing skills
 

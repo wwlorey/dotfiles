@@ -283,6 +283,10 @@
           {
             "type": "command",
             "command": "python3 $HOME/.claude/hooks/redirect-bash-to-mcp.py"
+          },
+          {
+            "type": "command",
+            "command": "python3 $HOME/.claude/hooks/redirect-bash-config-writes.py"
           }
         ]
       },
