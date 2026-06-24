@@ -18,7 +18,7 @@ Decide how many workers fit the task — the count doesn't change whether you co
 - **Single worker** — one **focused** delegation. Brief per the checklist below and call Agent.
 - **Parallel fan-out (2+ workers)** — task splits into independent units that don't share state. Emit multiple Agent calls in one message; they run concurrently. Examples: review N files across distinct concerns, research M competing approaches, draft + adversarial critique pair, sweep K targets.
 - **Sequential dependency** — worker #2's briefing needs worker #1's output. Brief them one at a time.
-- **Ralph loop** — run a worker repeatedly on the same task until a stop condition is met (build until tests pass, refine a spec until complete, fix until clean). Sequential, not parallel: each iteration's briefing reflects the state the previous worker left behind. Define the stop condition explicitly before the first spawn; cap iterations to avoid runaway loops.
+- **Ralph loop** — run a worker repeatedly on the same task until a stop condition is met (build until tests pass, refine a spec until complete, fix until clean). Sequential, not parallel: each iteration's briefing reflects the state the previous worker left behind. Define the stop condition explicitly before the first spawn; cap iterations to avoid runaway loops. Spawn each iteration **synchronously** — never `run_in_background`. An async ralph iteration whose terminal notification never arrives leaves the orchestrator silent while the worker is stranded, and the next iteration spawns on top of an unresolved one.
 
 Do the work yourself (no spawn) when:
 
@@ -71,13 +71,18 @@ When uncertain between the two, **verify the artifact** — git log, tree state,
 
 ## Detecting and recovering from dormant workers
 
-A separate failure mode from interim-snapshot confusion: the worker emits text without a pending tool call (often gate output like `/code-review` findings, or a deliberation snippet that *looks* like a conclusion), the harness ends its turn, and the worker goes dormant. Completion notifications don't wake a dormant worker. The notification looks `status: completed` but the `result` text doesn't match the structured return format you briefed for.
+A separate failure mode from interim-snapshot confusion: the worker emits text without a pending tool call (often gate output like `/code-review` findings, or a deliberation snippet that *looks* like a conclusion), the harness ends its turn, and the worker goes dormant. Completion notifications don't wake a dormant worker.
 
-**Detection** — when a `status: completed` notification arrives whose `result` does NOT match your briefed structured format:
+Two variants surface this:
+
+- **Bad-format notification.** A `status: completed` notification arrives whose `result` text doesn't match the structured return format you briefed for.
+- **Missing notification.** The Agent spawn returned `Async agent launched successfully` (instead of a synchronous structured result) AND no follow-up `task-notification` has arrived within ~5–10 minutes. The orchestrator is now on the hook to receive a terminal notification carrying the worker's structured return — if it never arrives, the worker is a candidate dormancy regardless of how active the artifact looks. Do NOT rationalize a stream of bookkeeping commits (gate-finding backfills, multi-iteration claim chains) as proof of progress — those can keep landing while the worker is stranded mid-iteration without having returned its terminal block. "I haven't heard back from the worker" is itself the trigger, equivalent to a bad-format notification arriving.
+
+**Detection** (either variant):
 
 1. Verify the artifact (git log, tree state, files written) against the plan.
-2. If the artifact is complete → the worker actually finished but emitted bad-format text. Extract what you need from the artifact and move on.
-3. If the artifact is incomplete → check whether the worker's output-file size has grown over a meaningful interval (~5 minutes). If stable, the worker is dormant. If still growing, it's mid-execution; wait for the next notification.
+2. If the artifact is complete → the worker actually finished but emitted bad-format text (or the notification got lost in transit). Extract what you need from the artifact and move on.
+3. If the artifact is incomplete → stat the worker's JSONL output file. If the mtime is older than ~5 minutes, the worker is dormant. If still growing, it's mid-execution; wait for the next notification, or `SendMessage` to ask for a status update.
 
 **Recovery decision tree (cheapest option first — do not default to the fresh spawn):**
 

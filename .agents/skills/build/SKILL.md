@@ -13,7 +13,7 @@ This is a pipeline. The conventions below are inlined here, not pulled in by ref
 
 Stop condition: `issues/ready` returns no slugs **OR** you have completed 30 iterations. If `ready` returns no slugs but `grep -l '^status: open$' issues/*.md` finds open issues, report "backlog blocked by unresolved deps" rather than "backlog drained" in the on-completion summary.
 
-Each iteration is one **sequentially** spawned worker via the `orchestrate` skill (Agent-tool spawn). The loop never runs two iterations in parallel. Fresh context per iteration. The worker's briefing covers exactly one issue.
+Each iteration is one **sequentially** spawned worker via the `orchestrate` skill — a synchronous Agent call. Never `run_in_background`: the loop is sequential by definition, and an async spawn whose terminal notification never arrives leaves the orchestrator silent while the worker is dead. The loop never runs two iterations in parallel. Fresh context per iteration. The worker's briefing covers exactly one issue.
 
 Before constructing the worker briefing, check your invocation context for caller-supplied policy (typically supplied by `dev`):
 
@@ -68,7 +68,14 @@ Worker briefing template:
 >
 > You are a worker, not an orchestrator. Return text only. Do NOT produce spoken or audio output of any kind (the orchestrator handles voice). Do NOT spawn further workers via the Agent tool. Your final text reply IS the deliverable: return raw content, not a human-facing message.
 
-After the worker returns, check the stop condition:
+After the worker returns, before any other check, audit the artifact against the spawn:
+
+- `git log <HEAD-before-this-iteration>..HEAD` must show exactly one `claim <slug>` commit and at least one matching commit that closes the same slug (frontmatter `status: closed`).
+- `grep -l '^status: in_progress$' issues/*.md` must return empty — no orphaned claims.
+
+If either check fails, the worker either went dormant mid-implementation OR violated the one-issue-per-spawn scope by trying to run multiple iterations inside one context (claim commits stacking up with no matching closes is the diagnostic signature of both). PAUSE the loop and apply orchestrate's dormant-worker recovery decision tree — inline trivial mechanical remainders, `SendMessage` to resume non-trivial ones, fresh recovery-scoped spawn only as a last resort. Resume the loop only after every orphaned `in_progress` is in a terminal state. Do NOT spawn iteration N+1 on top of an unresolved iteration N.
+
+Then check the stop condition:
 - If the worker reported "backlog empty" → stop.
 - If you've spawned 30 workers → stop and report the cap was hit.
 - Otherwise, evaluate the **mid-iteration checkpoint** before spawning the next iteration. Look in your invocation context for a `## Per-batch gate policy (from dev)` section — its bullets are the gates and the `Mid-batch checkpoint:` sub-section names the trigger conditions (typically "every 5 iterations since the last per-batch run" and "immediately after any iteration that touched a high-risk surface"). If the conditions are met, fire the gates before spawning the next iteration.
