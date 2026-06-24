@@ -168,7 +168,17 @@ When the impl worker returns with commits and the exit condition met, mark the i
 
 Before dequeueing the next item, **check the tree is clean** (`git status`). Worker died mid-implement → see Edge cases.
 
-**Mid-batch checkpoint.** Before dequeueing, check whether per-batch gates should fire now. Look in your invocation context for a `## Per-batch gate policy (from dev)` section — its bullets are the gates and the `Mid-batch checkpoint:` sub-section names the trigger conditions (typically "every 5 items closed since the last per-batch run" and "immediately after any item that touched a high-risk surface"). If the conditions are met, fire the gates before dequeueing the next item. A gate-failure is handled by auto-spawning a remediation worker (scoped strictly to the failure; do not absorb unrelated work) and continuing — surface the failure + fix in the on-completion summary. If no policy section is present, skip the checkpoint and dequeue as today.
+**Mid-batch checkpoint.** Before dequeueing, check whether per-batch gates should fire now. Look in your invocation context for a `## Per-batch gate policy (from dev)` section — its bullets are the gates and the `Mid-batch checkpoint:` sub-section names the trigger conditions (typically "every 5 items closed since the last per-batch run" and "immediately after any item that touched a high-risk surface"). If the conditions are met, fire the gates before dequeueing the next item.
+
+When firing per-batch gates, pass the slate's commit range (the SHA range covering items closed since the slate started) in each gate-worker briefing AND require the worker to tag every finding INTRODUCED-BY-SLATE or PRE-EXISTING with a one-line git-log/git-blame justification. Findings handled per the routing rule below.
+
+**Per-finding routing (per `dev`'s gate-failure recovery + no-loose-ends rule):**
+- HIGH severity → auto-spawn a remediation worker (scoped strictly to the failure; do not absorb unrelated work) and continue — surface the failure + fix in the on-completion summary.
+- MED severity tagged INTRODUCED-BY-SLATE → auto-spawn a remediation worker (slate-introduced regression; same treatment as HIGH).
+- MED severity tagged PRE-EXISTING → file as a tracker issue at `<repo>/issues/<slug>.md` (status: open, mirror the project's existing issue format) before dequeueing the next item — do NOT remediate. Surface in the on-completion summary.
+- LOW severity (any tag) → file as a tracker issue (same shape as PRE-EXISTING MED). Do NOT remediate. Surface in the on-completion summary.
+
+The "file as tracker" filings can land in a single batched commit per mid-batch round (e.g. `chore(issues): file N mid-batch <round> gate findings`). Each filing is small (~50 lines markdown). If no policy section is present, skip the checkpoint and dequeue as today.
 
 ### 4. Throughout: communicate the state
 
@@ -182,7 +192,10 @@ When all items are `committed` or `blocked`:
 - Surface any blocked items with the reason.
 - Surface any items whose worker reported push failure.
 - **Aggregate new work surfaced.** Collect the `## New work surfaced` block from every impl worker's return AND every remediation worker's return (remediation workers spawned at mid-batch / session-close checkpoints are scoped impl workers and contribute too). Surface the union under a top-level `## New work surfaced` section in your own return — slug + one-line description per item, grouped by which worker reported it. This is the hook a caller like `dev` uses to detect "more work has surfaced from this run" for session-close decisions.
-- **Session-close gates.** Look in your invocation context for a `## Session-close gate policy (from dev)` section. If present, AND the aggregated `## New work surfaced` section contains nothing that would queue more items into the current session, fire those session-close gates now. Surface findings in the on-completion summary. A failing session-close gate is handled by auto-spawning a remediation worker — surface failure + fix in the summary. If no session-close policy section is present, skip.
+- **Session-close gates.** Look in your invocation context for a `## Session-close gate policy (from dev)` section. If present, AND the aggregated `## New work surfaced` section contains nothing that would queue more items into the current session, fire those session-close gates now. Surface findings in the on-completion summary.
+  - Pass the slate's full commit range in each gate-worker briefing and require INTRODUCED-BY-SLATE / PRE-EXISTING tagging per the mid-batch routing rule above.
+  - Apply the same routing: HIGH → remediation; MED + INTRODUCED → remediation; MED + PRE-EXISTING → file as tracker; LOW → file as tracker.
+  - **No loose ends.** Before declaring the slate complete, every surfaced finding from every gate run this session (per-item + mid-batch + session-close) MUST be in a terminal state: fixed (commit landed), filed as `<repo>/issues/<slug>.md` (open or won't-fix), or explicitly deferred by the user. "Surfaced in the report as prose only" is NOT a terminal state — findings in chat alone are re-discovered by every future gate run, burning cycles forever. The orchestrator (this skill) files the trackers itself (not delegated to a worker); a single `chore(issues): file N session-close gate followups` commit covers them.
 - Do not silently swallow a blocker.
 
 ## Hard rules

@@ -109,7 +109,11 @@ The shape `dev` defines; the orchestrating pipeline (`changes` or `build`) does 
 2. **Continue the lifecycle.** Do not pause for user input. The fix is part of the work.
 3. **Record the failure + fix.** In the end-of-turn report (which `dev` owns) and in the close-comment of whatever issue the fix landed against. Explicit audit trail.
 
-Special case for `audit-specs`: HIGH-severity drift findings get remediation workers (auto-routed into `changes`). MED/LOW drift goes into the on-completion report only — surface, don't block.
+**MED routing — introduced vs exposed.** A MED-severity finding from any gate routes to a remediation worker IF it's a regression *introduced* by the current slate (the finding cites files or lines that appear in the slate's commit range — `git log <baseline>..HEAD -- <file>` returns ≥1 commit, OR `git blame <baseline>..HEAD <file>` shows the line was modified). Otherwise, it's *pre-existing drift the gate exposed* — file it as a tracker issue (see "No loose ends" rule under Session-close detection) and surface it in the on-completion report. HIGH always remediates. LOW always files-and-surfaces (no remediation).
+
+Audit-specs MED/LOW drift was historically surface-only. That carve-out is folded into the general policy above — spec drift is now subject to the introduced/exposed test like other gate findings.
+
+When firing per-batch or session-close gate workers, the orchestrator MUST pass the slate's commit range in the worker briefing AND request each finding be tagged INTRODUCED-BY-SLATE or PRE-EXISTING with the git-log/git-blame evidence. The orchestrator uses the tag to route; if a worker omits the tag, the orchestrator runs the git check itself before routing.
 
 ## AFK / autonomy rules
 
@@ -147,6 +151,18 @@ After the new invocation returns, re-evaluate all four session-close conditions 
 **When condition 4 isn't yet stable** — a remediation worker's findings queued more work, which may surface more findings — let the loop run: the lifecycle's normal aggregation rolls the new findings into the next on-completion return, which feeds condition 2 above.
 
 Both the condition-2 re-invocation loop and the condition-4 remediation cascade share a combined cap of 5 iterations to prevent runaway. If the loop hasn't stabilized by then, stop and report `session-close did not stabilize` in the end-of-turn report along with the unresolved items.
+
+### No loose ends rule
+
+Before declaring session-close stable, every surfaced finding from every gate run this session (per-item, mid-batch, session-close) MUST be in one of three terminal states:
+
+- **Fixed** — a commit landed addressing it (either the original impl worker, an auto-spawned remediation worker, or an orchestrator-inlined edit for trivial-mechanical remainders).
+- **Filed as a tracker issue** — an `issues/<slug>.md` file exists naming the finding, the file:line citation, the proposed fix, severity, and a `status: open` (or `status: closed` with rationale if won't-fix) frontmatter. Project's issue-format conventions apply (mirror an existing tracker in the same family).
+- **Explicitly deferred by the user** — the user said "skip that one" / "park it" / similar.
+
+**"Surfaced in the end-of-turn report as prose only" is NOT a terminal state.** Findings in chat history alone are lost when the session compacts; they'll be re-discovered by every future gate run that walks the same surface, burning gate cycles forever. The orchestrator MUST file a tracker for every MED/LOW the introduced/exposed policy above left in the "file as tracker" path (and for every spec-drift finding from audit-specs runs) before session-close stabilizes.
+
+This filing step is part of the orchestrator's work — not delegated to a worker. The filings themselves can land in a single batched commit (e.g. `chore(issues): file N session-close gate followups`). Each tracker file is small (~50-100 lines of markdown); even 10-15 of them is cheaper than the cost of every future audit run re-walking the drift.
 
 Once stabilized, emit the end-of-turn report (per the `end-of-turn-report` skill — orchestrators speak; workers do not).
 

@@ -89,7 +89,9 @@ Aggregate the workers' findings into a single table sorted by drift level. For e
 
 Highlight HIGH-severity findings prominently and any spec that flips from "none" to anything else since the last audit (if a prior audit log exists). Present to the user (or upward to the caller — e.g. `dev`). **Do not auto-revise.** The decision on revisions lives with the caller; they can hand the findings to `changes` or a per-spec revision pipeline to apply edits.
 
-Also surface a top-level `## New work surfaced` section aggregating every per-spec worker's `## New work surfaced` bullets. Group by stem. If no spec produced HIGH findings, write the literal text `none` under the heading. This is the hook a caller like `dev` uses to auto-route HIGH drift into the changes pipeline (MED/LOW drift stays in the drift-report body for human review).
+Also surface a top-level `## New work surfaced` section aggregating every per-spec worker's `## New work surfaced` bullets. Group by stem. If no spec produced HIGH findings, write the literal text `none` under the heading. This is the hook a caller like `dev` uses to auto-route HIGH drift into the changes pipeline.
+
+**MED/LOW drift handling** (updated): MED/LOW drift findings are NOT to be left in the drift-report body alone. Per `dev`'s no-loose-ends rule, the caller (dev / changes / build) MUST file each MED/LOW finding as a tracker issue at `<repo>/issues/<slug>.md` before declaring session-close — otherwise the finding lives only in chat history and every future library-wide audit re-discovers it. This skill surfaces the findings; the caller (orchestrator) files them. To make filing mechanical, the per-spec worker's drift report MUST cite the affected `file:line` precisely so the orchestrator's tracker-filing step has the references it needs.
 
 ## When to use
 
