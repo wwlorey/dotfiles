@@ -24,7 +24,8 @@
       "*face-reading/scripts/*",
       "git push*",
       "git fetch*",
-      "git pull*"
+      "git pull*",
+      "just deploy*"
     ],
     "filesystem": {
       "allowWrite": [
