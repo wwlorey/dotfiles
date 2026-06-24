@@ -1,5 +1,6 @@
 {
   "autoMemoryEnabled": false,
+  "tui": "fullscreen",
   "statusLine": {
     "type": "command",
     "command": "sh $HOME/.claude/statusline.sh"
