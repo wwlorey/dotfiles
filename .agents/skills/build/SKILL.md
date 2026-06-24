@@ -17,7 +17,7 @@ You (the agent running in the main loop, this turn) own the loop. The worker (sp
 2. Re-read `issues/<slug>.md` and confirm `status: open`. If already `in_progress`, do not work it; report the stale claim and stop.
 3. Record `HEAD-before-this-iteration` for the post-iteration audit in step 7.
 4. Check your invocation context for a caller-supplied `## Per-item gate policy (from dev)` section — its bullets populate the worker briefing's "Required verification gates" section (per the `orchestrate` skill's 7th briefing-checklist item). If absent, omit that section from the briefing.
-5. Spawn the iteration worker via a **synchronous** Agent call. Never `run_in_background` — the loop is sequential by definition, and an async spawn whose terminal notification never arrives leaves you silent while the worker is dead. Briefing template below under "## Iteration worker".
+5. Spawn the iteration worker via a **synchronous** Agent call. Never `run_in_background` — the loop is sequential by definition, and an async spawn whose terminal notification never arrives leaves you silent while the worker is dead. Briefing template below under "## Iteration worker". Substitute the pre-iteration HEAD recorded in step 3 into the briefing's `Pre-iteration HEAD:` field so the worker can scope backpressure per `backpressure`'s "Per-iteration scoping" section.
 6. Wait for the worker's structured return.
 7. Run the **post-iteration audit** (below). If it fails, PAUSE the loop, recover, resume.
 8. Apply **per-finding routing** for any gate output surfaced this iteration (below).
@@ -61,6 +61,8 @@ Spawn one worker per iteration via the `orchestrate` skill. Each worker handles 
 >
 > **Slug:** `<SLUG>`
 >
+> **Pre-iteration HEAD:** `<PRE_ITERATION_HEAD>` (the SHA of HEAD before your claim commit; pass this to `backpressure` as the diff range for per-iteration scoping)
+>
 > **Scope.** You may touch any file in the repo required to implement this single issue, including specs the issue's `## Doc refs` name and any ripple neighbors. **You may NOT claim another issue from `./issues/ready`. You may NOT iterate on a second slug inside this spawn.** You may not absorb unrelated pre-existing failures into your commits — log a separate `<repo>/issues/<slug>.md` for them and continue. You may not commit with backpressure failures unaddressed.
 >
 > **Exit condition** (verifiable, all three must hold):
@@ -82,7 +84,7 @@ Spawn one worker per iteration via the `orchestrate` skill. Each worker handles 
 >    - **Update affected specs alongside code in the same commit.** Specs are SOURCE OF TRUTH at `<repo>/specs/<stem>.md`. Transitions like `approved` → `implemented` happen here when applicable.
 >    - If you discover pre-existing spec drift while implementing, log a separate `<repo>/issues/<slug>.md` for it — do not absorb the drift into this claim. Keep the change focused.
 > 5. Write tests (unit, property, or integration — pick what fits). No placeholder tests.
-> 6. Consult the `backpressure` skill and run full backpressure for the project's stack. Fix every failure on your own changes. For pre-existing trivial failures (lint warnings, formatter drift, one-line type-fix), fix and continue. For pre-existing non-trivial failures (a real failing test on code you didn't touch), log a new `<repo>/issues/<slug>.md` and leave alone — do not absorb. Re-run backpressure until clean.
+> 6. Consult the `backpressure` skill. Pass the `Pre-iteration HEAD` value (above) as the diff range so backpressure runs in per-iteration scoped mode per its "Per-iteration scoping" section. The skill scopes test invocation to the reverse-dep closure of touched crates, runs workspace-cheap gates as-is, and falls back to full-workspace automatically if the diff hits a workspace-trigger file. Fix every failure on your own changes. For pre-existing trivial failures (lint warnings, formatter drift, one-line type-fix), fix and continue. For pre-existing non-trivial failures (a real failing test on code you didn't touch), log a new `<repo>/issues/<slug>.md` and leave alone — do not absorb. Re-run backpressure until clean.
 > 7. Run any **Required verification gates** named in the section below (the section is omitted entirely if no caller policy applied). Treat a failing gate the same as a failing backpressure check — fix the underlying issue or revert. If the fix touches code, re-run step 6 before proceeding.
 > 8. Close: edit frontmatter `status: in_progress` → `status: closed`. Add a `## Comments` entry summarizing what was done.
 > 9. Commit the implementation + spec updates + closure as one logical change (formatter residue may be a separate commit). Push.

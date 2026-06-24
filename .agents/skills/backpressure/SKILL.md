@@ -59,6 +59,35 @@ Available references:
 - `references/frontend.md` — TypeScript / React / Vite / Tailwind
 - `references/tauri.md` — Tauri desktop apps
 
+## Per-iteration scoping (when called from a ralph-loop pipeline)
+
+When a pipeline like `build` calls backpressure as part of one iteration in a loop over many issues, full-workspace runs become wasteful. A per-batch or session-close gate in the same pipeline is the safety net for cross-crate regressions; per-iteration verification can scope down to what the iteration actually touched.
+
+**Inputs.** The caller pipeline records the iteration's pre-spawn HEAD and passes it (or a diff range) to backpressure. From `git diff --name-only <pre-iteration-HEAD>..HEAD`, you have the iteration's touched-file list.
+
+**Algorithm.**
+
+1. **Workspace-trigger escape hatch.** If any touched file is workspace-level — workspace manifest, lockfile, toolchain pin, dependency-policy file, top-level task-runner (`justfile` / `Makefile`), project scripts referenced from pre-commit/pre-push, top-level `.cargo/config.toml` or `package.json` — run full-workspace backpressure. The escape hatch is mandatory because these files affect every crate / package.
+2. **Reverse-dep closure scoping.** Otherwise, identify the touched units of work for the stack (Rust workspace crates, pnpm workspace packages, etc.). For each, compute the **reverse-dependency closure** — every unit that depends on a touched unit, transitively. Run tests for that closure only.
+3. **Workspace-cheap gates always run.** Format check, lockfile audit (if the lockfile didn't change), workspace-level lint when it's already cheap-paid (pre-commit will re-run it anyway), spec validation, top-level entitlement / manifest / config sanity checks. Test invocation is the only thing being scoped.
+
+**Per-stack reverse-dep computation.**
+
+- **Rust workspace:** `cargo metadata --format-version=1 --no-deps` returns each workspace package's dependencies. Compute reverse edges from those entries. Then `cargo test -p <crate1> -p <crate2> ...` runs only the closure.
+- **pnpm workspace:** `pnpm-workspace.yaml` + each package's `dependencies` + `workspace:` protocol mentions. `pnpm --filter <pkg1> --filter <pkg2>... test`.
+- **Single-package projects:** scoping doesn't apply; run full backpressure.
+
+If the project ships a helper script (e.g. `scripts/scope-test-crates.sh` that takes a diff range and prints the test-target list), prefer it — the script encodes the project's correctness boundaries authoritatively. If none exists, compute the closure inline from `cargo metadata` (Rust) or the workspace manifest (frontend).
+
+**When per-iteration scoping does NOT apply.** Run full-workspace:
+
+- Per-batch or session-close gates in the calling pipeline — the pipeline itself invokes these explicitly with the full-workspace expectation.
+- A standalone backpressure call (no caller pipeline).
+- An explicit "is this ready to ship / merge?" call.
+- When the workspace-trigger escape hatch fires (step 1 above).
+
+**Caller responsibility.** The caller pipeline (`build`, `changes`) must pass the pre-iteration HEAD or diff range when invoking backpressure for per-iteration verification. Without that input, scoping cannot run and backpressure falls back to full-workspace. The pipeline should also explicitly request per-iteration mode in its invocation context (otherwise full-workspace is the safe default).
+
 ## Spec-compliance check
 
 When a code change touches an `implemented`-status spec — either directly editing the spec or modifying code the spec describes — run a spec-compliance check before reporting done. Any `MISSING` finding fails backpressure. This is the structural defense against visually-unimplemented spec items: spec promises a UI element (a control, a label, a section), implementation drops it, no other test catches the gap.
