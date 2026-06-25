@@ -22,9 +22,9 @@ You (the agent running in the main loop, this turn) own the loop. The worker (sp
 7. Run the **post-iteration audit** (below). If it fails, PAUSE the loop, recover, resume.
 8. Apply **per-finding routing** for any gate output surfaced this iteration (below).
 9. Evaluate the **mid-iteration checkpoint** for per-batch gates from `dev`'s policy (below).
-10. Check the stop condition: backlog empty OR 30 iterations completed → stop and emit the on-completion report. Otherwise loop back to step 1.
+10. Check the stop condition: backlog empty OR 100 iterations completed → stop and emit the on-completion report. Otherwise loop back to step 1.
 
-Stop condition (canonical): `./issues/ready` returns no slugs, OR 30 iterations completed.
+Stop condition (canonical): `./issues/ready` returns no slugs, OR 100 iterations completed.
 
 ### Post-iteration audit
 
