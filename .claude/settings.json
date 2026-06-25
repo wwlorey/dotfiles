@@ -256,6 +256,10 @@
           {
             "type": "command",
             "command": "python3 $HOME/.claude/hooks/require-voice-report.py"
+          },
+          {
+            "type": "command",
+            "command": "python3 $HOME/.claude/hooks/check-orphaned-claims.py"
           }
         ]
       }

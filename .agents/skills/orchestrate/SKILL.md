@@ -92,6 +92,16 @@ Two variants surface this:
 
 The fresh-spawn option is a LAST resort. It discards the worker's hard-won context and costs the most. Try inline and `SendMessage` first.
 
+### Harness enforcement (Stop hook)
+
+The missing-notification rule above is enforced by `~/.claude/hooks/check-orphaned-claims.py`, a Stop hook that fires every time the orchestrator tries to end a turn. When the cwd has an `issues/` dir (per the `issues` skill convention) AND any `issues/<slug>.md` has `status: in_progress` AND the most-recent commit mentioning that slug is older than 10 minutes AND no `ScheduleWakeup` tool call has fired in the current turn's transcript, the hook blocks the stop with a recovery prompt naming three valid responses:
+
+1. **Inline-close** — recover staged work, commit, push, flip `status: in_progress` → `closed`. The hook's check passes once the status flips.
+2. **`ScheduleWakeup`** — schedule a 15-minute wake-up (recommended cadence) that re-enters the orchestration to re-check. The hook allows stop once the wake-up call is in this turn's transcript.
+3. **Unclaim** — flip `in_progress` → `open` with a `## Comments` note, commit + push. A future iteration can re-claim cleanly.
+
+The hook fails open on parse error and allows the second Stop attempt when `stop_hook_active: true` (so a deliberate defer-despite-orphans is always possible — the block message remains in the transcript as the audit trail). This is why the prose rule above remains the source of truth: the hook is a forcing function, not the policy itself.
+
 ## Synthesis and end-of-turn
 
 After workers return:
