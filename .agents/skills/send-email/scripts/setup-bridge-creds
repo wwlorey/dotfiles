@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+# setup-bridge-creds — create or rotate the sops-encrypted ProtonMail Bridge
+# connection credentials used by the send-email skill. Run interactively in a
+# real terminal:
+#
+#     bash ~/.agents/skills/send-email/scripts/setup-bridge-creds
+#
+# The password is read without echo; the plaintext lives only in a temp file
+# removed on exit; the encrypted dotenv is written into the dotfiles repo
+# (encrypt-to your age recipient) so it can be committed and deployed with
+# `save-config`.
+set -euo pipefail
+
+DOTFILES="${DOTFILES:-$HOME/Repos/dotfiles}"
+AGE_KEY="$HOME/.config/sops/age/keys.txt"
+OUT="$DOTFILES/.config/mail/bridge.env"
+
+command -v sops >/dev/null 2>&1 || { echo "sops not found" >&2; exit 1; }
+command -v age-keygen >/dev/null 2>&1 || { echo "age-keygen not found" >&2; exit 1; }
+[ -f "$AGE_KEY" ] || { echo "age key not found at $AGE_KEY" >&2; exit 1; }
+[ -d "$DOTFILES" ] || { echo "dotfiles repo not found at $DOTFILES (set DOTFILES=)" >&2; exit 1; }
+
+recipient="$(age-keygen -y "$AGE_KEY")"
+
+read -r -p "Bridge login address (SMTP username): " smtp_user
+read -r -s -p "Bridge password: " smtp_pass; echo
+read -r -p "SMTP host [127.0.0.1]: " smtp_host; smtp_host="${smtp_host:-127.0.0.1}"
+read -r -p "SMTP port [1025]: " smtp_port; smtp_port="${smtp_port:-1025}"
+read -r -p "Default From address (optional, blank to skip): " mail_from
+
+[ -n "$smtp_user" ] && [ -n "$smtp_pass" ] || { echo "username and password are required" >&2; exit 1; }
+
+tmp="$(mktemp "${TMPDIR:-/tmp}/bridge-env.XXXXXX")"
+trap 'rm -f "$tmp"' EXIT
+{
+  echo "MAIL_SMTP_HOST=$smtp_host"
+  echo "MAIL_SMTP_PORT=$smtp_port"
+  echo "MAIL_SMTP_USER=$smtp_user"
+  echo "MAIL_SMTP_PASS=$smtp_pass"
+  [ -n "$mail_from" ] && echo "MAIL_FROM=$mail_from"
+} >"$tmp"
+
+mkdir -p "$(dirname "$OUT")"
+sops --encrypt --age "$recipient" --input-type dotenv --output-type dotenv "$tmp" >"$OUT"
+
+echo "Wrote encrypted bridge credentials to $OUT"
+echo "Next: save-config"
