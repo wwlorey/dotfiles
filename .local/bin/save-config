@@ -22,13 +22,20 @@ brew list --installed-on-request > "$brewPacks"
 brew list --cask > "$brewCasks"
 cat "/Users/william/Library/Application Support/com.pais.handy/settings_store.json" > "$handySettings"
 
-dic_plist="$HOME/Library/LaunchAgents/co.lorey.dic-daemon.plist"
-dic_target="gui/$(id -u)/co.lorey.dic-daemon"
-if [[ -f "$dic_plist" ]]; then
-    if launchctl print "$dic_target" >/dev/null 2>&1; then
-        launchctl kickstart -k "$dic_target"
-    else
-        launchctl enable "$dic_target" 2>/dev/null || true
-        launchctl bootstrap "gui/$(id -u)" "$dic_plist"
+# Load any co.lorey.* launch agent that isn't loaded yet, so deploying picks up
+# the cron/daemon jobs (jms-weekly, jms-chat, dic-daemon, …) on a fresh machine
+# without a manual launchctl step. Already-loaded jobs are left alone — calendar
+# jobs must NOT be force-run on every deploy.
+for plist in "$HOME"/Library/LaunchAgents/co.lorey.*.plist; do
+    [[ -f "$plist" ]] || continue
+    target="gui/$(id -u)/$(basename "$plist" .plist)"
+    if ! launchctl print "$target" >/dev/null 2>&1; then
+        launchctl enable "$target" 2>/dev/null || true
+        launchctl bootstrap "gui/$(id -u)" "$plist"
     fi
-fi
+done
+
+# dic-daemon is a long-running daemon: restart it on every deploy so it picks up
+# code changes (the others are short-lived per-fire scripts that don't need it).
+dic_target="gui/$(id -u)/co.lorey.dic-daemon"
+launchctl print "$dic_target" >/dev/null 2>&1 && launchctl kickstart -k "$dic_target"
