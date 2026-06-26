@@ -6,7 +6,8 @@
     "command": "sh $HOME/.claude/statusline.sh"
   },
   "env": {
-    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1",
+    "PROTECTED_DIRS": "${HOME}/Library/CloudStorage/ProtonDrive-william@lorey.co-folder:${HOME}/Sync:${HOME}/.ssh:${HOME}/.local/bin"
   },
   "sandbox": {
     "enabled": true,

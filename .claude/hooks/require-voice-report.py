@@ -6,11 +6,16 @@ every time control returns to the user. That rule lived only in a skill the
 agent had to *remember* to follow, so it failed intermittently. This hook
 moves enforcement into the harness.
 
-Registered under `Stop` ONLY — never `SubagentStop`. The `Stop` event fires
-for the main agent's turn; `SubagentStop` fires for Agent-tool workers. The
-orchestrate skill is explicit that workers must NOT speak ("Orchestrators
-speak; workers do not"), so leaving `SubagentStop` unregistered means workers
-are structurally never gated. No per-skill logic needed.
+Only the main agent is gated — workers must NOT speak ("Orchestrators speak;
+workers do not", per the orchestrate skill). Two layers enforce that:
+
+1. Registered under `Stop`, not `SubagentStop`. Classic Agent-tool workers fire
+   `SubagentStop`, so they are never reached here.
+2. Teammate sessions (spawned under `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`) are
+   full sessions that fire `Stop` like the main agent, so layer 1 does not catch
+   them. They are identified instead by an `{"type": "agent-setting"}` entry in
+   their transcript (the recorded subagent type) — a marker the main session's
+   transcript never carries. When that marker is present, this hook no-ops.
 
 Logic: since the last genuine user prompt, did the assistant make a *speak-now*
 run_dic call (the voice TTS tool, called WITHOUT an `output` param)? A
@@ -97,6 +102,12 @@ def main() -> None:
                 entries.append(json.loads(line))
             except json.JSONDecodeError:
                 continue
+
+    # Teammate session (agent-teams worker): never gate. Its transcript carries
+    # an `agent-setting` entry recording the subagent type; the main session's
+    # never does. Workers do not speak.
+    if any(e.get("type") == "agent-setting" for e in entries):
+        return
 
     # Find the most recent genuine user prompt; scan everything after it.
     last_user = -1
