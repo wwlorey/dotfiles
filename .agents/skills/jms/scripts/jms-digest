@@ -1,0 +1,151 @@
+#!/usr/bin/env bash
+# jms-digest — fetch the newest Jack Mallers Show episode, summarize it, and
+# email the digest via the local ProtonMail Bridge.
+#
+# Vendor primitive: the summarization step calls `claude -p` (capability: LLM
+# summarization of a transcript). A harness port rewrites only that one call.
+#
+# Usage:
+#   jms-digest            # cron mode: send only if a new episode exists
+#   jms-digest --force    # always summarize+send the latest, print to stdout
+#   jms-digest --dry-run  # build the email but print instead of sending
+set -euo pipefail
+
+# Full episodes are live-streamed, so they live under /streams (not /videos,
+# which carries Shorts and clips).
+CHANNEL_URL="https://www.youtube.com/@thejackmallersshow/streams"
+MIN_DURATION=1200 # seconds (20 min) — skip Shorts and clips
+SCAN_COUNT=12     # how many recent uploads to inspect
+TAB=$'\t'         # yt-dlp --print prints the template verbatim; use a real tab
+
+STATE_DIR="$HOME/.local/state/jms"
+STATE_FILE="$STATE_DIR/last-sent"
+SENDER="noreply@lorey.co"
+RECIPIENT="jms@lorey.co"
+# Delivery is handled by the shared send-email skill.
+SEND_EMAIL="$HOME/.agents/skills/send-email/scripts/send-email.py"
+FETCH_TRANSCRIPT="$HOME/.agents/skills/jms/scripts/fetch-transcript"
+# Email-chat shares state here: the cached transcript (so a reply can be answered
+# without refetching) and the reply-token (so the digest's Reply-To is gated).
+CHAT_STATE_DIR="$HOME/.local/state/jms-chat"
+
+FORCE=0
+DRY_RUN=0
+for arg in "$@"; do
+  case "$arg" in
+    --force) FORCE=1 ;;
+    --dry-run) DRY_RUN=1 ;;
+    *) echo "jms-digest: unknown argument: $arg" >&2; exit 2 ;;
+  esac
+done
+
+log() { echo "[jms-digest $(date '+%Y-%m-%dT%H:%M:%S')] $*" >&2; }
+
+for tool in yt-dlp claude jq python3; do
+  command -v "$tool" >/dev/null 2>&1 || { log "required tool not found: $tool"; exit 1; }
+done
+
+# 1. Discover the newest long-form episode (newest-first; first one over the
+#    duration floor wins).
+log "discovering latest episode on $CHANNEL_URL"
+# Capture the listing first, then filter — piping straight into an awk that
+# exits early would SIGPIPE yt-dlp and trip `set -o pipefail`.
+listing="$(
+  yt-dlp --no-warnings --ignore-errors --playlist-end "$SCAN_COUNT" \
+    --print "%(duration)s${TAB}%(id)s${TAB}%(upload_date)s${TAB}%(title)s" \
+    "$CHANNEL_URL" 2>/dev/null || true
+)"
+selection="$(
+  printf '%s\n' "$listing" |
+    awk -F"$TAB" -v min="$MIN_DURATION" '$1 ~ /^[0-9]+$/ && ($1 + 0) >= min { print; exit }'
+)"
+[ -n "$selection" ] || { log "no full-length episode found in the latest $SCAN_COUNT uploads"; exit 1; }
+
+vid="$(printf '%s' "$selection" | cut -f2)"
+upload_date="$(printf '%s' "$selection" | cut -f3)"
+title="$(printf '%s' "$selection" | cut -f4-)"
+url="https://www.youtube.com/watch?v=${vid}"
+log "latest episode: $vid — $title ($upload_date)"
+
+# 2. Idempotency guard.
+mkdir -p "$STATE_DIR"
+if [ "$FORCE" -eq 0 ] && [ -f "$STATE_FILE" ] && [ "$(cat "$STATE_FILE")" = "$vid" ]; then
+  log "episode $vid already sent; nothing to do"
+  exit 0
+fi
+
+# 3. Transcript via the shared fetch-transcript helper; cache it for email-chat.
+work="$(mktemp -d "${TMPDIR:-/tmp}/jms.XXXXXX")"
+trap 'rm -rf "$work"' EXIT
+transcript="$work/transcript.txt"
+log "fetching captions for $vid"
+if ! bash "$FETCH_TRANSCRIPT" "$vid" >"$transcript" 2>/dev/null || [ ! -s "$transcript" ]; then
+  log "no captions available yet for $vid; will retry next run"; exit 1
+fi
+mkdir -p "$CHAT_STATE_DIR"
+cp "$transcript" "$CHAT_STATE_DIR/$vid.txt" 2>/dev/null || true
+log "transcript: $(wc -l <"$transcript" | tr -d ' ') lines, $(wc -c <"$transcript" | tr -d ' ') bytes"
+
+# 4. Summarize. Stream-json is used so the digest is recovered from the assistant
+#    message even if a Stop hook adds a follow-up turn; sentinels bound the text.
+read -r -d '' prompt <<EOF || true
+You are summarizing an episode of The Jack Mallers Show (Bitcoin, macroeconomics,
+markets, the future of money). The transcript is auto-generated captions piped on
+stdin, so punctuation and speaker labels are unreliable — infer meaning.
+
+Episode title: ${title}
+URL: ${url}
+Aired (YYYYMMDD): ${upload_date}
+
+Write a structured email digest of about 400-600 words in plain text:
+1. A 3-4 sentence TL;DR of the episode.
+2. The key topics/segments — each a short label line followed by 1-3 "- " bullets.
+3. A few notable quotes or claims (paraphrase if the captions are garbled).
+4. A final line exactly: Watch: ${url}
+
+Output ONLY the digest, wrapped between a line containing exactly <<<DIGEST>>> and
+a line containing exactly <<<END>>>. No preamble, no markdown headers.
+EOF
+
+# SECURITY: the transcript is untrusted (arbitrary YouTube captions). Never add
+# --dangerously-skip-permissions here — without it, non-interactive claude -p
+# auto-denies any tool call the captions might try to coerce, so the model can
+# only return text.
+log "summarizing with claude -p"
+raw="$(claude -p --output-format stream-json --verbose "$prompt" <"$transcript" 2>/dev/null |
+  jq -r 'select(.type=="assistant") | .message.content[]? | select(.type=="text") | .text' 2>/dev/null || true)"
+
+digest="$(printf '%s\n' "$raw" | awk '/<<<DIGEST>>>/{f=1;next} /<<<END>>>/{f=0} f')"
+# Fallback: if the sentinels are missing, use the whole assistant text.
+[ -n "$digest" ] || digest="$raw"
+[ -n "$digest" ] || { log "summarization produced no output"; exit 1; }
+
+# 5. Build and send the email.
+subject="JMS digest: ${title}"
+body="$(printf '%s\n\n—\nEpisode: %s\nAired: %s\nAutomated weekly summary of The Jack Mallers Show.\n' \
+  "$digest" "$url" "$upload_date")"
+
+if [ "$DRY_RUN" -eq 1 ]; then
+  printf -- '----- DRY RUN (not sent) -----\nFrom: %s\nTo: %s\nSubject: %s\n\n%s\n' \
+    "$SENDER" "$RECIPIENT" "$subject" "$body"
+  exit 0
+fi
+
+[ -f "$SEND_EMAIL" ] || { log "send-email skill not found at $SEND_EMAIL"; exit 1; }
+# Encode the episode id + chat token in the Message-ID (which Proton preserves,
+# unlike Reply-To). A reply's In-Reply-To carries it, gating the email-chat
+# responder to this episode. Only set when the chat token has been created.
+mid_args=()
+if [ -f "$CHAT_STATE_DIR/reply-token" ]; then
+  token="$(cat "$CHAT_STATE_DIR/reply-token")"
+  mid_args=(--message-id "<jms.${vid}.${token}@lorey.co>")
+fi
+printf '%s' "$body" | python3 "$SEND_EMAIL" --from "$SENDER" --to "$RECIPIENT" --subject "$subject" ${mid_args[@]+"${mid_args[@]}"}
+log "sent digest for $vid to $RECIPIENT"
+
+# 6. Record state (cron mode only; manual --force runs do not move the marker).
+if [ "$FORCE" -eq 1 ]; then
+  printf '%s\n' "$digest"
+else
+  printf '%s\n' "$vid" >"$STATE_FILE"
+fi
