@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# jms-chat-setup — create the email-chat reply token: the secret embedded in each
+# digest's Reply-To address (`jms+<VIDEOID>.<TOKEN>@lorey.co`). A reply must carry
+# the token to be answered, so it's the email-chat feature's only real gate.
+#
+#   bash ~/.agents/skills/jms/scripts/jms-chat-setup            # create once
+#   bash ~/.agents/skills/jms/scripts/jms-chat-setup --rotate   # re-key
+set -euo pipefail
+
+STATE_DIR="$HOME/.local/state/jms-chat"
+TOKEN_FILE="$STATE_DIR/reply-token"
+
+rotate=0
+[ "${1:-}" = "--rotate" ] && rotate=1
+
+command -v openssl >/dev/null 2>&1 || { echo "jms-chat-setup: openssl not found" >&2; exit 1; }
+
+mkdir -p "$STATE_DIR"
+if [ -f "$TOKEN_FILE" ] && [ "$rotate" -eq 0 ]; then
+  echo "reply-token already exists at $TOKEN_FILE (use --rotate to re-key)"
+  exit 0
+fi
+
+# 32 hex chars: address-safe (a-f0-9), no '.' or '+' that would break parsing.
+token="$(openssl rand -hex 16)"
+( umask 077; printf '%s' "$token" > "$TOKEN_FILE" )
+chmod 600 "$TOKEN_FILE"
+
+echo "wrote reply-token to $TOKEN_FILE"
+[ "$rotate" -eq 1 ] && echo "(rotated — replies to digests sent before now will no longer be answered)"
+echo "digest Reply-To will be: jms+<VIDEOID>.${token}@lorey.co"
