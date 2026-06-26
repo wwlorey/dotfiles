@@ -15,3 +15,12 @@ runtime-agnostic. When a skill leans on a vendor primitive (a specific tool,
 a hook mechanism, a session API), name the tool, state the underlying
 capability it provides, and write the surrounding prose so a port to another
 harness rewrites only the named line.
+
+## No GitHub Actions
+
+Never use GitHub Actions. Do not create, modify, or rely on any
+`.github/workflows/*` file, and do not propose CI built on GitHub's hosted
+runners. Continuous-verification gates live in the local toolchain — pre-commit
+hooks and `just` targets (lint, audit, test, spec-validation) — which run on
+the developer's machine before a commit lands. When a task calls for an
+automated gate, wire it into that local layer, never into a hosted CI workflow.
