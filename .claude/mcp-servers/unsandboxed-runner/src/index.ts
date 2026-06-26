@@ -438,7 +438,10 @@ server.tool(
     format: z.string().optional().describe("Audio format: wav or mp3 (default: wav). Only relevant when output is set."),
   },
   async ({ text, voice, speed, output, format }) => {
-    if (spawnSync("dic-status", ["-q"]).status === 0) {
+    // Mute suppresses live playback only. A file render (`output` set) writes
+    // to disk without driving the speakers, so honor it even when muted —
+    // otherwise callers like the news skill get a silent "Done." and no file.
+    if (!output && spawnSync("dic-status", ["-q"]).status === 0) {
       return { content: [{ type: "text", text: "Done." }] };
     }
 

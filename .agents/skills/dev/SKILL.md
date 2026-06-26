@@ -39,6 +39,8 @@ Three cadences. Gates are conditional on what the work touched.
 
 Inject these into the impl-worker briefing as a "Required verification gates" section per the `orchestrate` skill's briefing checklist. The worker runs them after `backpressure` passes, before commit.
 
+**`verify` deterministic fallback.** When a live launch is infeasible in the run environment (a model/dataset too large to load, hardware the sandbox lacks, no display), the worker falls back to the highest-fidelity deterministic coverage that IS feasible — IPC/component/integration tests of the changed flow — AND records the residual (what a live run would still catch) in the issue's close-comment. This is fallback-with-residual, never skip-verify: a class of bugs only a real launch surfaces, so the residual must be named, not silently dropped.
+
 ### Per-batch gates (always run; no skip option)
 
 Fire at the natural batch boundary: end of the `changes` slate, exit of the `build` loop, OR at a mid-batch checkpoint (see below).
@@ -49,7 +51,7 @@ Fire at the natural batch boundary: end of the `changes` slate, exit of the `bui
 | Any item in the batch touched code a spec claims behavior about | `audit-specs` in scoped mode (union of touched-neighbor stems across the batch) |
 | Any item produced a non-trivial diff (and `code-review` did NOT already fire per-item) | `code-review` |
 
-Per-batch gates run autonomously even when the user is at the keyboard. Do not pause to ask permission. Surface "running per-batch gates now" as a status update.
+"Always run; no skip option" means the conditions in the table govern WHICH gates fire, and you fire exactly those autonomously without asking permission — it does NOT mean all three fire every batch. Scale to batch content: a pure-doc / spec-only batch (no high-risk surface, no non-trivial code diff) correctly fires only `audit-specs`; a code-heavy batch fires all that match. If every non-trivial item in the batch already had its `code-review` fire per-item, the batch-level `code-review` condition is already satisfied and does not re-fire. Surface "running per-batch gates now" as a status update.
 
 ### Mid-batch forced checkpoint
 
@@ -59,6 +61,8 @@ Fire per-batch gates immediately — without waiting for the slate / loop to fin
 - The most recent item touched a high-risk surface
 
 After the gates run (and any remediation worker completes), resume the slate / loop with a clean per-batch counter.
+
+**When high-risk is the norm, not the exception.** On a security-heavy project (crypto / IPC / PHI throughout), nearly every item trips the high-risk definition, so the second trigger would fire after *every* item — collapsing the batch to size 1 and defeating batching. In that regime the 5-item count governs as the primary cadence, and the high-risk-immediate trigger is reserved for *genuinely exceptional* changes: a format-breaking crypto migration, a new network/egress surface, a new at-rest store, an auth-model change. Each item still gets its per-item gates, so per-item safety is unaffected; the immediate-trigger just stops firing on routine high-risk work. State this judgment in the end-of-turn report when you invoke it.
 
 ### Session-close gates (when the queue is empty AND no new work surfaced)
 
@@ -166,6 +170,8 @@ Before declaring session-close stable, every surfaced finding from every gate ru
 **"Surfaced in the end-of-turn report as prose only" is NOT a terminal state.** Findings in chat history alone are lost when the session compacts; they'll be re-discovered by every future gate run that walks the same surface, burning gate cycles forever. The orchestrator MUST file a tracker for every MED/LOW the introduced/exposed policy above left in the "file as tracker" path (and for every spec-drift finding from audit-specs runs) before session-close stabilizes.
 
 This filing step is part of the orchestrator's work — not delegated to a worker. The filings themselves can land in a single batched commit (e.g. `chore(issues): file N session-close gate followups`). Each tracker file is small (~50-100 lines of markdown); even 10-15 of them is cheaper than the cost of every future audit run re-walking the drift.
+
+**This rule covers worker-surfaced observations, not only gate findings.** An impl worker that notices something out-of-scope — a pre-existing bug, a suspicious inconsistency, a "this looks wrong but isn't mine to fix" — must FILE it as a tracker, not bury it in its return prose. The orchestrator must file any worker-mentioned-but-unfiled observation before close, exactly like a gate finding. This is not bureaucracy: in practice a worker's offhand "noted but not filed" aside has hidden a release-blocking bug that only surfaced because it was filed and a later iteration investigated it. A mentioned-but-unfiled observation is the same loss-on-compaction as a prose-only gate finding. When in doubt, file it.
 
 Once stabilized, emit the end-of-turn report (per the `end-of-turn-report` skill — orchestrators speak; workers do not).
 
