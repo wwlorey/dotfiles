@@ -26,7 +26,7 @@ RECIPIENT="jms@lorey.co"
 SEND_EMAIL="$HOME/.agents/skills/send-email/scripts/send-email.py"
 FETCH_TRANSCRIPT="$HOME/.agents/skills/jms/scripts/fetch-transcript"
 # Email-chat shares state here: the cached transcript (so a reply can be answered
-# without refetching) and the reply-token (so the digest's Reply-To is gated).
+# without refetching) and the reply-token (embedded in the digest's Message-ID).
 CHAT_STATE_DIR="$HOME/.local/state/jms-chat"
 
 FORCE=0

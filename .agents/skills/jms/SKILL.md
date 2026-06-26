@@ -92,7 +92,7 @@ access (untrusted input can't make it act).
 - One-time: `bash ~/.agents/skills/jms/scripts/jms-chat-setup` (generates the
   reply token), `save-config`, then load the poll:
   `launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/co.lorey.jms-chat.plist`.
-- Rotate token (invalidates Reply-To on already-sent digests):
+- Rotate token (replies to already-sent digests stop being answered):
   `bash ~/.agents/skills/jms/scripts/jms-chat-setup --rotate`.
 - Pause: `touch ~/.local/state/jms-chat/disabled`; resume:
   `trash ~/.local/state/jms-chat/disabled`.

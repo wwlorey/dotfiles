@@ -23,9 +23,9 @@ BODY
 - `--from` (optional) — defaults to `MAIL_FROM` in the credentials, else the
   SMTP login address. Must be an address your Proton account owns (or a
   catch-all alias), or Proton rejects the send.
-- `--reply-to`, `--in-reply-to`, `--references` (optional) — reply-routing and
-  threading headers; each is CR/LF-sanitized. `--references` is a space-separated
-  list of Message-IDs.
+- `--message-id`, `--reply-to`, `--in-reply-to`, `--references` (optional) —
+  identity / reply-routing / threading headers; each is CR/LF-sanitized.
+  `--references` is a space-separated list of Message-IDs.
 - Body is read from **stdin** (or pass `--body "..."`).
 
 The script connects over implicit TLS (SMTPS) to `127.0.0.1:1025` and decrypts

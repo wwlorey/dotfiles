@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # jms-chat-setup — create the email-chat reply token: the secret embedded in each
-# digest's Reply-To address (`jms+<VIDEOID>.<TOKEN>@lorey.co`). A reply must carry
-# the token to be answered, so it's the email-chat feature's only real gate.
+# digest's Message-ID (`<jms.<VIDEOID>.<TOKEN>@lorey.co>`, which Proton preserves).
+# A reply's In-Reply-To carries it back, and a reply must carry the token to be
+# answered — so it's the email-chat feature's only real gate.
 #
 #   bash ~/.agents/skills/jms/scripts/jms-chat-setup            # create once
 #   bash ~/.agents/skills/jms/scripts/jms-chat-setup --rotate   # re-key
@@ -21,11 +22,11 @@ if [ -f "$TOKEN_FILE" ] && [ "$rotate" -eq 0 ]; then
   exit 0
 fi
 
-# 32 hex chars: address-safe (a-f0-9), no '.' or '+' that would break parsing.
+# 32 hex chars (a-f0-9): no '.', so the jms.<vid>.<token> Message-ID parses cleanly.
 token="$(openssl rand -hex 16)"
 ( umask 077; printf '%s' "$token" > "$TOKEN_FILE" )
 chmod 600 "$TOKEN_FILE"
 
 echo "wrote reply-token to $TOKEN_FILE"
 [ "$rotate" -eq 1 ] && echo "(rotated — replies to digests sent before now will no longer be answered)"
-echo "digest Reply-To will be: jms+<VIDEOID>.${token}@lorey.co"
+echo "digest Message-ID will be: <jms.<VIDEOID>.${token}@lorey.co>"
