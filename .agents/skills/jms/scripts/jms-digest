@@ -97,11 +97,21 @@ Episode title: ${title}
 URL: ${url}
 Aired (YYYYMMDD): ${upload_date}
 
-Write a structured email digest of about 400-600 words in plain text:
-1. A 3-4 sentence TL;DR of the episode.
-2. The key topics/segments — each a short label line followed by 1-3 "- " bullets.
-3. A few notable quotes or claims (paraphrase if the captions are garbled).
-4. A final line exactly: Watch: ${url}
+Write the digest in plain text with TWO clearly separated parts.
+
+Put this exact line, then PART 1: THE GIST
+PART 1 is an in-depth TL;DR of roughly 6-10 sentences. A reader should finish it in
+under a minute and feel fully caught up — the through-line, the main arguments, the
+conclusions, and any calls to action. Richer than a one-liner, shorter than PART 2.
+
+Then a blank line, this exact line, then PART 2: THE BREAKDOWN
+PART 2 walks the episode IN THE ORDER JACK PRESENTS IT, mirroring the show's own
+structure (e.g. the opening / market check, each main news item or topic in turn,
+the mailbag or Q&A, Strike updates, and the close). For each segment: a short label
+line, then 2-4 "- " bullets capturing the argument, the key data or claims, and any
+notable quote (paraphrase if the captions are garbled).
+
+End with a final line exactly: Watch: ${url}
 
 Output ONLY the digest, wrapped between a line containing exactly <<<DIGEST>>> and
 a line containing exactly <<<END>>>. No preamble, no markdown headers.

@@ -32,7 +32,8 @@ pipeline is one deterministic script — run it and relay the result.
 2. Skips if that episode id was already sent (unless `--force`).
 3. Pulls the auto-generated English captions with `yt-dlp` and flattens them to
    plain text.
-4. Summarizes the transcript into a structured digest.
+4. Summarizes the transcript into a two-part digest — a brief in-depth "Gist"
+   (TL;DR) and a "Breakdown" that follows the episode's own segment order.
 5. Hands the digest to the `send-email` skill, which delivers it through the
    local ProtonMail Bridge (`From: noreply@lorey.co`, `To: jms@lorey.co`).
 
