@@ -47,6 +47,8 @@ Routing (per `dev`'s gate-failure recovery + no-loose-ends rule):
 - MED severity tagged PRE-EXISTING → file as a tracker issue at `<repo>/issues/<slug>.md` (status: open) before spawning the next iteration — do NOT remediate.
 - LOW severity (any tag) → file as a tracker issue. Do NOT remediate.
 
+**Orchestrator-inline shortcut for trivial pure-doc drift.** When a MED/LOW finding is a trivial pure-doc / spec-text correction — a one-line drift, no recompile, no investigation (e.g. a stale signature in a spec API list, a wrong byte count, a dangling section reference) — the orchestrator MAY fix it inline in the batched gate-followup commit instead of filing a tracker (or, for INTRODUCED drift, instead of a remediation worker). This is the "Fixed" terminal state from `dev`'s no-loose-ends rule, and it is strictly faster than file-then-reclaim-then-spawn-a-worker for a one-line edit. Reserve filing / remediation for findings that need real code work, a recompile-gated change, or investigation. Per `dev`'s introduced/exposed test, prefer inlining INTRODUCED slate drift (you made the mess, fix it now); a PRE-EXISTING trivial doc nit may be inlined too when you are already editing that spec, else file it to avoid scope-creep.
+
 **Mechanical filing from the worker's `## Trackers to file` block.** Gate worker briefings (per `dev`'s gate-policy injection) require workers to emit a `## Trackers to file` section with one ready-to-write blob per MED/LOW finding. The filing step is mechanical: for each `### issues/<slug>.md` header in the block, write the following content to disk verbatim and `git add`. No prose-to-file translation; no fields to invent. Filings land in a single batched commit per mid-iteration round.
 
 ### Mid-iteration checkpoint
@@ -62,6 +64,8 @@ Spawn one worker per iteration via the `orchestrate` skill. Each worker handles 
 > **Slug:** `<SLUG>`
 >
 > **Pre-iteration HEAD:** `<PRE_ITERATION_HEAD>` (the SHA of HEAD before your claim commit; pass this to `backpressure` as the diff range for per-iteration scoping)
+>
+> **Git.** Commit DIRECTLY to the branch the loop runs on (the project's working branch — `master`/`main` unless told otherwise). Do NOT create a feature branch, do NOT `git checkout -b`. Run `git branch --show-current` first; if you are not on that branch, switch to it before claiming. The build loop's one-claim-one-close audit and its `git push` to the shared branch assume every iteration lands there — a stray feature branch silently diverges the loop. (This overrides any generic "branch before committing" git etiquette; the loop's model is trunk-based by design.)
 >
 > **Scope.** You may touch any file in the repo required to implement this single issue, including specs the issue's `## Doc refs` name and any ripple neighbors. **You may NOT claim another issue from `./issues/ready`. You may NOT iterate on a second slug inside this spawn.** You may not absorb unrelated pre-existing failures into your commits — log a separate `<repo>/issues/<slug>.md` for them and continue. You may not commit with backpressure failures unaddressed.
 >
