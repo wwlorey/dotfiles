@@ -27,13 +27,21 @@ pipeline is one deterministic script — run it and relay the result.
 
 ## What the script does
 
-1. Finds the newest long-form upload (`duration > 20min`, skips Shorts/clips)
-   on the channel via `yt-dlp`.
+1. Finds the newest long-form episode via `yt-dlp`. Episodes land in either the
+   `/streams` tab (live-streamed shows) or `/videos` (pre-recorded uploads), so
+   it scans **both**, keeps uploads over `MIN_DURATION` (20min, excluding
+   Shorts/clips), and picks the newest by upload date. On an unattended (cron)
+   run that finds no episode — empty fetch or nothing long-form — it emails a
+   `JMS digest alert: no episode found` notice to `jms@lorey.co` and exits.
 2. Skips if that episode id was already sent (unless `--force`).
 3. Pulls the auto-generated English captions with `yt-dlp` and flattens them to
    plain text.
 4. Summarizes the transcript into a two-part digest — a brief in-depth "Gist"
-   (TL;DR) and a "Breakdown" that follows the episode's own segment order.
+   (TL;DR) and a "Breakdown" that follows the episode's own segment order. The
+   model must wrap the digest in `<<<DIGEST>>>`/`<<<END>>>` sentinels; if they're
+   absent (an auth error like "Not logged in", a refusal, an empty stream), the
+   script refuses to send, emails a `JMS digest alert: summarization failed`
+   notice on a cron run, and exits — it never ships the raw error as the digest.
 5. Hands the digest to the `send-email` skill, which delivers it through the
    local ProtonMail Bridge (`From: noreply@lorey.co`, `To: jms@lorey.co`).
 

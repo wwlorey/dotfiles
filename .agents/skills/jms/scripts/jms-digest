@@ -11,11 +11,13 @@
 #   jms-digest --dry-run  # build the email but print instead of sending
 set -euo pipefail
 
-# Full episodes are live-streamed, so they live under /streams (not /videos,
-# which carries Shorts and clips).
-CHANNEL_URL="https://www.youtube.com/@thejackmallersshow/streams"
+# Full episodes appear in either tab: live-streamed shows land under /streams,
+# pre-recorded uploads under /videos (which also carries Shorts and clips). Scan
+# both and let the duration floor exclude the short stuff.
+CHANNEL="https://www.youtube.com/@thejackmallersshow"
+TABS=(streams videos)
 MIN_DURATION=1200 # seconds (20 min) — skip Shorts and clips
-SCAN_COUNT=12     # how many recent uploads to inspect
+SCAN_COUNT=12     # how many recent uploads to inspect per tab
 TAB=$'\t'         # yt-dlp --print prints the template verbatim; use a real tab
 
 STATE_DIR="$HOME/.local/state/jms"
@@ -41,25 +43,52 @@ done
 
 log() { echo "[jms-digest $(date '+%Y-%m-%dT%H:%M:%S')] $*" >&2; }
 
+# Email a failure alert — only for unattended (cron) runs; manual --force/--dry-run
+# runs surface errors on the terminal. Best-effort: a failed alert never masks the
+# original failure. Args: $1 = body detail, $2 = subject tail.
+alert() {
+  [ "$FORCE" -eq 0 ] && [ "$DRY_RUN" -eq 0 ] || return 0
+  [ -f "$SEND_EMAIL" ] || return 0
+  printf 'The weekly JMS digest run did not deliver a digest.\n\nReason: %s\n\n— jms-digest on %s at %s\n' \
+    "$1" "$(hostname -s 2>/dev/null || echo host)" "$(date '+%Y-%m-%dT%H:%M:%S')" |
+    python3 "$SEND_EMAIL" --from "$SENDER" --to "$RECIPIENT" \
+      --subject "JMS digest alert: $2" >/dev/null 2>&1 || true
+}
+
 for tool in yt-dlp claude jq python3; do
   command -v "$tool" >/dev/null 2>&1 || { log "required tool not found: $tool"; exit 1; }
 done
 
-# 1. Discover the newest long-form episode (newest-first; first one over the
-#    duration floor wins).
-log "discovering latest episode on $CHANNEL_URL"
-# Capture the listing first, then filter — piping straight into an awk that
-# exits early would SIGPIPE yt-dlp and trip `set -o pipefail`.
-listing="$(
-  yt-dlp --no-warnings --ignore-errors --playlist-end "$SCAN_COUNT" \
-    --print "%(duration)s${TAB}%(id)s${TAB}%(upload_date)s${TAB}%(title)s" \
-    "$CHANNEL_URL" 2>/dev/null || true
-)"
+# 1. Discover the newest long-form episode. Merge both tabs, keep rows over the
+#    duration floor, and let the newest upload_date win.
+log "discovering latest episode on $CHANNEL (tabs: ${TABS[*]})"
+# Capture each tab's listing first, then filter — piping yt-dlp straight into an
+# awk that exits early would SIGPIPE it and trip `set -o pipefail`.
+listing=""
+for tab in "${TABS[@]}"; do
+  listing+="$(
+    yt-dlp --no-warnings --ignore-errors --playlist-end "$SCAN_COUNT" \
+      --print "%(duration)s${TAB}%(id)s${TAB}%(upload_date)s${TAB}%(title)s" \
+      "$CHANNEL/$tab" 2>/dev/null || true
+  )"$'\n'
+done
 selection="$(
   printf '%s\n' "$listing" |
-    awk -F"$TAB" -v min="$MIN_DURATION" '$1 ~ /^[0-9]+$/ && ($1 + 0) >= min { print; exit }'
+    awk -F"$TAB" -v min="$MIN_DURATION" '$1 ~ /^[0-9]+$/ && ($1 + 0) >= min' |
+    sort -t"$TAB" -k3,3nr | head -n1
 )"
-[ -n "$selection" ] || { log "no full-length episode found in the latest $SCAN_COUNT uploads"; exit 1; }
+if [ -z "$selection" ]; then
+  # Distinguish a transient empty fetch (network/yt-dlp hiccup) from a real
+  # "nothing long-form recently" so the cron log is diagnosable.
+  if [ -z "$(printf '%s' "$listing" | tr -d '[:space:]')" ]; then
+    reason="discovery returned an empty listing (transient yt-dlp/network failure?); will retry next run"
+  else
+    reason="no episode over ${MIN_DURATION}s in the latest $SCAN_COUNT uploads per tab"
+  fi
+  log "$reason"
+  alert "$reason" "no episode found"
+  exit 1
+fi
 
 vid="$(printf '%s' "$selection" | cut -f2)"
 upload_date="$(printf '%s' "$selection" | cut -f3)"
@@ -126,9 +155,15 @@ raw="$(claude -p --output-format stream-json --verbose "$prompt" <"$transcript" 
   jq -r 'select(.type=="assistant") | .message.content[]? | select(.type=="text") | .text' 2>/dev/null || true)"
 
 digest="$(printf '%s\n' "$raw" | awk '/<<<DIGEST>>>/{f=1;next} /<<<END>>>/{f=0} f')"
-# Fallback: if the sentinels are missing, use the whole assistant text.
-[ -n "$digest" ] || digest="$raw"
-[ -n "$digest" ] || { log "summarization produced no output"; exit 1; }
+# Require the sentinels — their absence means claude -p returned something other
+# than a digest (an auth error like "Not logged in", a refusal, an empty stream).
+# Do NOT fall back to the raw text: emailing that ships the error as the digest.
+if [ -z "$digest" ]; then
+  reason="summarization produced no digest (claude -p auth/output failure — raw: $(printf '%s' "$raw" | head -c 120 | tr '\n' ' '))"
+  log "$reason"
+  alert "$reason" "summarization failed"
+  exit 1
+fi
 
 # 5. Build and send the email.
 subject="JMS digest: ${title}"
