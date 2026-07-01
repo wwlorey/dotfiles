@@ -1,0 +1,43 @@
+# aichat — HIPAA-compliant Vertex AI setup
+# Auth: gcloud Application Default Credentials (ADC).
+#   Run once:  gcloud auth application-default login
+# Project ID is resolved from $GOOGLE_CLOUD_HIPAA_PROJECT_ID (client name =
+# google_cloud_hipaa), kept OUT of this file so it's safe to commit publicly.
+# Set that variable in your private dotfiles (~/Sync/.dotfiles), e.g.:
+#   export GOOGLE_CLOUD_HIPAA_PROJECT_ID="your-hipaa-project-id"
+# All traffic stays inside your BAA-covered Vertex project.
+
+model: google_cloud_hipaa:gemini-2.5-flash-lite   # default: GA, cheap, HIPAA-eligible
+stream: true
+save: false            # do NOT persist sessions/messages to disk (PHI hygiene)
+save_session: false
+
+clients:
+  - type: vertexai
+    name: google_cloud_hipaa
+    location: us-central1
+    # project_id resolved from $GOOGLE_CLOUD_HIPAA_PROJECT_ID at request time.
+    # Declaring models: overrides aichat's built-in catalog for this client,
+    # so we list every GA model we want. All GA => HIPAA-eligible under the BAA.
+    models:
+      - name: gemini-2.5-flash-lite      # cheapest daily driver
+        max_input_tokens: 1000000
+        max_output_tokens: 65536
+        input_price: 0.10
+        output_price: 0.40
+        supports_vision: true
+        supports_function_calling: true
+      - name: gemini-2.5-flash           # step up for nuance/tone
+        max_input_tokens: 1000000
+        max_output_tokens: 65536
+        input_price: 0.30
+        output_price: 2.50
+        supports_vision: true
+        supports_function_calling: true
+      - name: gemini-2.5-pro             # hardest / most nuanced sessions
+        max_input_tokens: 1000000
+        max_output_tokens: 65536
+        input_price: 1.25
+        output_price: 10.00
+        supports_vision: true
+        supports_function_calling: true
