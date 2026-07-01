@@ -474,11 +474,22 @@ server.tool(
         server.sendLoggingMessage({ level: "info", data: line.trimEnd() });
       });
 
+      // The dic client blocks until the daemon acks, which only happens
+      // *after* playback finishes, and it holds an exclusive flock for that
+      // whole span (see .local/bin/dic). The client already caps itself at
+      // REQUEST_TIMEOUT (3600s). This wrapper's backstop must exceed that so
+      // the client's own graceful timeout always wins: a shorter cap would
+      // SIGTERM the client mid-playback, fabricate a `timed_out` failure for
+      // audio the daemon is still happily playing, and release the flock while
+      // the daemon streams — racing the next call into an empty-response crash.
+      // 3660s = client's 3600s + 60s margin. Covers long speak-now passages and
+      // long file renders (e.g. the news skill's daily WAV) alike.
+      const DIC_TIMEOUT_MS = 3_660_000;
       const timer = setTimeout(() => {
         timedOut = true;
         child.kill("SIGTERM");
         setTimeout(() => { if (!child.killed) child.kill("SIGKILL"); }, 5000);
-      }, 60_000);
+      }, DIC_TIMEOUT_MS);
 
       child.on("close", (code) => {
         clearTimeout(timer);
