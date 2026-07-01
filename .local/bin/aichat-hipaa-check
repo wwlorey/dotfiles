@@ -1,0 +1,121 @@
+#!/usr/bin/env python3
+"""Confirm an aichat config is HIPAA-compliant for Google Vertex AI use.
+
+Compliance invariant — ALL must hold:
+
+  1. Every client is `type: vertexai` — the only aichat client that routes to
+     Google Vertex AI under your signed BAA. This REJECTS in particular the
+     `gemini` client type, which targets Google AI Studio (the consumer
+     Generative Language API) and is NOT covered by the BAA — a subtle trap,
+     since it looks similar. Also rejects openai / claude / bedrock /
+     azure-openai / cohere / openai-compatible (non-Vertex routes).
+
+  2. Nothing is persisted to disk: `save: false` and `save_session: false`
+     (PHI hygiene — no transcripts written locally).
+
+  3. Every explicitly-declared model is GA — no preview / experimental
+     snapshots. GA models are what the BAA covers.
+
+Exit status: 0 = compliant, 1 = violations found, 2 = usage/parse error.
+Use on demand, or as a gate (e.g. a git pre-commit hook) via the exit code.
+
+Usage: aichat-hipaa-check [path/to/config.yaml]
+Default: ~/Library/Application Support/aichat/config.yaml
+"""
+
+from __future__ import annotations
+
+import os
+import sys
+
+import yaml
+
+ALLOWED_CLIENT_TYPES = {"vertexai"}
+NON_GA_MARKERS = ("preview", "-exp", "experimental", "nightly", "-rc", "-test")
+
+DEFAULT_CONFIG = os.path.expanduser(
+    "~/Library/Application Support/aichat/config.yaml"
+)
+
+
+def _non_ga(name: str) -> bool:
+    low = name.lower()
+    return any(marker in low for marker in NON_GA_MARKERS)
+
+
+def check(cfg: dict) -> list[str]:
+    problems: list[str] = []
+
+    if cfg.get("save", False) is not False:
+        problems.append("save is not false — sessions could persist PHI to disk")
+    if cfg.get("save_session", False) is not False:
+        problems.append(
+            "save_session is not false — session history could persist PHI"
+        )
+
+    clients = cfg.get("clients") or []
+    if not clients:
+        problems.append("no clients defined")
+
+    for i, client in enumerate(clients):
+        ctype = client.get("type")
+        label = client.get("name") or ctype or f"#{i}"
+
+        if ctype not in ALLOWED_CLIENT_TYPES:
+            hint = (
+                " ('gemini' = Google AI Studio, NOT BAA-covered)"
+                if ctype == "gemini"
+                else ""
+            )
+            problems.append(
+                f"client '{label}' has type '{ctype}' — only 'vertexai' is "
+                f"BAA-covered{hint}"
+            )
+            continue
+
+        models = client.get("models") or []
+        if not models:
+            problems.append(
+                f"client '{label}' declares no models: — aichat's built-in "
+                f"vertexai catalog includes preview snapshots; declare an "
+                f"explicit GA-only models: list"
+            )
+        for m in models:
+            name = m.get("name", "")
+            if _non_ga(name):
+                problems.append(
+                    f"client '{label}' model '{name}' looks non-GA "
+                    f"(preview/experimental) — GA only under the BAA"
+                )
+
+    return problems
+
+
+def main() -> int:
+    path = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_CONFIG
+    try:
+        with open(path) as f:
+            cfg = yaml.safe_load(f) or {}
+    except FileNotFoundError:
+        print(f"aichat-hipaa-check: config not found: {path}", file=sys.stderr)
+        return 2
+    except yaml.YAMLError as exc:
+        print(f"aichat-hipaa-check: invalid YAML in {path}: {exc}", file=sys.stderr)
+        return 2
+
+    problems = check(cfg)
+    if problems:
+        print(f"✗ NOT HIPAA-compliant: {path}")
+        for p in problems:
+            print(f"  - {p}")
+        return 1
+
+    print(
+        f"✓ HIPAA-compliant (Vertex-only, GA models, no disk "
+        f"persistence): {path}"
+    )
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

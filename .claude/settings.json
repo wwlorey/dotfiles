@@ -211,7 +211,6 @@
       "Edit(~/.age/**)",
       "Edit(~/.env)",
       "Edit(~/.env.*)",
-      "Edit(~/.Trash/**)",
       "Edit(//usr/local/bin/**)",
       "Edit(//opt/homebrew/bin/**)",
 
@@ -240,13 +239,14 @@
       "Write(~/.age/**)",
       "Write(~/.env)",
       "Write(~/.env.*)",
-      "Write(~/.Trash/**)",
       "Write(//usr/local/bin/**)",
       "Write(//opt/homebrew/bin/**)",
 
       "Bash(security find-*)",
       "Bash(security dump-*)",
-      "Bash(security export-*)"
+      "Bash(security export-*)",
+
+      "Bash(aichat:*)"
     ]
   },
   "hooks": {
@@ -308,6 +308,10 @@
           {
             "type": "command",
             "command": "python3 $HOME/.claude/hooks/redirect-bash-config-writes.py"
+          },
+          {
+            "type": "command",
+            "command": "python3 $HOME/.claude/hooks/block-aichat.py"
           }
         ]
       },

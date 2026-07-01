@@ -1,6 +1,7 @@
 . $HOME/.bashrc
 . $HOME/.zsh/git-prompt
 . $HOME/.zsh/fzf.zsh
+. $HOME/.zsh/aichat.zsh
 
 alias sz='source ~/.zshrc'
 
