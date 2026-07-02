@@ -56,7 +56,14 @@ else
   status=$(git status --short)
 fi
 
-prompt="You are a commit message generator. Given the following git diff and status, write a single concise commit message. Output ONLY the commit message text, nothing else. No quotes, no prefixes, no explanation.
+prompt="You are a commit message generator. Given the following git diff and status, write a single concise commit message.
+
+Emit the commit message wrapped exactly between these two marker lines, each on its own line, and put nothing else between them:
+<<<COMMIT>>>
+the commit message here
+<<<END>>>
+
+Do not add quotes, markdown, bold, or a subject prefix inside the markers. Any commentary you write must be outside the markers.
 
 git status:
 $status
@@ -100,6 +107,23 @@ if [ -s "$errfile" ]; then
   cat "$errfile" >&2
 fi
 rm -f "$errfile"
+
+# The model may wrap the message in commentary; keep only what's between the
+# markers when they're present, otherwise fall back to the raw output.
+if printf '%s' "$msg" | grep -q '<<<COMMIT>>>'; then
+  msg=$(printf '%s\n' "$msg" | sed -n '/<<<COMMIT>>>/,/<<<END>>>/p' | sed '1d;$d')
+fi
+
+# Drop leading and trailing blank lines.
+msg=$(printf '%s\n' "$msg" | awk '
+  { lines[NR] = $0 }
+  END {
+    start = 1; end = NR
+    while (start <= end && lines[start] ~ /^[[:space:]]*$/) start++
+    while (end >= start && lines[end] ~ /^[[:space:]]*$/) end--
+    for (i = start; i <= end; i++) print lines[i]
+  }
+')
 
 if [ -z "$msg" ]; then
   echo "Failed to generate commit message."
