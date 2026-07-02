@@ -61,11 +61,19 @@ if [[ "${1:-}" == "ls" || "${1:-}" == "list" ]]; then
   exit 0
 fi
 
+bare=0
+if [[ "${1:-}" == "--bare" ]]; then
+  bare=1
+  shift
+fi
+
 args=()
-if [[ -f "$MEMENTO" ]]; then
-  args+=(--append-system-prompt "$(getMemento)")
-else
-  echo "Warning: $MEMENTO not found" >&2
+if (( ! bare )); then
+  if [[ -f "$MEMENTO" ]]; then
+    args+=(--append-system-prompt "$(getMemento)")
+  else
+    echo "Warning: $MEMENTO not found" >&2
+  fi
 fi
 
 mode=()
