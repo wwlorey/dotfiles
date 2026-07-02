@@ -17,11 +17,13 @@ workers do not", per the orchestrate skill). Two layers enforce that:
    their transcript (the recorded subagent type) — a marker the main session's
    transcript never carries. When that marker is present, this hook no-ops.
 
-Headless runs are exempt too: `agent -p` exports `AGENT_HEADLESS=1` (inherited
-by this hook process). A `-p` session's final message is its *output*, consumed
-programmatically (e.g. git-commit-auto parsing a commit message) — blocking the
-stop injects an extra turn whose wrap-up text replaces that output, and there
-is no interactive user to speak to anyway.
+Headless runs are exempt too: `AGENT_HEADLESS=1` (set by the `agent` wrapper's
+`-p` mode, and by scripts calling `claude -p` directly — see LAW.md, "Headless
+agent calls declare themselves") is inherited by this hook process. A headless
+session's final message is its *output*, consumed programmatically (e.g.
+git-commit-auto parsing a commit message) — blocking the stop injects an extra
+turn whose wrap-up text replaces that output, and there is no interactive user
+to speak to anyway.
 
 Logic: since the last genuine user prompt, did the assistant make a *speak-now*
 run_dic call (the voice TTS tool, called WITHOUT an `output` param)? A

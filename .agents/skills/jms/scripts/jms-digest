@@ -151,7 +151,9 @@ EOF
 # auto-denies any tool call the captions might try to coerce, so the model can
 # only return text.
 log "summarizing with claude -p"
-raw="$(claude -p --output-format stream-json --verbose "$prompt" <"$transcript" 2>/dev/null |
+# AGENT_HEADLESS: per LAW.md, headless agent calls declare themselves so Stop
+# hooks (voice report, orphan check) don't inject extra turns into the run.
+raw="$(AGENT_HEADLESS=1 claude -p --output-format stream-json --verbose "$prompt" <"$transcript" 2>/dev/null |
   jq -r 'select(.type=="assistant") | .message.content[]? | select(.type=="text") | .text' 2>/dev/null || true)"
 
 digest="$(printf '%s\n' "$raw" | awk '/<<<DIGEST>>>/{f=1;next} /<<<END>>>/{f=0} f')"

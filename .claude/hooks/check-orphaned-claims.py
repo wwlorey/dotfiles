@@ -22,10 +22,16 @@ slug = file stem, `status: open|in_progress|closed` in frontmatter.
 Loop/outage safety: `stop_hook_active: true` allows the second stop attempt,
 so the orchestrator can always bypass with a deliberate second try after
 seeing the block message. Fails OPEN on any exception.
+
+Headless runs (`AGENT_HEADLESS=1`, per LAW.md) are exempt: a headless
+session's final message is programmatic output — blocking the stop replaces
+it with the recovery-prompt response, and a one-shot pipeline (e.g. the
+commit-message generator) is in no position to recover orphaned claims.
 """
 from __future__ import annotations
 
 import json
+import os
 import re
 import subprocess
 import sys
@@ -37,6 +43,10 @@ STALE_SECONDS = 10 * 60
 
 
 def main() -> None:
+    # Headless run: final message is programmatic output — never gate.
+    if os.environ.get("AGENT_HEADLESS"):
+        return
+
     data = json.load(sys.stdin)
     # Already blocked once this turn — allow stop to avoid wedging.
     if data.get("stop_hook_active"):

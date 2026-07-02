@@ -193,10 +193,13 @@ def ask_claude(transcript: str, question: str, vid: str):
     )
     # tools off: NO --dangerously-skip-permissions (non-interactive claude -p
     # auto-denies any tool call the untrusted input might attempt).
+    # AGENT_HEADLESS: per LAW.md, headless agent calls declare themselves so
+    # Stop hooks (voice report, orphan check) don't inject extra turns.
     try:
         proc = subprocess.run(
             ["claude", "-p", "--output-format", "stream-json", "--verbose", prompt],
             input=transcript, capture_output=True, text=True, timeout=CLAUDE_TIMEOUT,
+            env={**os.environ, "AGENT_HEADLESS": "1"},
         )
     except subprocess.TimeoutExpired:
         log("claude timed out")
