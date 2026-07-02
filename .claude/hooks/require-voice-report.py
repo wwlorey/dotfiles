@@ -17,6 +17,12 @@ workers do not", per the orchestrate skill). Two layers enforce that:
    their transcript (the recorded subagent type) — a marker the main session's
    transcript never carries. When that marker is present, this hook no-ops.
 
+Headless runs are exempt too: `agent -p` exports `AGENT_HEADLESS=1` (inherited
+by this hook process). A `-p` session's final message is its *output*, consumed
+programmatically (e.g. git-commit-auto parsing a commit message) — blocking the
+stop injects an extra turn whose wrap-up text replaces that output, and there
+is no interactive user to speak to anyway.
+
 Logic: since the last genuine user prompt, did the assistant make a *speak-now*
 run_dic call (the voice TTS tool, called WITHOUT an `output` param)? A
 render-to-file call (with `output`, e.g. the `news` skill assembling a WAV)
@@ -34,6 +40,7 @@ Fails OPEN on any parse error — a broken hook must never trap the user.
 from __future__ import annotations
 
 import json
+import os
 import sys
 
 RUN_DIC = "mcp__unsandboxed-runner__run_dic"
@@ -81,6 +88,11 @@ def _is_speak_now_dic(entry: dict) -> bool:
 
 
 def main() -> None:
+    # Headless run (`agent -p`): the final message is programmatic output and
+    # nobody is listening — never gate.
+    if os.environ.get("AGENT_HEADLESS"):
+        return
+
     data = json.load(sys.stdin)
 
     # Already blocked once this turn — allow the stop to avoid wedging on a

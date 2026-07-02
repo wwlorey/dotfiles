@@ -109,10 +109,16 @@ fi
 rm -f "$errfile"
 
 # The model may wrap the message in commentary; keep only what's between the
-# <<<COMMIT>>> / <<<END>>> markers when present, otherwise use the raw output.
-# Token-based so it also handles both markers landing on the same line.
-if printf '%s' "$msg" | grep -q '<<<COMMIT>>>'; then
-  msg=$(printf '%s\n' "$msg" | awk '
+# <<<COMMIT>>> / <<<END>>> markers. Token-based so it also handles both
+# markers landing on the same line. Missing markers is a hard failure —
+# committing the raw output verbatim is how conversational replies ended up
+# as commit messages.
+if ! printf '%s' "$msg" | grep -q '<<<COMMIT>>>'; then
+  echo "Failed to extract commit message: no <<<COMMIT>>> markers in model output:" >&2
+  printf '%s\n' "$msg" >&2
+  exit 1
+fi
+msg=$(printf '%s\n' "$msg" | awk '
     {
       line = $0
       if (!grab) {
@@ -126,7 +132,6 @@ if printf '%s' "$msg" | grep -q '<<<COMMIT>>>'; then
       print line
     }
   ')
-fi
 
 # Drop leading and trailing blank lines.
 msg=$(printf '%s\n' "$msg" | awk '

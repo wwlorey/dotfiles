@@ -80,6 +80,10 @@ mode=()
 if [[ "${1:-}" == "-p" ]]; then
   mode=(-p)
   shift
+  # Headless print mode: output is consumed programmatically, so hooks that
+  # inject extra turns for an interactive user (e.g. the spoken end-of-turn
+  # report) must stand down or they corrupt the printed final message.
+  export AGENT_HEADLESS=1
 fi
 
 if [[ -n "${1:-}" && -d "$AGENTS/skills/$1" ]]; then
