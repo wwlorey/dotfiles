@@ -84,6 +84,10 @@ if [[ "${1:-}" == "-p" || "${1:-}" == "--print" ]]; then
   # inject extra turns for an interactive user (e.g. the spoken end-of-turn
   # report) must stand down or they corrupt the printed final message.
   export AGENT_HEADLESS=1
+else
+  # Interactive mode: clear any flag leaked from a parent headless context so
+  # the interactive-only Stop hooks are never silently disabled.
+  unset AGENT_HEADLESS
 fi
 
 if [[ -n "${1:-}" && -d "$AGENTS/skills/$1" ]]; then

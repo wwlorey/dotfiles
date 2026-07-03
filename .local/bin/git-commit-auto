@@ -113,8 +113,8 @@ rm -f "$errfile"
 # markers landing on the same line. Missing markers is a hard failure —
 # committing the raw output verbatim is how conversational replies ended up
 # as commit messages.
-if ! printf '%s' "$msg" | grep -q '<<<COMMIT>>>'; then
-  echo "Failed to extract commit message: no <<<COMMIT>>> markers in model output:" >&2
+if ! printf '%s' "$msg" | grep -q '<<<COMMIT>>>' || ! printf '%s' "$msg" | grep -q '<<<END>>>'; then
+  echo "Failed to extract commit message: <<<COMMIT>>>/<<<END>>> marker pair missing from model output:" >&2
   printf '%s\n' "$msg" >&2
   exit 1
 fi
