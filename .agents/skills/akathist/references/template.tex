@@ -16,8 +16,9 @@
 ]
 \usepackage{parskip}
 \setlength{\parskip}{0.8\baselineskip plus 2pt}   % open spacing between paragraphs
-\usepackage{ragged2e}       % \RaggedRight — even word spacing, no stretched gaps
 \usepackage{needspace}      % keep a heading with the start of its stanza
+\usepackage{tikz}
+\usepackage{pgfornament}    % Vectorian ornaments (title-page corners, end flourish)
 \setlength{\emergencystretch}{2em}
 % No hyphenation: keep every word whole so the exact-text QA gate never sees a
 % word split across a line break.
@@ -51,12 +52,31 @@
 
 \begin{document}
 \fontsize{18}{24}\selectfont
-\RaggedRight
+% Plain \raggedright (not ragged2e's \RaggedRight): its infinite right-margin
+% stretch lets any word wrap to the next line, so nothing ever runs past the
+% page edge — and with hyphenation off, no word is ever split.
+\raggedright
 
-% ---- TITLE (from the <h1>) ------------------------------------------------
+% ---- TITLE PAGE (from the <h1>) -------------------------------------------
+% The title alone, vertically centered and with no page number, then a blank
+% page (the blank verso). The akathist itself begins on the page after the blank.
+\thispagestyle{empty}
+% Decorative Vectorian ornament (#61) in the four corners, mirrored for symmetry.
+% Change {61} to another catalog number, adjust width/inset, or delete the block
+% to omit the corners.
+\begin{tikzpicture}[remember picture,overlay]
+ \node[anchor=north west] at ([shift={(0.55in,-0.5in)}]current page.north west){\pgfornament[width=3cm]{61}};
+ \node[anchor=north east] at ([shift={(-0.55in,-0.5in)}]current page.north east){\pgfornament[width=3cm,symmetry=v]{61}};
+ \node[anchor=south west] at ([shift={(0.55in,0.5in)}]current page.south west){\pgfornament[width=3cm,symmetry=h]{61}};
+ \node[anchor=south east] at ([shift={(-0.55in,0.5in)}]current page.south east){\pgfornament[width=3cm,symmetry=c]{61}};
+\end{tikzpicture}
+\vspace*{\fill}
 \akatitle{% REPLACE with the <h1> text, e.g. Akathist to the Holy Martyr N.N.
 }
-\medskip
+% \akasubtitle{% REPLACE with a dedication / date line if the source prints one }
+\vspace*{\fill}
+\clearpage
+\null\clearpage        % blank page
 
 % ---- BODY -----------------------------------------------------------------
 % One block per source element, in document order:
@@ -83,5 +103,9 @@ Rejoice, O holy N.N., % ...  (closing refrain — plain, just the last line, no 
 
 % ... continue through Kontakion 13, then any \rubric the source italicizes, then
 % the repeated Ikos 1 and Kontakion 1 as the source directs.
+
+% Decorative flourish (#46) closing the booklet — change the number or delete it.
+\bigskip
+\begin{center}\pgfornament[width=5cm]{46}\end{center}
 
 \end{document}

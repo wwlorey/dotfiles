@@ -33,6 +33,8 @@ akathist (13 Kontakia + 12 Ikoi, Chairetismoi, refrains) and the macro map.
 - Font **Janson Text LT Std** must be installed: `fc-list | grep -F "Janson Text LT Std"`.
   If absent, stop and tell the user to drop the OTF into `~/Library/Fonts/`.
 - `xelatex`, `pdfjam` (TeX Live / MacTeX), and `pdftotext` (poppler) must be on PATH.
+- The `tikz` and `pgfornament` LaTeX packages (TeX Live) — the title-page corner
+  ornaments and the end flourish use them.
 - `python3` with the `pypdf` module — the build's long-edge imposition step
   needs it (`pip install pypdf` if missing).
 
@@ -140,8 +142,19 @@ akathist (13 Kontakia + 12 Ikoi, Chairetismoi, refrains) and the macro map.
 - The body is set at 18pt on 24pt leading and the title at 24pt (see
   `references/template.tex`) — a large, open, readable devotional size, with
   `\parskip` opening the space between paragraphs.
-- The body is **ragged-right** (`\RaggedRight`) with hyphenation off: even word
-  spacing everywhere, no stretched gaps, and no word ever split across a line.
+- The body is **ragged-right** (plain `\raggedright`) with hyphenation off: even
+  word spacing, no stretched gaps, no word split across a line — and its infinite
+  right-margin stretch wraps any long word to the next line, so nothing ever runs
+  past the page edge.
+- The booklet opens with a **title page** (the title alone, vertically centered,
+  no page number via `\thispagestyle{empty}`) followed by a **blank page**; the
+  akathist itself begins on the page after the blank. `\clearpage\null\clearpage`
+  produces the blank verso.
+- **Decorative ornaments** (`pgfornament`, Vectorian set): a corner ornament in
+  the four corners of the title page (mirrored for symmetry) and a centered
+  flourish closing the booklet. The template ships #61 corners and a #46
+  end-piece; change the numbers, size, or delete the blocks in `<name>.tex` to
+  adjust or omit.
 - Headings are kept with their stanza: `\heading` uses `\needspace` to push a
   heading to the next page when too few lines remain, so a "Kontakion N" / "Ikos
   N" label never dangles alone at the foot of a page.
