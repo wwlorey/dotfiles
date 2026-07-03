@@ -77,7 +77,7 @@ if (( ! bare )); then
 fi
 
 mode=()
-if [[ "${1:-}" == "-p" ]]; then
+if [[ "${1:-}" == "-p" || "${1:-}" == "--print" ]]; then
   mode=(-p)
   shift
   # Headless print mode: output is consumed programmatically, so hooks that
