@@ -1,0 +1,88 @@
+#!/usr/bin/env bash
+# Strict exact-text QA gate for an akathist booklet.
+#
+#   verify <path/to/name.pdf> <path/to/source.html>
+#
+# The source of truth is source.html (prayer only — no site nav/ads). This reads
+# its text (stripping tags, <br> -> newline), extracts the text from the built
+# PDF, normalizes both the SAME way, and diffs them as a token stream — one token
+# per line, CASE AND PUNCTUATION PRESERVED. A plain .txt source also works and is
+# read as-is.
+#
+# The only things folded away are genuine typographic equivalences and layout
+# artifacts, never content:
+#   * curly quotes -> straight, all dash variants -> "-", ellipsis char -> "...",
+#     fixed-width spaces -> space, f-ligatures -> their letters (fi, fl, ...);
+#   * footer page-number lines (a line that is only digits) dropped;
+#   * line wrapping / reflow collapsed (whitespace runs -> one space) so the
+#     PDF's line breaks don't matter;
+#   * a space sitting before punctuation (a pdftotext spacing artifact) removed.
+# Everything else — every letter, its case, and every mark of punctuation — must
+# be identical. A changed capital, a dropped comma, or a missing colon fails.
+#
+# Exit 0 and print "MATCH" only when the streams are identical. Any difference
+# exits 1 and prints a unified token-level diff (< = in PDF only, > = in source
+# only) so the mismatch can be reconciled in the .tex or source.html.
+set -euo pipefail
+
+PDF="${1:?usage: verify <name.pdf> <source.html>}"
+SRC="${2:?usage: verify <name.pdf> <source.html>}"
+[ -f "$PDF" ] || { echo "ERROR: no such PDF: $PDF" >&2; exit 1; }
+[ -f "$SRC" ] || { echo "ERROR: no such source: $SRC" >&2; exit 1; }
+command -v pdftotext >/dev/null || { echo "ERROR: pdftotext not found (poppler)" >&2; exit 1; }
+command -v perl      >/dev/null || { echo "ERROR: perl not found" >&2; exit 1; }
+
+TMP="$(mktemp -d)"
+trap 'rm -rf "$TMP"' EXIT
+
+# Per-line fold of typographic variants to a canonical ascii form.
+cat > "$TMP/fold.pl" <<'PERL'
+while (my $l = <STDIN>) {
+  $l =~ s/[\x{2018}\x{2019}\x{201A}\x{201B}\x{2032}]/'/g;         # single quotes / prime
+  $l =~ s/[\x{201C}\x{201D}\x{201E}\x{201F}\x{2033}]/"/g;         # double quotes
+  $l =~ s/[\x{2010}\x{2011}\x{2012}\x{2013}\x{2014}\x{2015}]/-/g; # dash variants
+  $l =~ s/\x{2026}/.../g;                                          # ellipsis
+  $l =~ s/[\x{00A0}\x{2007}\x{2008}\x{2009}\x{202F}]/ /g;          # fixed-width spaces
+  $l =~ s/\x{FB00}/ff/g; $l =~ s/\x{FB01}/fi/g; $l =~ s/\x{FB02}/fl/g;
+  $l =~ s/\x{FB03}/ffi/g; $l =~ s/\x{FB04}/ffl/g;                 # f-ligatures
+  print $l;
+}
+PERL
+
+# Normalize a text stream to one case- and punctuation-preserving token per line.
+normalize() {
+  perl -CSD "$TMP/fold.pl" \
+    | grep -vE '^[[:space:]]*[0-9]+[[:space:]]*$' \
+    | perl -CSD -0777 -pe '
+        s/-{2,}/-/g;              # collapse dash runs (--, ---) to one
+        s/\s+([,.;:!?])/$1/g;     # drop pdftotext space before punctuation
+        s/\s+/ /g;                # collapse reflow / line wrapping
+        s/^ //; s/ $//;           # trim
+        s/ /\n/g;                 # one token per line
+      '
+}
+
+pdftotext -nopgbrk -q "$PDF" - | normalize > "$TMP/pdf.words"
+# Project source.html to text (strip tags, <br> -> newline) before normalizing;
+# a plain .txt source is read as-is.
+if [[ "$SRC" == *.html || "$SRC" == *.htm ]]; then
+  command -v python3 >/dev/null || { echo "ERROR: python3 not found (needed to read an .html source)" >&2; exit 1; }
+  python3 -c 'import sys,re,html; t=open(sys.argv[1],encoding="utf-8").read(); t=re.sub(r"<br\s*/?>","\n",t,flags=re.I); t=re.sub(r"<[^>]+>","",t); sys.stdout.write(html.unescape(t))' "$SRC" \
+    | normalize > "$TMP/src.words"
+else
+  normalize < "$SRC" > "$TMP/src.words"
+fi
+
+if diff -q "$TMP/src.words" "$TMP/pdf.words" >/dev/null; then
+  n=$(wc -l < "$TMP/pdf.words" | tr -d ' ')
+  echo "MATCH  ($n tokens, PDF == source, case + punctuation exact)"
+  exit 0
+fi
+
+echo "MISMATCH  (< PDF-only   > source-only)"
+echo "----------------------------------------"
+diff "$TMP/pdf.words" "$TMP/src.words" || true
+echo "----------------------------------------"
+p=$(wc -l < "$TMP/pdf.words" | tr -d ' '); s=$(wc -l < "$TMP/src.words" | tr -d ' ')
+echo "PDF tokens: $p   source tokens: $s"
+exit 1

@@ -1,0 +1,77 @@
+#!/usr/bin/env bash
+# Verify an imposed akathist booklet is laid out so it will fold and read
+# correctly when printed double-sided in booklet mode with a LONG-edge flip.
+#
+#   check-booklet <name-booklet.pdf> <name.pdf>
+#
+# Asserts, against the imposed booklet (and the reading copy it came from):
+#   * every booklet sheet is letter-landscape (792x612 pt);
+#   * sheets alternate rotation 0 / 180 (front sheets upright, back sheets
+#     flipped 180) — the imposition a long-edge duplex flip needs;
+#   * the imposed slot count (2 x sheets) is a multiple of four and covers
+#     every reading page with fewer than four blank pad pages.
+# Prints `BOOKLET OK` and exits 0, or `BOOKLET FAIL` with one line per failed
+# assertion and exits 1.
+set -euo pipefail
+
+BOOKLET="${1:?usage: check-booklet <name-booklet.pdf> <name.pdf>}"
+READING="${2:?usage: check-booklet <name-booklet.pdf> <name.pdf>}"
+[ -f "$BOOKLET" ] || { echo "BOOKLET FAIL: no such file: $BOOKLET" >&2; exit 1; }
+[ -f "$READING" ] || { echo "BOOKLET FAIL: no such file: $READING" >&2; exit 1; }
+
+command -v python3 >/dev/null || { echo "ERROR: python3 not found" >&2; exit 1; }
+python3 -c "import pypdf" 2>/dev/null || { echo "ERROR: python 'pypdf' not installed (pip install pypdf)" >&2; exit 1; }
+
+python3 - "$BOOKLET" "$READING" <<'PY'
+import sys
+from pypdf import PdfReader
+
+booklet, reading = sys.argv[1], sys.argv[2]
+fails = []
+
+bpages = PdfReader(booklet).pages
+rpages = PdfReader(reading).pages
+nb, nr = len(bpages), len(rpages)
+
+# Letter dimensions in points, with a 1pt tolerance.
+def is_size(box, w, h, tol=1.0):
+    return abs(float(box.width) - w) <= tol and abs(float(box.height) - h) <= tol
+
+if nb == 0:
+    fails.append("booklet has no pages")
+
+for i, pg in enumerate(bpages):
+    if not is_size(pg.mediabox, 792, 612):
+        fails.append(f"sheet {i}: not letter-landscape "
+                     f"({float(pg.mediabox.width):.0f}x{float(pg.mediabox.height):.0f} pt, want 792x612)")
+    want = 180 if i % 2 else 0
+    got = (pg.get("/Rotate") or 0) % 360
+    if got != want:
+        side = "back" if i % 2 else "front"
+        fails.append(f"sheet {i} ({side}): rotation {got}, want {want} for long-edge duplex")
+
+# Saddle-stitch: 2 imposed pages per sheet, padded up to a multiple of four.
+slots = nb * 2
+if slots % 4 != 0:
+    fails.append(f"imposed slot count {slots} is not a multiple of four")
+if slots < nr:
+    fails.append(f"imposed slots {slots} do not cover {nr} reading pages")
+elif slots - nr >= 4:
+    fails.append(f"too many blank pad pages: {slots} slots for {nr} reading pages")
+
+# Reading copy should be letter-portrait.
+for i, pg in enumerate(rpages):
+    if not is_size(pg.mediabox, 612, 792):
+        fails.append(f"reading page {i}: not letter-portrait "
+                     f"({float(pg.mediabox.width):.0f}x{float(pg.mediabox.height):.0f} pt, want 612x792)")
+        break
+
+if fails:
+    print("BOOKLET FAIL")
+    for f in fails:
+        print(f"  - {f}")
+    sys.exit(1)
+
+print(f"BOOKLET OK  ({nb} landscape sheets, {slots} slots for {nr} reading pages, "
+      f"long-edge 0/180 rotation)")
+PY

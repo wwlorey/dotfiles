@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+# Build an akathist booklet: typeset the .tex with XeLaTeX, then impose it
+# 2-up saddle-stitch for double-sided long-edge printing.
+#
+#   build <path/to/name.tex>
+#
+# Produces, next to the source:
+#   name.pdf          reading copy (letter portrait, with page numbers)
+#   name-booklet.pdf  imposed booklet (letter landscape, 2 pages/side),
+#                     imposed for LONG-EDGE duplex (back sheets rotated 180)
+set -euo pipefail
+
+FONT="Janson Text LT Std"
+TEX="${1:?usage: build <path/to/name.tex>}"
+[ -f "$TEX" ] || { echo "ERROR: no such file: $TEX" >&2; exit 1; }
+DIR="$(cd "$(dirname "$TEX")" && pwd)"
+STEM="$(basename "$TEX" .tex)"
+
+command -v xelatex >/dev/null || { echo "ERROR: xelatex not found (install MacTeX/TeX Live)" >&2; exit 1; }
+command -v pdfjam  >/dev/null || { echo "ERROR: pdfjam not found (ships with TeX Live)" >&2; exit 1; }
+command -v python3 >/dev/null || { echo "ERROR: python3 not found (needed for long-edge imposition)" >&2; exit 1; }
+python3 -c "import pypdf" 2>/dev/null || { echo "ERROR: python 'pypdf' not installed (pip install pypdf) — needed for long-edge imposition" >&2; exit 1; }
+# grep (no -q) consumes the whole stream — with `set -o pipefail`, an early
+# grep -q exit would SIGPIPE fc-list and spuriously fail the check.
+fc-list | grep -F "$FONT" >/dev/null || {
+  echo "ERROR: font '$FONT' not installed. Drop the OTF into ~/Library/Fonts/ and retry." >&2
+  exit 1
+}
+
+cd "$DIR"
+# Twice so the page-number footer stabilizes before imposition.
+xelatex -interaction=nonstopmode -halt-on-error "$STEM.tex" >/dev/null
+xelatex -interaction=nonstopmode -halt-on-error "$STEM.tex" >/dev/null
+pdfjam --booklet true --landscape --paper letterpaper \
+       --outfile "$STEM-booklet.pdf" "$STEM.pdf" >/dev/null 2>&1
+# pdfjam lays out the saddle-stitch sheets for SHORT-edge duplex. Rotate every
+# back-side sheet (odd 0-based page) 180 so the sheets alternate 0/180 and the
+# booklet prints correctly with a LONG-edge duplex flip.
+python3 - "$STEM-booklet.pdf" <<'PY'
+import sys
+from pypdf import PdfReader, PdfWriter
+path = sys.argv[1]
+r = PdfReader(path); w = PdfWriter()
+for i, pg in enumerate(r.pages):
+    if i % 2:
+        pg.rotate(180)
+    w.add_page(pg)
+with open(path, "wb") as f:
+    w.write(f)
+PY
+rm -f "$STEM.aux" "$STEM.log"
+
+echo "PDF:     $DIR/$STEM.pdf"
+echo "Booklet: $DIR/$STEM-booklet.pdf"

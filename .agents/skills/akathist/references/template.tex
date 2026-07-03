@@ -1,0 +1,87 @@
+% Akathist booklet — XeLaTeX source scaffold.
+% Fill the body from source.html (the formatting-preserving ground truth), then
+% delete the guidance comments. Keep the preamble intact — it defines the Janson
+% font and the formatting macros. See references/structure.md for how each source
+% HTML element maps onto a macro.
+
+\documentclass[11pt]{extarticle}
+\usepackage[letterpaper,top=0.7in,bottom=0.7in,left=0.75in,right=0.75in]{geometry}
+\usepackage{fontspec}
+% Only the "55 Roman" OTF is installed, so synthesize bold + italic from it.
+\setmainfont{Janson Text LT Std}[
+  Numbers={OldStyle,Proportional},
+  BoldFont={Janson Text LT Std},       BoldFeatures={FakeBold=2.2},
+  ItalicFont={Janson Text LT Std},     ItalicFeatures={FakeSlant=0.18},
+  BoldItalicFont={Janson Text LT Std}, BoldItalicFeatures={FakeBold=2.2,FakeSlant=0.18},
+]
+\usepackage{parskip}
+\setlength{\parskip}{0.8\baselineskip plus 2pt}   % open spacing between paragraphs
+\usepackage{ragged2e}       % \RaggedRight — even word spacing, no stretched gaps
+\usepackage{needspace}      % keep a heading with the start of its stanza
+\setlength{\emergencystretch}{2em}
+% No hyphenation: keep every word whole so the exact-text QA gate never sees a
+% word split across a line break.
+\hyphenpenalty=10000
+\exhyphenpenalty=10000
+\pagestyle{plain}          % centered page number in the footer (aids booklet order)
+\frenchspacing
+
+% --- Formatting mirrors the source HTML exactly -----------------------------
+% Apply weight/slant ONLY where the source marks it — via an element (h1/h2/h3
+% are headings, <strong>/<b> bold, <em>/<i> italic) OR a CSS class (e.g.
+% class="italic", a class containing "font-bold"). Body text, salutations, and
+% refrains stay plain, because the source renders them as plain paragraph text.
+% Never add bold or italic the source does not have.
+\newcommand{\akatitle}[1]{\begin{center}\fontsize{24}{28}\selectfont\bfseries #1\end{center}}
+% Optional dedication / commemoration line under the title, if the source has one.
+\newcommand{\akasubtitle}[1]{\begin{center}\large #1\end{center}}
+% Section heading, from an <h1>/<h2>/<h3>. Kept with the start of its stanza:
+% \needspace forces a page break *before* the heading if too few lines remain
+% (so a heading never dangles at the foot of a page); \nopagebreak glues it to
+% the body paragraph that follows.
+\newcommand{\heading}[1]{%
+  \par\needspace{4\baselineskip}%
+  \bigskip
+  {\centering\bfseries #1\par}%
+  \nopagebreak}
+% Rubric — text the source sets in italics (e.g. class="italic"): a spoken or
+% action instruction such as "(Repeat thrice)". Use ONLY when the source
+% italicizes it; otherwise the line is a plain paragraph.
+\newcommand{\rubric}[1]{{\itshape #1}\par}
+
+\begin{document}
+\fontsize{18}{24}\selectfont
+\RaggedRight
+
+% ---- TITLE (from the <h1>) ------------------------------------------------
+\akatitle{% REPLACE with the <h1> text, e.g. Akathist to the Holy Martyr N.N.
+}
+\medskip
+
+% ---- BODY -----------------------------------------------------------------
+% One block per source element, in document order:
+%   <h3>Kontakion 1</h3>      -> \heading{Kontakion 1}
+%   <p>…</p>                  -> a plain paragraph (blank line before and after)
+%   <p>a<br>b<br>c</p>        -> ONE paragraph, lines joined with \\  (the
+%                                salutations and their closing refrain are one
+%                                such paragraph — the refrain is just its last line)
+%   <p class="italic">…</p>   -> \rubric{…}
+%
+% Worked example — replicate this shape for every Kontakion and Ikos:
+
+\heading{Kontakion 1}
+% REPLACE: the Kontakion 1 paragraph. Its refrain is inline, exactly as the source has it.
+
+\heading{Ikos 1}
+% REPLACE: the Ikos 1 lead paragraph.
+
+% REPLACE: the salutations + closing refrain as ONE paragraph, one \\ per line.
+% Everything here is plain — no bold, no hanging indent — matching the source:
+Rejoice, % ...! \\
+Rejoice, % ...! \\
+Rejoice, O holy N.N., % ...  (closing refrain — plain, just the last line, no \\)
+
+% ... continue through Kontakion 13, then any \rubric the source italicizes, then
+% the repeated Ikos 1 and Kontakion 1 as the source directs.
+
+\end{document}

@@ -23,6 +23,7 @@
       "agent*",
       "open *",
       "*face-reading/scripts/*",
+      "*akathist/scripts/*",
       "git push*",
       "git fetch*",
       "git pull*",
