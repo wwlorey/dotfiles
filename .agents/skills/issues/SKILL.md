@@ -137,6 +137,8 @@ It does NOT detect cycles. At <100 issues per project the cost of manual cycle r
 
 There is no separate "reopened" state — git history shows it was closed and then opened. That's enough.
 
+**Closing field-reported bugs.** An issue for a failure observed in the field (a distributed build, a user's machine, an external environment) closes as *fixed* only when the original failing scenario has been re-run successfully. When the fix cannot be exercised in the environment that produced the report, close it with a comment stating "fix attempted, field verification pending" and file a companion `<slug>-field-verify` issue (`status: open`) that closes only on confirmation from the field. Commit messages and release notes inherit the distinction — an attempted fix is never announced as "fixed."
+
 ## Concurrent claims
 
 Two agents may try to claim the same issue. The protocol:

@@ -84,6 +84,9 @@ Worker briefing template:
 > ## Exit condition
 > A verifiable command + expected outcome that proves this item is shippable (e.g. `bash e2e/foo.sh exits 0`, `pytest passes`, `grep finds X in path`).
 >
+> ## Evidence (bug items only)
+> The concrete observed failure this plan targets — log line, captured artifact, reproduced error — with where it came from. If evidence is unobtainable, the literal label HYPOTHESIS-FIX plus why.
+>
 > ## Questions for user
 > - ... (omit section if no questions)
 > ```
@@ -101,10 +104,12 @@ Every returned plan goes through this gate before you present it to the user —
 
 1. **Trace the full path.** From trigger to symptom (or input to output), end-to-end, naming every file and condition.
 2. **Question magic numbers.** If the fix changes thresholds or constants, demand evidence or reasoning for the values chosen. "Lower X" is not a plan.
-3. **Enumerate triggers.** Multiple code paths producing this symptom? Confirmed which fires?
-4. **Edge cases.** What inputs should STILL trigger the original behavior? Make the worker prove the fix doesn't break those.
-5. **Silent failures.** Does the fix add observability so future debugging has breadcrumbs?
-6. **Exit condition.** Is it verifiable? If you can't write a check that proves done, the plan isn't ready — send back.
+3. **Enumerate triggers.** Multiple code paths producing this symptom? Confirmed which fires? A user-visible message that funnels several distinct errors into one string is not a diagnosis — the plan must identify the underlying error, not the message.
+4. **Demand evidence for bug fixes.** A bug-fix plan must cite the concrete observed failure it targets: a log line, a captured artifact, a reproduced error, or forensic extraction from the failing environment. "Error X matches the symptom" is a hypothesis, not evidence. When evidence is genuinely unobtainable, the plan carries the explicit label `HYPOTHESIS-FIX`, and the label propagates: into the commit message, into the tracking issue, and into an open `<item>-field-verify` tracker that closes only when the original scenario re-runs successfully. A hypothesis fix is never described as "fixed" in issues, commits, or release notes.
+5. **Require a reality anchor for external contracts.** When the item touches code that parses or validates artifacts produced by an external system (platform receipts, third-party API responses, file formats owned by someone else), the plan must name at least one captured real artifact used as a test fixture — or state that none exists yet and include obtaining one in the plan. Synthetic fixtures derived from the same spec or understanding the code was written from are self-confirmation, not verification: spec, code, and tests can all agree with each other and still all be wrong about the external system.
+6. **Edge cases.** What inputs should STILL trigger the original behavior? Make the worker prove the fix doesn't break those.
+7. **Silent failures.** Does the fix add observability so future debugging has breadcrumbs?
+8. **Exit condition.** Is it verifiable? If you can't write a check that proves done, the plan isn't ready — send back.
 
 When the plan survives the checklist, present it to the user for explicit approval before moving the item to `approved`.
 
