@@ -57,7 +57,7 @@ For each item, spawn one worker via the `orchestrate` skill (Agent-tool spawn). 
 
 Worker briefing template:
 
-> **Goal.** Take this single item through investigation and produce a plan. **Stop before implementing.** Return: (a) the proposed plan, numbered, (b) any clarifying questions for the user, (c) which specs are likely affected, (d) the exit condition (a verifiable command + expected outcome that proves the item is shippable).
+> **Goal.** Take this single item through investigation and produce a plan. **Stop before implementing.** Return: (a) the proposed plan, numbered, (b) any clarifying questions for the user, (c) which specs are likely affected, (d) the exit condition (a verifiable command + expected outcome that proves the item is shippable), (e) for bug items, the observed-failure evidence (the concrete error you confirmed fires — not a hypothesis pattern-matched from the symptom; go get the log line, artifact, or reproduction during investigation).
 >
 > **Item:** \<verbatim decomposed item>
 >
@@ -148,6 +148,7 @@ For the next-in-queue approved item, spawn an implementation worker:
 > - Specs alongside code — non-negotiable. Do not defer with an issue.
 > - Push after each commit. If push fails, report and continue.
 > - If backpressure fails on your own changes and you cannot fix it in this iteration, do not commit broken state; report the blocker.
+> - If the approved plan carries the `HYPOTHESIS-FIX` label, the label propagates: every commit message and the tracking issue name it, an open `<item>-field-verify` tracker must exist before the item closes, and the change is described as "fix attempted, pending verification" — never "fixed." Same discipline when the item is a field-reported bug whose failing scenario cannot be re-run from here (see the `issues` skill's field-reported closing rule).
 > - **Gate output is not your terminal return.** When a verification gate (`code-review`, `audit-specs`, `verify`, etc.) emits findings, that text is the GATE's output — NOT yours. Your turn is not done. Continue: address any findings, complete steps 6 and 7 of the lifecycle for that sub-piece, move to the next sub-piece, and only emit the structured `## Summary / ## Commits shipped / ...` return AFTER every sub-piece is committed AND the exit condition is met. If your last emitted text is a gate's findings (or any non-structured prose) and the artifact is incomplete, you are NOT done — your next action MUST be a tool call, not more prose.
 >
 > **Long-running commands use MCP wrappers, not raw Bash.** For any cargo command, use `mcp__unsandboxed-runner__run_cargo` — pass argv as a string array (e.g. `args: ["test", "--workspace"]`, `args: ["clippy", "--workspace", "--all-targets", "--", "-D", "warnings"]`). For tauri build, use `mcp__unsandboxed-runner__run_tauri_build`. For pnpm, use `mcp__unsandboxed-runner__run_pnpm`. The wrappers run outside the sandbox and bypass Bash's timeout cap. Raw `cargo` via Bash is blocked by a PreToolUse hook (`redirect-bash-to-mcp.py`). NEVER end your turn while waiting on a backgrounded task — the harness treats final text without a pending tool call as turn-end, the worker goes dormant, and completion notifications don't wake it.
