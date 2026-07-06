@@ -253,6 +253,7 @@ Every successful resolution maps to one or more of:
 1. **Status** — winning power or position. Offer it through: access (membership tiers), scarcity (limited editions), premium titles ("Diamond Member," "Anchor Donor"), or identity association (Mercedes, Rolex).
 2. **Completeness from an external source** — being made whole. Offer: reduced anxiety, reduced workload, more time, the right tools.
 3. **Self-realization / acceptance** — reaching one's potential. Offer: mastery, growth, transformation.
+4. **Transcendence** — being part of something bigger than oneself. Offer: a movement or cause, a chance to help others (Tom's Shoes, FUBU).
 
 #### Use images of success
 
@@ -307,9 +308,9 @@ When you're not in the room and a customer hears your name, can they figure out 
 
 **Better candidates** would have been: *Gather, Curate, Curator* — words that describe what the product actually does.
 
-### The Curse of Knowledge (Lee LeFever)
+### The Curse of Knowledge
 
-Coined by communication expert Lee LeFever in *The Art of Explanation*. The founder is so close to the product that they project their knowledge onto the customer. The customer hears something completely different from what the founder thinks they're saying.
+The founder is so close to the product that they project their own knowledge onto the customer, who then hears something completely different from what the founder thinks they're saying. (The term originates in behavioral economics — Camerer, Loewenstein & Weber, 1989; StoryBrand's naming video frames it via Lee LeFever's *The Art of Explanation*.)
 
 **The Tap Test:** Imagine tapping the rhythm of a song on a table. To you (the tapper), it's obvious — you can hear the melody in your head. To the listener, it's just random taps. That's how your brand sounds to customers when you have the curse of knowledge.
 

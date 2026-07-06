@@ -34,7 +34,7 @@ The most important section. Decisions made in seconds.
 
 What goes here:
 1. **Philosophical statement as the headline** — the hook that invites people into the story. Examples: *"Filing taxes doesn't need to be difficult."* / *"Buying a home should be exciting, not stressful."* / *"Just do it."* If the BrandScript lacks a strong philosophical angle, use an aspirational identity statement or direct promise of the desired outcome instead.
-2. **One clarifying sentence underneath** — plain noun-level description of what you do. The one-liner (*"We help [character] who struggle with [problem] by [plan] so they [success]"*) often works perfectly here or as the meta description.
+2. **One clarifying sentence underneath** — plain noun-level description of what you do. The one-liner (*"We help [character] who struggle with [problem] by [plan] so that they [success]"*) often works perfectly here or as the meta description.
 3. **Direct CTA button** — brightest, most obvious element on the screen.
 4. **Optional transitional CTA** — secondary, less prominent.
 
