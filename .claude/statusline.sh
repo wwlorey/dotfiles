@@ -13,8 +13,8 @@ if [ -n "$cwd" ]; then
 fi
 if [ -n "$pct" ]; then
   parts="$parts 🧠 $(printf '%.0f%%' "$pct")"
-fi
-if [ -n "$model" ]; then
-  parts="$parts · $model"
+  [ -n "$model" ] && parts="$parts · $model"
+elif [ -n "$model" ]; then
+  parts="$parts 🧠 $model"
 fi
 printf '%s' "$parts"
