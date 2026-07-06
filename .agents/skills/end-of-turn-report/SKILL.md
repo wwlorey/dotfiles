@@ -35,5 +35,13 @@ Use the `voice` skill's **speak now** mode by calling the `mcp__unsandboxed-runn
 - Backgrounded call, no `output` param (so it plays immediately).
 - Default voice (`bf_isabella`).
 - The spoken text is the format above — nothing more.
+- **Ordering: voice call first, user-facing text last.** Fire the
+  `mcp__unsandboxed-runner__run_dic` call before the turn's final text, then
+  emit the user-facing text — the answer, report, or question — as the turn's
+  LAST output, with no tool calls after it. Terminal UIs render only the text
+  that follows the turn's last tool call as the turn's message, so text
+  emitted before a tool call is effectively invisible to the user. Any
+  long-form content the user must read (status reports, findings, summaries)
+  goes after the voice call, never before it.
 
 Do not block on the audio; the text reply or input request is the primary artifact.
