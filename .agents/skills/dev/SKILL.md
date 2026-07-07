@@ -24,6 +24,8 @@ Pick exactly one underlying lifecycle for each user request. When the user descr
 
 When the user explicitly invokes an underlying skill by name (e.g. `/changes ...`), they have bypassed `dev`. Respect the bypass — do not wrap it. `dev` is the default surface, not the only surface.
 
+**Re-enter `dev` for every new development directive.** Each user request that is development work routes through `dev` afresh — even mid-session, and even while riding an earlier `dev` → `changes`/`build` loop. Momentum from a prior lifecycle is not license to free-spawn impl workers for the new request: the new directive gets its own routing decision, its own injected gate policy, and its own delegation. A terse follow-up ("now also fix the header") is a fresh directive, not a continuation of the last worker's scope.
+
 The verification cadence policy below applies ONLY to code-touching lifecycles (`changes`, `build`). Routes to `spec` / `spec-to-issues` / standalone `audit-specs` produce no code commits, so no per-item / per-batch / session-close gates apply — those lifecycles run as-is.
 
 ## Verification cadence policy
