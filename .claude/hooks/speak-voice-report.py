@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Stop hook: speak the end-of-turn report AFTER the turn's final text renders.
+"""Stop hook: speak the turn's final line AFTER it renders in the terminal.
 
 The `end-of-turn-report` rule says the main agent delivers a brief spoken
 update every time control returns to the user, with a user-ratified ordering:
@@ -9,86 +9,73 @@ agent cannot both end with text and end with a TTS call. This hook closes the
 gap from the harness side: it fires on Stop — after the final text has
 rendered — and speaks then.
 
-Two sources for the spoken line, in order:
+Contract with the agent: by the `end-of-turn-report` convention the agent
+ends every text-terminated final message with a literal last line of the form
+`Summary: <Dirname>. <phrase>.`. This hook takes the final message's last
+non-empty line, strips the `Summary:` label, normalizes it, and speaks the
+remainder — so the spoken line is exactly the last text the user sees, it
+leads with the working directory's basename, and it never contains the word
+"summary".
 
-1. **Staged marker (preferred).** During the turn the agent writes the crafted
-   line to `/tmp/claude/voice-report-<cwd-slug>.txt`, where cwd-slug is the
-   working directory with `/` replaced by `-` (the same encoding the harness
-   uses for its per-project tmp dirs, e.g. `-Users-william-Repos-sanctora`).
-   Both sides derive it identically: the agent from `$(pwd | tr '/' '-')`,
-   this hook from the `cwd` field in its stdin JSON. Concurrent sessions in
-   the *same* project directory share a marker — a documented, accepted edge
-   on this single-user machine (a session whose marker was eaten degrades to
-   source 2). Marker present, non-empty, and younger than 30 minutes: speak
-   it. The marker is DELETED before the speaker is spawned, so a re-fired
-   Stop can never double-speak; a marker older than the TTL (orphaned by a
-   killed session) is deleted unspoken. The agent stages atomically
-   (temp-file + `mv`) so a half-written line is never read.
-2. **Auto-fallback (safety net — nothing ever blocks).** No marker: derive a
-   line as `<cwd basename, capitalized>. ` + a short summary of the turn's
-   final assistant message (read from the transcript). The summary comes from
-   a detached `claude -p ... --model haiku` call (run with `AGENT_HEADLESS=1`
-   per LAW.md — it is a headless pipeline consuming programmatic output);
-   if the CLI is missing or errors, the first ~15 words of the final text
-   stand in. No final text at all: speak "Done."
+Source of the final message: the `last_assistant_message` field of the Stop
+event (coerced to "" when null/absent/non-string). If a harness omits the
+field entirely, a minimal transcript parse recovers the last assistant text
+block as a fallback. Empty final text (a turn that ends on a tool call) speaks
+nothing — silence is correct and fail-safe there.
 
-The hook itself returns immediately in every case (always allow the stop):
-all TTS/summarization work runs in a DETACHED re-invocation of this same
-script (`--speak` / `--speak-summary` subcommands; Popen with
-start_new_session=True, all stdio to devnull). Mute (`dic-status -q` exit 0)
-is honored in the detached child, the same way the run_dic MCP wrapper honors
-it. `dic`'s default voice is bf_isabella — the same default run_dic uses; the
-text is fed to `dic` via stdin so no argv quoting issues arise.
+The hook returns immediately in every case (always allow the stop). The mute
+check and the blocking `dic` call run in a DETACHED re-invocation of this same
+script (Popen with start_new_session=True, all stdio to devnull), so the hook
+never blocks the user. `dic`'s default voice is bf_isabella — the same default
+the run_dic MCP wrapper uses; the text is fed to `dic` via stdin so no argv
+quoting issues arise. Mute (`dic-status -q` exit 0) is honored in the child,
+the same way the run_dic wrapper honors it.
 
 Only the main agent speaks — workers must NOT ("Orchestrators speak; workers
-do not", per the orchestrate skill). Two layers enforce that:
+do not", per the orchestrate skill). Three layers enforce that:
 
 1. Registered under `Stop`, not `SubagentStop`. Classic Agent-tool workers fire
-   `SubagentStop`, so they are never reached here.
+   `SubagentStop` (Stop auto-converts), so they are never reached here.
 2. Teammate sessions (spawned under `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`) are
    full sessions that fire `Stop` like the main agent, so layer 1 does not
    catch them. They are identified by an `{"type": "agent-setting"}` entry in
    their transcript (the recorded subagent type) — a marker the main session's
-   transcript never carries. When present, this hook no-ops BEFORE touching
-   the staged marker (teammates share the main session's cwd, so consuming it
-   would eat the main agent's staged line).
+   transcript never carries. When present, this hook no-ops.
+3. Headless runs: `AGENT_HEADLESS=1` (set by the `agent` wrapper's `-p` mode,
+   and by scripts calling `claude -p` directly — see LAW.md, "Headless agent
+   calls declare themselves") is inherited by this hook process. Nobody is at
+   the keyboard to hear a headless session.
 
-Headless runs are exempt too: `AGENT_HEADLESS=1` (set by the `agent` wrapper's
-`-p` mode, and by scripts calling `claude -p` directly — see LAW.md, "Headless
-agent calls declare themselves") is inherited by this hook process. Nobody is
-at the keyboard to hear a headless session.
-
-Re-entry safety: when another Stop hook blocks, the harness re-enters with
-`stop_hook_active: true`. A freshly staged marker still plays then, but the
-auto-fallback is skipped — the fallback already spoke on the first attempt,
-and double-speaking is worse than silence.
+Re-entry safety: when another Stop hook blocks (Stop hooks run in PARALLEL, so
+this hook fires — and speaks — on the same attempt that gets blocked), the
+harness re-enters with `stop_hook_active: true`. This hook then stays silent:
+the first attempt already spoke, and double-speaking is worse than silence.
 
 Fails OPEN on any parse error — a broken hook must never delay or trap the
 user; on any doubt it allows the stop silently. The detached child never
-surfaces errors into the terminal; failures leave a breadcrumb in
-/tmp/claude/voice-report.log.
+surfaces errors into the terminal; successes and failures leave a breadcrumb
+in /tmp/claude/voice-report.log (size-capped, rotated at ~64 KB).
 
-Test seams: `DIC_BIN` / `DIC_STATUS_BIN` / `CLAUDE_BIN` env vars override the
-external binaries so every branch can be exercised without audio or API calls.
+Test seams: `DIC_BIN` / `DIC_STATUS_BIN` env vars override the external
+binaries so every branch can be exercised without audio.
 """
 
 from __future__ import annotations
 
 import json
 import os
-import shutil
+import re
 import subprocess
 import sys
 import time
 
-MARKER_DIR = "/tmp/claude"
 BREADCRUMB_LOG = "/tmp/claude/voice-report.log"
-MARKER_TTL_SECONDS = 30 * 60
-SUMMARY_INPUT_CAP = 1500
-FALLBACK_WORDS = 15
-SUMMARY_PROMPT = (
-    "Condense the following assistant message into one short spoken status "
-    "phrase, at most 12 words, no preamble, no quotes, plain text only:\n\n"
+LOG_CAP_BYTES = 64 * 1024
+MAX_WORDS = 40
+
+_SUMMARY_LABEL_RE = re.compile(
+    r"^\s*summary\b\s*(?:of\b[^:–—-]*)?[:–—-]\s*(.*)$",
+    re.IGNORECASE,
 )
 
 
@@ -105,10 +92,19 @@ def _dic_status_bin() -> str:
     )
 
 
-def _claude_bin() -> str:
-    return os.environ.get(
-        "CLAUDE_BIN", shutil.which("claude") or "/opt/homebrew/bin/claude"
-    )
+def _log(msg: str) -> None:
+    """Best-effort, size-capped breadcrumb; never surfaces errors."""
+    try:
+        os.makedirs(os.path.dirname(BREADCRUMB_LOG), exist_ok=True)
+        try:
+            if os.path.getsize(BREADCRUMB_LOG) > LOG_CAP_BYTES:
+                os.replace(BREADCRUMB_LOG, BREADCRUMB_LOG + ".1")
+        except OSError:
+            pass
+        with open(BREADCRUMB_LOG, "a", encoding="utf-8") as fh:
+            fh.write(f"{time.strftime('%Y-%m-%dT%H:%M:%S')} {msg}\n")
+    except OSError:
+        pass
 
 
 def _muted() -> bool:
@@ -137,47 +133,25 @@ def _speak(text: str) -> None:
             stderr=subprocess.DEVNULL,
             timeout=600,
         )
+        _log(f"spoke: {text!r}")
     except (OSError, subprocess.SubprocessError) as exc:
         _log(f"dic failed: {exc}")
 
 
-def _summarize(final_text: str) -> str:
-    """One-phrase summary via `claude -p`; falls back to the leading words."""
-    tail = final_text[-SUMMARY_INPUT_CAP:]
-    try:
-        env = dict(os.environ, AGENT_HEADLESS="1")
-        r = subprocess.run(
-            [_claude_bin(), "-p", SUMMARY_PROMPT + tail, "--model", "haiku"],
-            capture_output=True,
-            text=True,
-            timeout=120,
-            env=env,
-        )
-        if r.returncode == 0:
-            line = " ".join(r.stdout.split())
-            if line:
-                return line
-        _log(f"claude summarizer exit {r.returncode}; using truncation fallback")
-    except (OSError, subprocess.SubprocessError) as exc:
-        _log(f"claude summarizer failed: {exc}; using truncation fallback")
-    return " ".join(final_text.split()[:FALLBACK_WORDS])
-
-
-def _spawn_detached(argv: list[str], extra_env: dict[str, str] | None = None) -> None:
+def _spawn_detached(extra_env: dict[str, str]) -> None:
     env = dict(os.environ)
-    if extra_env:
-        env.update(extra_env)
+    env.update(extra_env)
     try:
         subprocess.Popen(
-            [sys.executable, os.path.abspath(__file__), *argv],
+            [sys.executable, os.path.abspath(__file__), "--speak"],
             stdin=subprocess.DEVNULL,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
             start_new_session=True,
             env=env,
         )
-    except OSError:
-        pass
+    except OSError as exc:
+        _log(f"spawn failed: {exc}")
 
 
 def _is_teammate(transcript_path: str) -> bool:
@@ -200,7 +174,11 @@ def _is_teammate(transcript_path: str) -> bool:
 
 
 def _final_assistant_text(transcript_path: str) -> str:
-    """Concatenated text blocks of the last assistant entry that has any."""
+    """Concatenated text blocks of the last assistant entry that has any.
+
+    Fallback source only — used when the Stop event omits
+    `last_assistant_message` entirely.
+    """
     final = ""
     try:
         with open(transcript_path, encoding="utf-8") as fh:
@@ -230,38 +208,74 @@ def _final_assistant_text(transcript_path: str) -> str:
     return final
 
 
-def _log(msg: str) -> None:
-    """Best-effort breadcrumb; a detached process must never surface errors."""
-    try:
-        with open(BREADCRUMB_LOG, "a", encoding="utf-8") as fh:
-            fh.write(f"{time.strftime('%Y-%m-%dT%H:%M:%S')} {msg}\n")
-    except OSError:
-        pass
+def _resolve_text(data: dict) -> str:
+    """The turn's final text: `last_assistant_message` (coerced), or a
+    transcript fallback only when the field is omitted entirely."""
+    if "last_assistant_message" in data and data["last_assistant_message"] is not None:
+        raw = data["last_assistant_message"]
+        return raw if isinstance(raw, str) else ""
+    transcript_path = data.get("transcript_path") or ""
+    return _final_assistant_text(transcript_path) if transcript_path else ""
 
 
-def _consume_marker(cwd: str) -> str:
-    """Read and DELETE the marker (delete-before-speak keeps re-fired Stops
-    idempotent), returning '' when absent, unreadable, or older than the TTL
-    (a marker orphaned by a killed session must not be spoken later)."""
-    marker = os.path.join(MARKER_DIR, f"voice-report-{cwd.replace('/', '-')}.txt")
-    try:
-        stale = time.time() - os.stat(marker).st_mtime > MARKER_TTL_SECONDS
-    except OSError:
+def _strip_md(text: str) -> str:
+    """Strip leading bullets/blockquote markers and inline emphasis for speech."""
+    text = text.strip()
+    text = re.sub(r"^\s*(?:[>\-+*]\s+)+", "", text)
+    text = re.sub(r"`+", "", text)
+    text = re.sub(r"\*+", "", text)
+    text = re.sub(r"(?<!\w)_+|_+(?!\w)", "", text)
+    return text.strip()
+
+
+def _strip_summary_label(line: str) -> str:
+    """Remove a leading summary label tolerantly. Runs whether or not the line
+    looked canonical, so a summary-*like* line can never speak the word."""
+    m = _SUMMARY_LABEL_RE.match(line)
+    if m:
+        line = m.group(1)
+    line = re.sub(
+        r"^\s*summary\b[\s:.–—-]*", "", line, count=1, flags=re.IGNORECASE
+    )
+    return line.strip()
+
+
+def _speechify(name: str) -> str:
+    s = re.sub(r"[-_.]+", " ", name)
+    s = re.sub(r"\s+", " ", s).strip()
+    return s.title()
+
+
+def _key(s: str) -> str:
+    return re.sub(r"[^a-z0-9]", "", s.lower())
+
+
+def _spoken_from_text(text: str, cwd: str) -> str:
+    """Build the line to speak, or "" when there is nothing to say.
+
+    Guarantees (both the canonical and the fallback path): the result never
+    contains the word "summary", and it leads with the cwd basename.
+    """
+    text = (text or "").strip()
+    if not text:
         return ""
-    text = ""
-    if not stale:
-        try:
-            with open(marker, encoding="utf-8") as fh:
-                text = fh.read().strip()
-        except OSError:
-            text = ""
-    try:
-        os.unlink(marker)
-    except OSError:
-        pass
-    if stale:
-        _log(f"stale marker discarded: {marker}")
-    return text
+    lines = [ln for ln in text.splitlines() if ln.strip()]
+    if not lines:
+        return ""
+    line = _strip_md(lines[-1])
+    line = _strip_summary_label(line)
+    remainder = _strip_md(line)
+
+    base = _speechify(os.path.basename((cwd or "").rstrip("/"))) or "Session"
+    if base and remainder and _key(remainder).startswith(_key(base)):
+        spoken = remainder
+    else:
+        spoken = f"{base}. {remainder}".strip()
+
+    words = spoken.split()
+    if len(words) > MAX_WORDS:
+        spoken = " ".join(words[:MAX_WORDS])
+    return spoken.strip()
 
 
 def hook_main() -> None:
@@ -271,46 +285,39 @@ def hook_main() -> None:
 
     data = json.load(sys.stdin)
 
+    # Re-entry after another parallel Stop hook blocked: the first attempt
+    # already spoke — don't double-speak.
+    if data.get("stop_hook_active"):
+        return
+
     transcript_path = data.get("transcript_path") or ""
 
-    # Teammate session (agent-teams worker): no-op before touching the marker
-    # — teammates share the main session's cwd. Workers do not speak.
+    # Teammate session (agent-teams worker): workers do not speak.
     if transcript_path and _is_teammate(transcript_path):
         return
 
     cwd = data.get("cwd") or os.getcwd()
-
-    staged = _consume_marker(cwd)
-    if staged:
-        _spawn_detached(["--speak", staged])
+    spoken = _spoken_from_text(_resolve_text(data), cwd)
+    if not spoken:
+        # Turn ended on a tool call (no final text) — silence is correct.
         return
 
-    # Re-entry after another Stop hook blocked: the fallback already spoke on
-    # the first attempt — don't double-speak.
-    if data.get("stop_hook_active"):
-        return
-
-    prefix = (os.path.basename(cwd.rstrip("/")) or "Session").capitalize() + "."
-    final_text = _final_assistant_text(transcript_path) if transcript_path else ""
-    _spawn_detached(["--speak-summary", prefix], {"FINAL_TEXT": final_text})
+    _spawn_detached({"SPEAK_TEXT": spoken})
 
 
-def child_main(argv: list[str]) -> None:
+def child_main() -> None:
     if _muted():
+        _log("muted; not speaking")
         return
-    if argv[0] == "--speak" and len(argv) > 1:
-        _speak(argv[1])
-    elif argv[0] == "--speak-summary" and len(argv) > 1:
-        prefix = argv[1]
-        final_text = os.environ.get("FINAL_TEXT", "").strip()
-        line = _summarize(final_text) if final_text else "Done."
-        _speak(f"{prefix} {line}")
+    text = os.environ.get("SPEAK_TEXT", "").strip()
+    if text:
+        _speak(text)
 
 
 if __name__ == "__main__":
     try:
-        if len(sys.argv) > 1 and sys.argv[1].startswith("--speak"):
-            child_main(sys.argv[1:])
+        if len(sys.argv) > 1 and sys.argv[1] == "--speak":
+            child_main()
         else:
             hook_main()
     except Exception:
