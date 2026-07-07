@@ -109,4 +109,4 @@ After workers return:
 - Synthesize their outputs into a single coherent answer for the user.
 - Apply any changes the workers proposed.
 - If a worker returned nothing useful, **say so** in the synthesis — silence reads as "covered".
-- Speak a report per the `end-of-turn-report` skill — the voice call fires before the synthesis text, and the synthesis text is the turn's last output. **Orchestrators speak; workers do not.**
+- Speak a report per the `end-of-turn-report` skill — stage the spoken line to the marker file before the synthesis text; the Stop hook plays it after the synthesis text renders, so the synthesis text is the turn's last output. **Orchestrators speak; workers do not.**

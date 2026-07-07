@@ -10,9 +10,8 @@ main agent is about to edit project source without a lifecycle skill active.
 
 Non-blocking by design: it injects `additionalContext`, never denies. A wrong
 guess costs at most one extra reminder line; it can never trap a legitimate
-edit. (Compare `require-voice-report.py`, which hard-blocks — the voice rule
-graduated to a block only after a soft form proved insufficient. This starts
-soft.)
+edit. (Rules with no legitimate exceptions get hard denies — see
+`block-force-push.py`. This starts soft.)
 
 Fires only when ALL hold:
   1. Tool is Edit / Write / NotebookEdit.

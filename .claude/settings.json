@@ -257,7 +257,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 $HOME/.claude/hooks/require-voice-report.py"
+            "command": "python3 $HOME/.claude/hooks/speak-voice-report.py"
           },
           {
             "type": "command",

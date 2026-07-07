@@ -1,13 +1,13 @@
 ---
 name: voice
-description: Producing spoken audio — speaking text aloud in real time (realtime voice responses, ad-hoc utterances, the playback half of an end-of-turn report) or rendering text to a WAV/MP3 file for another skill (e.g. news). Consult whenever you need to produce spoken output, save synthesized speech to disk, or another skill (such as `end-of-turn-report` or `news`) needs the synthesis primitive.
+description: Producing spoken audio — speaking text aloud in real time (realtime voice responses, ad-hoc utterances, the spoken alert before a mid-turn pause) or rendering text to a WAV/MP3 file for another skill (e.g. news). Consult whenever you need to produce spoken output, save synthesized speech to disk, or another skill (such as `end-of-turn-report` or `news`) needs the synthesis primitive.
 ---
 
 # Voice
 
 Synthesize speech via the `mcp__unsandboxed-runner__run_dic` MCP tool. This is an MCP tool, not a Bash command — call it directly with parameters; do not pipe via `echo` or shell-invoke. Two modes, distinguished by whether the caller passes `output`:
 
-- **Speak now** — plays immediately through the speakers. Used for realtime voice responses, ad-hoc spoken output, and the playback half of an end-of-turn report.
+- **Speak now** — plays immediately through the speakers. Used for realtime voice responses, ad-hoc spoken output, and the spoken alert before a mid-turn pause (see the `end-of-turn-report` skill; the end-of-turn line itself is played by a Stop hook, not by this tool).
 - **Render to file** — saves audio to disk, no playback. Used by skills that need to assemble audio (e.g. `news` chunking themes into a daily WAV).
 
 This skill is the synthesis primitive only — format, length, and trigger rules belong to the caller (see the `end-of-turn-report` skill for end-of-turn specifics).
