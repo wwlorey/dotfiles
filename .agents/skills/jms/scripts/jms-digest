@@ -6,9 +6,10 @@
 # summarization of a transcript). A harness port rewrites only that one call.
 #
 # Usage:
-#   jms-digest            # cron mode: send only if a new episode exists
-#   jms-digest --force    # always summarize+send the latest, print to stdout
-#   jms-digest --dry-run  # build the email but print instead of sending
+#   jms-digest              # cron mode: discover the latest episode, send if new
+#   jms-digest --retry-only # act only on a pending episode (hourly backoff job)
+#   jms-digest --force      # always summarize+send the latest, print to stdout
+#   jms-digest --dry-run    # build the email but print instead of sending
 set -euo pipefail
 
 # Full episodes appear in either tab: live-streamed shows land under /streams,
@@ -22,6 +23,14 @@ TAB=$'\t'         # yt-dlp --print prints the template verbatim; use a real tab
 
 STATE_DIR="$HOME/.local/state/jms"
 STATE_FILE="$STATE_DIR/last-sent"
+# Auto-captions often lag a freshly-published episode by hours. When discovery
+# finds an episode whose captions aren't published yet, its id and metadata are
+# parked in this marker; the hourly --retry-only job drains it with exponential
+# backoff (RETRY_BASE, doubling each time) until captions appear or it gives up
+# after RETRY_CAP attempts.
+PENDING_FILE="$STATE_DIR/pending"
+RETRY_BASE=3600 # first backoff step in seconds (1h); each retry doubles it
+RETRY_CAP=5     # give up after this many failed retries (~31h total window)
 SENDER="noreply@lorey.co"
 RECIPIENT="jms@lorey.co"
 # Delivery is handled by the shared send-email skill.
@@ -33,34 +42,211 @@ CHAT_STATE_DIR="$HOME/.local/state/jms-chat"
 
 FORCE=0
 DRY_RUN=0
+RETRY_ONLY=0
 for arg in "$@"; do
   case "$arg" in
     --force) FORCE=1 ;;
     --dry-run) DRY_RUN=1 ;;
+    --retry-only) RETRY_ONLY=1 ;;
     *) echo "jms-digest: unknown argument: $arg" >&2; exit 2 ;;
   esac
 done
 
 log() { echo "[jms-digest $(date '+%Y-%m-%dT%H:%M:%S')] $*" >&2; }
+now_epoch() { date '+%s'; }
 
-# Email a failure alert — only for unattended (cron) runs; manual --force/--dry-run
-# runs surface errors on the terminal. Best-effort: a failed alert never masks the
-# original failure. Args: $1 = body detail, $2 = subject tail.
+# Email a failure/retry notice — only for unattended (cron) runs; manual
+# --force/--dry-run runs surface errors on the terminal. Best-effort: a failed
+# alert never masks the original failure. Args: $1 = body detail, $2 = subject tail.
 alert() {
   [ "$FORCE" -eq 0 ] && [ "$DRY_RUN" -eq 0 ] || return 0
   [ -f "$SEND_EMAIL" ] || return 0
-  printf 'The weekly JMS digest run did not deliver a digest.\n\nReason: %s\n\n— jms-digest on %s at %s\n' \
+  printf 'The JMS digest run did not deliver a digest.\n\nReason: %s\n\n— jms-digest on %s at %s\n' \
     "$1" "$(hostname -s 2>/dev/null || echo host)" "$(date '+%Y-%m-%dT%H:%M:%S')" |
     python3 "$SEND_EMAIL" --from "$SENDER" --to "$RECIPIENT" \
       --subject "JMS digest alert: $2" >/dev/null 2>&1 || true
 }
 
+# Pending-episode marker (JSON): the video the retry job is draining.
+write_pending() { # vid title upload_date first_seen attempts next_eligible
+  mkdir -p "$STATE_DIR"
+  jq -n --arg vid "$1" --arg title "$2" --arg ud "$3" \
+    --argjson fs "$4" --argjson at "$5" --argjson ne "$6" \
+    '{vid:$vid,title:$title,upload_date:$ud,first_seen:$fs,attempts:$at,next_eligible:$ne}' \
+    >"$PENDING_FILE"
+}
+clear_pending() { rm -f "$PENDING_FILE"; }
+
 for tool in yt-dlp claude jq python3; do
   command -v "$tool" >/dev/null 2>&1 || { log "required tool not found: $tool"; exit 1; }
 done
 
-# 1. Discover the newest long-form episode. Merge both tabs, keep rows over the
-#    duration floor, and let the newest upload_date win.
+work=""
+# return 0 explicitly: on macOS bash 3.2 a trap whose last command returns
+# non-zero overrides an explicit `exit 0`, so a clean no-op (no pending marker,
+# not yet due, already sent) would otherwise report exit 1 and pollute the logs.
+cleanup() { [ -n "$work" ] && rm -rf "$work"; return 0; }
+trap cleanup EXIT
+
+# process_episode <vid> <title> <upload_date>
+# Fetch captions, summarize, and email the digest for a known episode. Shared by
+# the discovery path and the retry path. Returns: 0 sent (or dry-run printed);
+# 10 captions not available yet; 11 summarization/delivery failed (already alerted).
+process_episode() {
+  local vid="$1" title="$2" upload_date="$3"
+  local url="https://www.youtube.com/watch?v=${vid}"
+
+  # Transcript via the shared fetch-transcript helper; cache it for email-chat.
+  work="$(mktemp -d "${TMPDIR:-/tmp}/jms.XXXXXX")"
+  local transcript="$work/transcript.txt"
+  log "fetching captions for $vid"
+  if ! bash "$FETCH_TRANSCRIPT" "$vid" >"$transcript" 2>/dev/null || [ ! -s "$transcript" ]; then
+    log "no captions available yet for $vid"
+    return 10
+  fi
+  mkdir -p "$CHAT_STATE_DIR"
+  cp "$transcript" "$CHAT_STATE_DIR/$vid.txt" 2>/dev/null || true
+  log "transcript: $(wc -l <"$transcript" | tr -d ' ') lines, $(wc -c <"$transcript" | tr -d ' ') bytes"
+
+  # Summarize. Stream-json is used so the digest is recovered from the assistant
+  # message even if a Stop hook adds a follow-up turn; sentinels bound the text.
+  local prompt
+  read -r -d '' prompt <<EOF || true
+You are summarizing an episode of The Jack Mallers Show (Bitcoin, macroeconomics,
+markets, the future of money). The transcript is auto-generated captions piped on
+stdin, so punctuation and speaker labels are unreliable — infer meaning.
+
+Episode title: ${title}
+URL: ${url}
+Aired (YYYYMMDD): ${upload_date}
+
+Write the digest in plain text with TWO clearly separated parts.
+
+Put this exact line, then PART 1: THE GIST
+PART 1 is an in-depth TL;DR of roughly 6-10 sentences. A reader should finish it in
+under a minute and feel fully caught up — the through-line, the main arguments, the
+conclusions, and any calls to action. Richer than a one-liner, shorter than PART 2.
+
+Then a blank line, this exact line, then PART 2: THE BREAKDOWN
+PART 2 walks the episode IN THE ORDER JACK PRESENTS IT, mirroring the show's own
+structure (e.g. the opening / market check, each main news item or topic in turn,
+the mailbag or Q&A, Strike updates, and the close). For each segment: a short label
+line, then 2-4 "- " bullets capturing the argument, the key data or claims, and any
+notable quote (paraphrase if the captions are garbled).
+
+End with a final line exactly: Watch: ${url}
+
+Output ONLY the digest, wrapped between a line containing exactly <<<DIGEST>>> and
+a line containing exactly <<<END>>>. No preamble, no markdown headers.
+EOF
+
+  # SECURITY: the transcript is untrusted (arbitrary YouTube captions). Never add
+  # --dangerously-skip-permissions here — without it, non-interactive claude -p
+  # auto-denies any tool call the captions might try to coerce, so the model can
+  # only return text.
+  log "summarizing with claude -p"
+  # AGENT_HEADLESS: per LAW.md, headless agent calls declare themselves so Stop
+  # hooks (voice report, orphan check) don't inject extra turns into the run.
+  local raw digest
+  raw="$(AGENT_HEADLESS=1 claude -p --output-format stream-json --verbose "$prompt" <"$transcript" 2>/dev/null |
+    jq -r 'select(.type=="assistant") | .message.content[]? | select(.type=="text") | .text' 2>/dev/null || true)"
+
+  digest="$(printf '%s\n' "$raw" | awk '/<<<DIGEST>>>/{f=1;next} /<<<END>>>/{f=0} f')"
+  # Require the sentinels — their absence means claude -p returned something other
+  # than a digest (an auth error like "Not logged in", a refusal, an empty stream).
+  # Do NOT fall back to the raw text: emailing that ships the error as the digest.
+  if [ -z "$digest" ]; then
+    local reason="summarization produced no digest (claude -p auth/output failure — raw: $(printf '%s' "$raw" | head -c 120 | tr '\n' ' '))"
+    log "$reason"
+    alert "$reason" "summarization failed"
+    return 11
+  fi
+
+  # Build and send the email.
+  local subject="JMS digest: ${title}"
+  local body
+  body="$(printf '%s\n\n—\nEpisode: %s\nAired: %s\nAutomated weekly summary of The Jack Mallers Show.\n' \
+    "$digest" "$url" "$upload_date")"
+
+  if [ "$DRY_RUN" -eq 1 ]; then
+    printf -- '----- DRY RUN (not sent) -----\nFrom: %s\nTo: %s\nSubject: %s\n\n%s\n' \
+      "$SENDER" "$RECIPIENT" "$subject" "$body"
+    return 0
+  fi
+
+  [ -f "$SEND_EMAIL" ] || { log "send-email skill not found at $SEND_EMAIL"; return 11; }
+  # Encode the episode id + chat token in the Message-ID (which Proton preserves,
+  # unlike Reply-To). A reply's In-Reply-To carries it, gating the email-chat
+  # responder to this episode. Only set when the chat token has been created.
+  local mid_args=()
+  if [ -f "$CHAT_STATE_DIR/reply-token" ]; then
+    local token; token="$(cat "$CHAT_STATE_DIR/reply-token")"
+    mid_args=(--message-id "<jms.${vid}.${token}@lorey.co>")
+  fi
+  printf '%s' "$body" | python3 "$SEND_EMAIL" --from "$SENDER" --to "$RECIPIENT" --subject "$subject" ${mid_args[@]+"${mid_args[@]}"}
+  log "sent digest for $vid to $RECIPIENT"
+
+  # Record state and drop any pending marker for this episode. Manual --force runs
+  # print the digest instead of moving the marker.
+  clear_pending
+  if [ "$FORCE" -eq 1 ]; then
+    printf '%s\n' "$digest"
+  else
+    mkdir -p "$STATE_DIR"
+    printf '%s\n' "$vid" >"$STATE_FILE"
+  fi
+  return 0
+}
+
+# --- retry-only mode: drain a pending episode with exponential backoff ---------
+# Cheap when idle: no pending marker means no work and no YouTube scraping.
+if [ "$RETRY_ONLY" -eq 1 ]; then
+  [ -f "$PENDING_FILE" ] || exit 0
+  pj="$(cat "$PENDING_FILE")"
+  vid="$(jq -r '.vid' <<<"$pj")"
+  title="$(jq -r '.title' <<<"$pj")"
+  upload_date="$(jq -r '.upload_date' <<<"$pj")"
+  first_seen="$(jq -r '.first_seen' <<<"$pj")"
+  attempts="$(jq -r '.attempts' <<<"$pj")"
+  next_eligible="$(jq -r '.next_eligible' <<<"$pj")"
+  now="$(now_epoch)"
+  [ "$now" -ge "$next_eligible" ] || exit 0 # not yet due; stay quiet
+
+  # A weekly run may have already sent this episode; don't double-send.
+  if [ -f "$STATE_FILE" ] && [ "$(cat "$STATE_FILE")" = "$vid" ]; then
+    log "episode $vid already sent; clearing pending"
+    clear_pending; exit 0
+  fi
+
+  log "retry for pending $vid (attempt $((attempts + 1)) of $RETRY_CAP)"
+  rc=0
+  process_episode "$vid" "$title" "$upload_date" || rc=$?
+  [ "$rc" -eq 0 ] && exit 0
+
+  attempts=$((attempts + 1))
+  if [ "$attempts" -ge "$RETRY_CAP" ]; then
+    window=$(((now - first_seen) / 3600))
+    reason="gave up after $attempts retries (~${window}h) — could not produce a digest for $vid ($title)"
+    log "$reason"
+    alert "$reason" "gave up on $vid"
+    clear_pending
+    exit 1
+  fi
+  delay=$((RETRY_BASE * (1 << attempts)))
+  next=$((now + delay))
+  write_pending "$vid" "$title" "$upload_date" "$first_seen" "$attempts" "$next"
+  # Per-retry email only for the caption-lag case; summarization failure was
+  # already alerted inside process_episode.
+  if [ "$rc" -eq 10 ]; then
+    reason="retry $attempts/$RETRY_CAP: captions still not ready for $vid ($title); next attempt in ~$((delay / 3600))h"
+    log "$reason"
+    alert "$reason" "retry $attempts — captions not ready"
+  fi
+  exit 1
+fi
+
+# --- discovery mode: find the newest long-form episode, send if new ------------
+# Merge both tabs, keep rows over the duration floor, newest upload_date wins.
 log "discovering latest episode on $CHANNEL (tabs: ${TABS[*]})"
 # Capture each tab's listing first, then filter — piping yt-dlp straight into an
 # awk that exits early would SIGPIPE it and trip `set -o pipefail`.
@@ -93,106 +279,33 @@ fi
 vid="$(printf '%s' "$selection" | cut -f2)"
 upload_date="$(printf '%s' "$selection" | cut -f3)"
 title="$(printf '%s' "$selection" | cut -f4-)"
-url="https://www.youtube.com/watch?v=${vid}"
 log "latest episode: $vid — $title ($upload_date)"
 
-# 2. Idempotency guard.
+# Idempotency guard.
 mkdir -p "$STATE_DIR"
 if [ "$FORCE" -eq 0 ] && [ -f "$STATE_FILE" ] && [ "$(cat "$STATE_FILE")" = "$vid" ]; then
   log "episode $vid already sent; nothing to do"
+  clear_pending
   exit 0
 fi
 
-# 3. Transcript via the shared fetch-transcript helper; cache it for email-chat.
-work="$(mktemp -d "${TMPDIR:-/tmp}/jms.XXXXXX")"
-trap 'rm -rf "$work"' EXIT
-transcript="$work/transcript.txt"
-log "fetching captions for $vid"
-if ! bash "$FETCH_TRANSCRIPT" "$vid" >"$transcript" 2>/dev/null || [ ! -s "$transcript" ]; then
-  log "no captions available yet for $vid; will retry next run"; exit 1
-fi
-mkdir -p "$CHAT_STATE_DIR"
-cp "$transcript" "$CHAT_STATE_DIR/$vid.txt" 2>/dev/null || true
-log "transcript: $(wc -l <"$transcript" | tr -d ' ') lines, $(wc -c <"$transcript" | tr -d ' ') bytes"
-
-# 4. Summarize. Stream-json is used so the digest is recovered from the assistant
-#    message even if a Stop hook adds a follow-up turn; sentinels bound the text.
-read -r -d '' prompt <<EOF || true
-You are summarizing an episode of The Jack Mallers Show (Bitcoin, macroeconomics,
-markets, the future of money). The transcript is auto-generated captions piped on
-stdin, so punctuation and speaker labels are unreliable — infer meaning.
-
-Episode title: ${title}
-URL: ${url}
-Aired (YYYYMMDD): ${upload_date}
-
-Write the digest in plain text with TWO clearly separated parts.
-
-Put this exact line, then PART 1: THE GIST
-PART 1 is an in-depth TL;DR of roughly 6-10 sentences. A reader should finish it in
-under a minute and feel fully caught up — the through-line, the main arguments, the
-conclusions, and any calls to action. Richer than a one-liner, shorter than PART 2.
-
-Then a blank line, this exact line, then PART 2: THE BREAKDOWN
-PART 2 walks the episode IN THE ORDER JACK PRESENTS IT, mirroring the show's own
-structure (e.g. the opening / market check, each main news item or topic in turn,
-the mailbag or Q&A, Strike updates, and the close). For each segment: a short label
-line, then 2-4 "- " bullets capturing the argument, the key data or claims, and any
-notable quote (paraphrase if the captions are garbled).
-
-End with a final line exactly: Watch: ${url}
-
-Output ONLY the digest, wrapped between a line containing exactly <<<DIGEST>>> and
-a line containing exactly <<<END>>>. No preamble, no markdown headers.
-EOF
-
-# SECURITY: the transcript is untrusted (arbitrary YouTube captions). Never add
-# --dangerously-skip-permissions here — without it, non-interactive claude -p
-# auto-denies any tool call the captions might try to coerce, so the model can
-# only return text.
-log "summarizing with claude -p"
-# AGENT_HEADLESS: per LAW.md, headless agent calls declare themselves so Stop
-# hooks (voice report, orphan check) don't inject extra turns into the run.
-raw="$(AGENT_HEADLESS=1 claude -p --output-format stream-json --verbose "$prompt" <"$transcript" 2>/dev/null |
-  jq -r 'select(.type=="assistant") | .message.content[]? | select(.type=="text") | .text' 2>/dev/null || true)"
-
-digest="$(printf '%s\n' "$raw" | awk '/<<<DIGEST>>>/{f=1;next} /<<<END>>>/{f=0} f')"
-# Require the sentinels — their absence means claude -p returned something other
-# than a digest (an auth error like "Not logged in", a refusal, an empty stream).
-# Do NOT fall back to the raw text: emailing that ships the error as the digest.
-if [ -z "$digest" ]; then
-  reason="summarization produced no digest (claude -p auth/output failure — raw: $(printf '%s' "$raw" | head -c 120 | tr '\n' ' '))"
-  log "$reason"
-  alert "$reason" "summarization failed"
-  exit 1
-fi
-
-# 5. Build and send the email.
-subject="JMS digest: ${title}"
-body="$(printf '%s\n\n—\nEpisode: %s\nAired: %s\nAutomated weekly summary of The Jack Mallers Show.\n' \
-  "$digest" "$url" "$upload_date")"
-
-if [ "$DRY_RUN" -eq 1 ]; then
-  printf -- '----- DRY RUN (not sent) -----\nFrom: %s\nTo: %s\nSubject: %s\n\n%s\n' \
-    "$SENDER" "$RECIPIENT" "$subject" "$body"
-  exit 0
-fi
-
-[ -f "$SEND_EMAIL" ] || { log "send-email skill not found at $SEND_EMAIL"; exit 1; }
-# Encode the episode id + chat token in the Message-ID (which Proton preserves,
-# unlike Reply-To). A reply's In-Reply-To carries it, gating the email-chat
-# responder to this episode. Only set when the chat token has been created.
-mid_args=()
-if [ -f "$CHAT_STATE_DIR/reply-token" ]; then
-  token="$(cat "$CHAT_STATE_DIR/reply-token")"
-  mid_args=(--message-id "<jms.${vid}.${token}@lorey.co>")
-fi
-printf '%s' "$body" | python3 "$SEND_EMAIL" --from "$SENDER" --to "$RECIPIENT" --subject "$subject" ${mid_args[@]+"${mid_args[@]}"}
-log "sent digest for $vid to $RECIPIENT"
-
-# 6. Record state (cron mode only; manual --force runs do not move the marker).
-if [ "$FORCE" -eq 1 ]; then
-  printf '%s\n' "$digest"
-else
-  printf '%s\n' "$vid" >"$STATE_FILE"
-fi
+rc=0
+process_episode "$vid" "$title" "$upload_date" || rc=$?
+case "$rc" in
+  0) exit 0 ;;
+  10)
+    # Captions aren't published yet. Manual runs just report it; a cron run parks
+    # the episode so the hourly --retry-only job drains it with backoff.
+    if [ "$FORCE" -eq 1 ] || [ "$DRY_RUN" -eq 1 ]; then
+      log "no captions available yet for $vid; try again later"
+      exit 1
+    fi
+    now="$(now_epoch)"
+    write_pending "$vid" "$title" "$upload_date" "$now" 0 "$((now + RETRY_BASE))"
+    reason="episode $vid ($title) detected but captions not ready; scheduled backoff retries (up to $RETRY_CAP over ~31h)"
+    log "$reason"
+    alert "$reason" "captions not ready — retrying"
+    exit 1
+    ;;
+  *) exit 1 ;; # 11: summarization/delivery failed, already alerted
+esac

@@ -1,6 +1,6 @@
 ---
 name: jms
-description: Producing a summary digest of The Jack Mallers Show (Bitcoin / macro / markets podcast on youtube.com/@thejackmallersshow). Consult whenever the user asks to summarize the latest JMS episode, wants the weekly Jack Mallers Show digest, says "what did Jack Mallers cover this week", or any phrasing that means catch me up on the newest episode. Also consult when the weekly launchd cron (co.lorey.jms-weekly) needs to run the digest unattended.
+description: Producing a summary digest of The Jack Mallers Show (Bitcoin / macro / markets podcast on youtube.com/@thejackmallersshow). Consult whenever the user asks to summarize the latest JMS episode, wants the weekly Jack Mallers Show digest, says "what did Jack Mallers cover this week", or any phrasing that means catch me up on the newest episode. Also consult when the weekly launchd cron (co.lorey.jms-weekly) or its hourly caption-retry companion (co.lorey.jms-retry) needs to run the digest unattended.
 ---
 
 # JMS Digest
@@ -21,9 +21,24 @@ pipeline is one deterministic script — run it and relay the result.
   fresh digest, prints it to stdout, *and* emails it. Add `--dry-run` to print
   the rendered email without sending. Relay the printed digest to the user.
 
-- **Unattended (cron):** the launchd agent `co.lorey.jms-weekly` runs
-  `jms-digest` with no flags every Tuesday 9:01am. The idempotency guard
-  (`~/.local/state/jms/last-sent`) ensures an episode is emailed at most once.
+- **Unattended (cron):** two launchd agents cooperate. `co.lorey.jms-weekly`
+  runs `jms-digest` with no flags every Tuesday 9:01am — it does the heavy
+  discovery. `co.lorey.jms-retry` runs `jms-digest --retry-only` hourly — it
+  does no discovery and is near-zero cost when idle, existing only to drain a
+  *pending* episode (see below) with exponential backoff. The idempotency guard
+  (`~/.local/state/jms/last-sent`) ensures an episode is emailed at most once
+  across both.
+
+  **Caption lag → pending + backoff.** Auto-captions often lag a fresh episode
+  by hours, and a live-streamed show can take much longer. When the weekly run
+  finds an episode whose captions aren't published yet, it parks the episode in
+  `~/.local/state/jms/pending` and emails a `captions not ready — retrying`
+  notice instead of silently waiting a whole week. The hourly retry job then
+  reattempts on a doubling schedule (~1h, +2h, +4h, +8h, +16h), emailing a
+  `retry N — captions not ready` notice on each still-failing attempt and a
+  `gave up` notice if captions never appear within ~31h (`RETRY_CAP` attempts).
+  A successful send clears the marker; the digest email itself is the success
+  signal.
 
 ## What the script does
 
@@ -35,7 +50,10 @@ pipeline is one deterministic script — run it and relay the result.
    `JMS digest alert: no episode found` notice to `jms@lorey.co` and exits.
 2. Skips if that episode id was already sent (unless `--force`).
 3. Pulls the auto-generated English captions with `yt-dlp` and flattens them to
-   plain text.
+   plain text. If captions aren't published yet, a cron run parks the episode in
+   `~/.local/state/jms/pending` (id, title, upload date, attempt count, next-due
+   time) and exits so the hourly `--retry-only` job can drain it with backoff
+   rather than waiting for next week's discovery.
 4. Summarizes the transcript into a two-part digest — a brief in-depth "Gist"
    (TL;DR) and a "Breakdown" that follows the episode's own segment order. The
    model must wrap the digest in `<<<DIGEST>>>`/`<<<END>>>` sentinels; if they're
@@ -58,21 +76,28 @@ Delivery goes through the `send-email` skill, so the only credentials needed are
 the shared ProtonMail Bridge ones. If they aren't set up yet, follow the
 `send-email` skill's setup (`scripts/setup-bridge-creds`), then `save-config`.
 
-Load the weekly schedule once:
+Load both schedules once — the weekly discovery job and the hourly retry job:
 
 ```bash
 launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/co.lorey.jms-weekly.plist
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/co.lorey.jms-retry.plist
 ```
 
 ## Files
 
 - `scripts/jms-digest` — orchestrator (discovery → guard → transcript →
-  summarize → send → record state). The sender address (`noreply@lorey.co`) and
-  recipient (`jms@lorey.co`) are set at the top of the script.
+  summarize → send → record state), plus a `--retry-only` mode that drains the
+  pending marker with exponential backoff. The sender address
+  (`noreply@lorey.co`) and recipient (`jms@lorey.co`) are set at the top of the
+  script.
 - Delivery: the `send-email` skill
   (`~/.agents/skills/send-email/scripts/send-email.py`) — `jms-digest` pipes the
   rendered digest to it. Bridge credentials are owned there, not here.
-- Schedule: `~/Library/LaunchAgents/co.lorey.jms-weekly.plist`.
+- State: `~/.local/state/jms/last-sent` (idempotency marker) and
+  `~/.local/state/jms/pending` (JSON: the episode the retry job is draining).
+- Schedule: `~/Library/LaunchAgents/co.lorey.jms-weekly.plist` (weekly
+  discovery) and `~/Library/LaunchAgents/co.lorey.jms-retry.plist` (hourly
+  caption retry, logs to `/tmp/jms-retry.log`).
 - `scripts/fetch-transcript` — `fetch-transcript <video-id|url>` prints a video's
   cleaned auto-caption transcript (shared by `jms-digest` and the chat poller).
 
@@ -108,6 +133,8 @@ access (untrusted input can't make it act).
 
 ## Notes
 
-- Auto-captions can lag a freshly-published episode by an hour or two; if the
-  transcript is missing the script exits without sending and the next run
-  retries.
+- Auto-captions can lag a freshly-published episode by hours (a long
+  live-streamed show, longer still). Rather than lose a whole week to that, the
+  weekly run parks the episode and the hourly `co.lorey.jms-retry` job drains it
+  with exponential backoff — so a caption lag delays the digest by hours, not a
+  week. See "Caption lag → pending + backoff" under *How to run*.
