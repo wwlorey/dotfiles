@@ -288,6 +288,15 @@
         ]
       },
       {
+        "matcher": "Edit|Write|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 $HOME/.claude/hooks/route-dev-work.py"
+          }
+        ]
+      },
+      {
         "matcher": "Bash",
         "hooks": [
           {
