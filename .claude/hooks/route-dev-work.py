@@ -77,19 +77,56 @@ CONTEXT = (
 )
 
 
+# Leading tags that mark a user-role text block as harness-injected rather than
+# a genuine user directive. task-notifications, system-reminders, and
+# slash/local-command records all arrive as user-role transcript entries between
+# loop iterations; counting them as prompts shrinks the "since last user
+# directive" window that gates the nudge. Kept in sync with
+# agent-spawn-reminder.py.
+WRAPPER_PREFIXES = (
+    "<task-notification",
+    "<system-reminder",
+    "<local-command-stdout",
+    "<local-command-stderr",
+    "<local-command-caveat",
+    "<command-name",
+    "<command-message",
+    "<command-args",
+)
+
+
+def _is_wrapper_text(text: str) -> bool:
+    """True if `text` is empty or a harness-injected wrapper block."""
+    stripped = text.lstrip()
+    if not stripped:
+        return True
+    return stripped.startswith(WRAPPER_PREFIXES)
+
+
 def _is_real_user_prompt(entry: dict) -> bool:
-    """True for a genuine user turn, False for tool_result-only entries."""
+    """True for a genuine user directive.
+
+    False for tool_result-only entries and for harness-injected user-role
+    entries — task-notifications, system-reminders, and slash/local-command
+    records that arrive between loop iterations. Treating those as prompts would
+    shrink the dev-family suppression window and make the nudge false-fire.
+    """
     if entry.get("type") != "user":
         return False
     content = entry.get("message", {}).get("content")
     if isinstance(content, str):
-        return bool(content.strip())
+        return not _is_wrapper_text(content)
     if isinstance(content, list):
-        has_text = any(b.get("type") == "text" for b in content if isinstance(b, dict))
         has_tool_result = any(
             b.get("type") == "tool_result" for b in content if isinstance(b, dict)
         )
-        return has_text and not has_tool_result
+        if has_tool_result:
+            return False
+        return any(
+            b.get("type") == "text" and not _is_wrapper_text(b.get("text", ""))
+            for b in content
+            if isinstance(b, dict)
+        )
     return False
 
 

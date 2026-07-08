@@ -19,10 +19,19 @@ Fires before every Agent tool call. Emits two `additionalContext` blocks:
      (a) No dev-family skill (dev / changes / build / spec / spec-to-issues /
          audit-specs) is active since the last genuine user prompt — so a spawn
          inside a proper lifecycle (planning worker, gate worker, impl worker)
-         stays silent.
+         stays silent. "Genuine user prompt" excludes harness-injected
+         user-role entries — task-notifications, system-reminders, and
+         slash/local-command records that arrive between loop iterations — so
+         the window reaches back to the true user directive where the lifecycle
+         Skill was invoked, not merely to the last notification.
      (b) The spawn prompt is impl-shaped (imperative implementation verb) AND
          carries a this-repo cue (issue slug, `crates/…` path, repo file
-         reference) — so research / planning / config / voice spawns and
+         reference), AND is not read-only (analysis / review / audit / plan /
+         gate spawns are excluded even when they carry an incidental impl verb),
+         AND does not TARGET config work (a spawn building a global skill, a
+         dotfiles / `.claude` hook, or MEMENTO routes through `config`, not
+         `dev` — so it is excluded even when it mentions a sanctora path for
+         context) — so research / planning / review / config / voice spawns and
          cross-project spawns never trigger it.
 
 Both blocks are advisory `additionalContext` — this hook NEVER denies. It fails
@@ -81,20 +90,81 @@ REPO_PATH_RE = re.compile(
     re.IGNORECASE,
 )
 
+# Read-only spawn cues: analysis / planning / review / audit / gate spawns that
+# inspect the repo but never implement. A prompt carrying any of these is
+# excluded even when it also carries an impl verb and a repo cue — it inspects,
+# it does not implement, so nudging it toward `dev` is noise (the nag-trap this
+# guard must avoid).
+READONLY_RE = re.compile(
+    r"\b(read[- ]only|do not edit|do not modify|don'?t edit|produce a plan|"
+    r"return findings|security review|audit[- ]?specs|review|audit|analysis)\b",
+    re.IGNORECASE,
+)
+
+# Config / dotfiles / skill TARGET cues. The nudge guards SANCTORA dev work; a
+# spawn whose actual target is config work (a global skill under ~/.agents, the
+# dotfiles repo, a `.claude/` hook, MEMENTO, the `config` skill's domain) is NOT
+# sanctora dev work and routes through `config`, not `dev` — so it stays silent
+# even when it references a sanctora file for context. Matching a target cue
+# here overrides the this-repo cue: it distinguishes "editing dotfiles, mentions
+# a sanctora path" from "editing sanctora source."
+CONFIG_TARGET_RE = re.compile(
+    r"(~/\.agents\b|\.agents/skills|~/repos/dotfiles|\bdotfiles\b|"
+    r"\.claude/hooks|\.claude/skills|\bMEMENTO\b|\bBACKLOG\.md\b|"
+    r"\bsave_config\b|\bSKILL\.md\b|\bcreate (?:a |an )?(?:new )?skill\b|"
+    r"\bconfig skill\b)",
+    re.IGNORECASE,
+)
+
+# Leading tags that mark a user-role text block as harness-injected rather than
+# a genuine user directive. task-notifications, system-reminders, and
+# slash/local-command records all arrive as user-role transcript entries between
+# loop iterations; counting them as prompts shrinks the "since last user
+# directive" window and defeats the dev-family suppression.
+WRAPPER_PREFIXES = (
+    "<task-notification",
+    "<system-reminder",
+    "<local-command-stdout",
+    "<local-command-stderr",
+    "<local-command-caveat",
+    "<command-name",
+    "<command-message",
+    "<command-args",
+)
+
+
+def _is_wrapper_text(text: str) -> bool:
+    """True if `text` is empty or a harness-injected wrapper block."""
+    stripped = text.lstrip()
+    if not stripped:
+        return True
+    return stripped.startswith(WRAPPER_PREFIXES)
+
 
 def _is_real_user_prompt(entry: dict) -> bool:
-    """True for a genuine user turn, False for tool_result-only entries."""
+    """True for a genuine user directive.
+
+    False for tool_result-only entries and for harness-injected user-role
+    entries — task-notifications, system-reminders, and slash/local-command
+    records that arrive between loop iterations. Treating those as prompts would
+    shrink the dev-family suppression window and make the nudge false-fire.
+    """
     if entry.get("type") != "user":
         return False
     content = entry.get("message", {}).get("content")
     if isinstance(content, str):
-        return bool(content.strip())
+        return not _is_wrapper_text(content)
     if isinstance(content, list):
-        has_text = any(b.get("type") == "text" for b in content if isinstance(b, dict))
         has_tool_result = any(
             b.get("type") == "tool_result" for b in content if isinstance(b, dict)
         )
-        return has_text and not has_tool_result
+        if has_tool_result:
+            return False
+        return any(
+            b.get("type") == "text" and not _is_wrapper_text(b.get("text", ""))
+            for b in content
+            if isinstance(b, dict)
+        )
     return False
 
 
@@ -121,7 +191,19 @@ def _invokes_dev_family(entry: dict) -> bool:
 
 
 def _spawn_is_unrouted_dev(prompt: str) -> bool:
-    """True if the spawn prompt is impl-shaped AND carries a this-repo cue."""
+    """True if the spawn prompt is a genuine implementation spawn on this repo.
+
+    Requires an impl verb AND a this-repo cue, and excludes:
+      - read-only analysis / review / audit / plan / gate spawns, even when they
+        carry an incidental impl verb and repo cue (they inspect, not implement);
+      - config / dotfiles / skill spawns whose TARGET is the `config` skill's
+        domain, even when they mention a sanctora path for context (not sanctora
+        dev work).
+    """
+    if CONFIG_TARGET_RE.search(prompt):
+        return False
+    if READONLY_RE.search(prompt):
+        return False
     if not IMPL_VERB_RE.search(prompt):
         return False
     return bool(ISSUE_SLUG_RE.search(prompt) or REPO_PATH_RE.search(prompt))

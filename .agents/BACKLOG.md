@@ -3,40 +3,6 @@
 Deferred config/tooling follow-ups. Lightweight — one `##` heading per item,
 newest first. Not deployed anywhere; repo documentation only.
 
-## FIX: dev-routing guard false-fires on legitimate build/changes loop spawns
-
-**Confirmed defect 2026-07-07 in `agent-spawn-reminder.py`'s dev-routing nudge
-(commit 18d3e2b) — the exact nag-trap flagged during its design.**
-
-The nudge suppresses only when a dev-family Skill call appears "since the last
-real user prompt." But a multi-turn `build`/`changes` loop spans many turns
-with a `task-notification` between each iteration, and the `build`/`changes`
-Skill was invoked several turns / notifications back. Observed: after
-invoking `build` and looping, the guard fired on a legitimate iteration-worker
-spawn because its window did not reach back past the intervening
-task-notifications to the `build` invocation.
-
-Root of the bug is in the window boundary: `_is_real_user_prompt` (copied from
-`route-dev-work.py`) must treat `task-notification`, `<system-reminder>`,
-`<local-command-*>`, and other non-genuine user-role messages as NON-prompts,
-so the window spans back to the true user directive where the lifecycle Skill
-was invoked. If it already excludes those and the guard still fires, the
-detection of the Skill-tool `build`/`changes` invocation in the transcript is
-failing (verify how Skill calls appear in the JSONL vs what `_invokes_dev_family`
-matches).
-
-Deeper option if the window approach stays fragile for long loops: an explicit
-lifecycle marker that `dev`/`build`/`changes` set on entry and clear at
-session-close (the root-cause worker rejected this for stale-marker risk, but a
-process-scoped or transcript-anchored marker may beat the multi-turn window).
-
-Priority: the nudge is SOFT (never blocks), so it's noise not breakage — but a
-guard that nags every legitimate loop iteration is the check-swallowed-text
-failure mode and must be fixed before the guard is trustworthy.
-
-**Refs:** `.claude/hooks/agent-spawn-reminder.py`,
-`.claude/hooks/route-dev-work.py` (`_is_real_user_prompt` / `_invokes_dev_family`).
-
 ## Global `asc` skill — App Store Connect via the official REST API
 
 **Design-approved in principle (2026-07), gated by the user on "after the
