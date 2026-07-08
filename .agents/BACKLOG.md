@@ -3,6 +3,33 @@
 Deferred config/tooling follow-ups. Lightweight — one `##` heading per item,
 newest first. Not deployed anywhere; repo documentation only.
 
+## FIX: two bugs in the asc client's IAP paths (found in first live use)
+
+Surfaced 2026-07-07 completing `co.sanctora.desktop.full` metadata.
+
+1. **`iap price` sends a bare inline id, Apple wants `${...}`.** `cmd_iap_price`
+   references the inline `inAppPurchasePrices` local id as `price-1`, but the
+   ASC API requires the `${price-1}` reference form — the POST fails HTTP 409.
+   The worker worked around it by issuing the corrected POST via the client's
+   auth; the script itself is still wrong. Fix: emit `${<local-id>}` in the
+   `manualPrices` relationship data. Without this, `iap price` is broken for
+   the next caller.
+
+2. **`iap status` checks relationship EXISTENCE, not completeness.** It reports
+   localization/price/availability "present" if the relationship object exists,
+   masking a price schedule with `manualPrices` empty (a shell) or a
+   localization with placeholder content. This is why `full` looked "complete"
+   but was still MISSING_METADATA. Fix: `iap status` should read into each
+   relationship (manualPrices count > 0, localization has name+description,
+   availability has territories) and report the real gap — and ideally flag
+   the missing App Review screenshot, the actual READY_TO_SUBMIT blocker.
+
+Optional bigger add: an `iap screenshot` subcommand (the 3-step reserve →
+upload asset → commit flow for `inAppPurchaseAppStoreReviewScreenshots`) so
+even that last step is automatable instead of UI-only.
+
+**Refs:** `.agents/skills/asc/scripts/asc` (`cmd_iap_price`, `cmd_iap_status`).
+
 ## Non-blocking swallowed-text audio advisory (voice)
 
 **Deferred fast-follow from the 2026-07 voice redesign.**
