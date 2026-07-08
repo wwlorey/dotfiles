@@ -66,6 +66,7 @@ asc build-wait --build <buildId> [--timeout 1800] [--interval 30]
 asc iap list --app <appId>
 asc iap status --id <iap> [--locale en-US] # state + completeness of {localization,price,availability,screenshot}
 asc iap price-points --id <iap> [--territory USA] [--limit 100]   # pick a --tier for `iap price`
+asc sandbox testers                        # list sandbox testers (id, acAccountName, territory)
 asc compliance --build <buildId> --exempt           # or --uses-encryption
 asc token                                  # diagnostic: resolve creds + gen JWT
 asc setup                                  # credential walkthrough
@@ -147,6 +148,7 @@ Two are **unconditional** — always production:
 |----|--------------|-----------|
 | `testers-remove` | `DELETE /v1/betaTesters/{id}` | deletes data |
 | `build-assign` | assigns a build to beta groups | distributes the build to real testers |
+| `sandbox-clear-history` | `POST /v2/sandboxTestersClearPurchaseHistoryRequest` | deletes a sandbox tester's purchase history, irreversibly (may take hours to propagate) |
 
 Four are **state-dependent** — SAFE on a draft in-app purchase, destructive on
 a live one:
@@ -169,8 +171,9 @@ draft (or the state can't be read — fail safe), refuses unless
 name + description) via `iap localize` is a normal metadata edit, not a
 price/availability change, and is never gated.
 
-Everything else above is SAFE (all reads/lists including `iap status` and
-`iap price-points`, downloading a profile, creating a draft profile/IAP,
+Everything else above is SAFE (all reads/lists including `iap status`,
+`iap price-points`, and `sandbox testers`, downloading a profile, creating a
+draft profile/IAP,
 localizing an IAP, editing a draft IAP's price/availability, uploading a draft
 IAP's review screenshot, declaring export-compliance on an unreleased build).
 Beyond this client, treat as
@@ -178,11 +181,21 @@ destructive/production anything that deletes or expires a build, removes a
 build from a group, deletes a tester or profile, submits a version for review,
 or changes the price/availability of a live product.
 
-**Layer 1 — client refusal.** `asc testers remove` / `asc build-assign` exit
-non-zero and refuse unless `--approve-destructive=<op>` names the exact op
-(e.g. `--approve-destructive=testers-remove`). The state-dependent `iap`
+**Layer 1 — client refusal.** `asc testers remove` / `asc build-assign` /
+`asc sandbox clear-history` exit non-zero and refuse unless
+`--approve-destructive=<op>` names the exact op
+(e.g. `--approve-destructive=testers-remove`,
+`--approve-destructive=sandbox-clear-history`). The state-dependent `iap`
 ops refuse the same way, but only after reading the IAP's `state` and finding
 it is not a draft. `--dry-run` always previews without the flag.
+
+`sandbox clear-history` deletes ALL sandbox purchase history for the named
+tester(s) and cannot be undone (Apple: propagation may take hours). Prepare it
+as `asc sandbox clear-history --tester <id> [--tester <id> ...] --approve-destructive=sandbox-clear-history`
+(`--tester` is repeatable; `--email <acAccountName>` is also accepted and
+resolved to an id via `asc sandbox testers`). The agent prepares this exact
+command and hands it to the USER to run — the agent-side execution is blocked by
+Layer 2 regardless.
 
 **Layer 2 — PreToolUse hook (agent hard-block).** A `PreToolUse` Bash hook
 denies the AGENT from executing any gated op — the capability provided is

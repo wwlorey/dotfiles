@@ -26,6 +26,7 @@ import sys
 DESTRUCTIVE_OPS = {
     "testers-remove":   "unconditional",   # DELETE /v1/betaTesters/{id}
     "build-assign":     "unconditional",   # distributes a build to testers
+    "sandbox-clear-history": "unconditional",  # deletes sandbox purchase history
     "iap-rename":       "state-dependent",  # PATCH name of a live IAP
     "iap-price":        "state-dependent",  # price schedule on a live IAP
     "iap-availability": "state-dependent",  # availability on a live IAP
@@ -59,6 +60,8 @@ def main():
         hit = "build-assign (distributes a build to testers)"
     elif re.search(r"\btesters\s+remove\b", cmd):
         hit = "testers remove (deletes a beta tester)"
+    elif re.search(r"\bsandbox\s+clear-history\b", cmd):
+        hit = "sandbox clear-history (deletes a sandbox tester's purchase history)"
     if not hit:
         return 0
 

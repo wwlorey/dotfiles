@@ -296,6 +296,8 @@ def _emit(obj, raw):
 DESTRUCTIVE_OPS = {
     "testers-remove": "delete a beta tester (data loss)",
     "build-assign": "assign a build to beta groups (distributes it to testers)",
+    "sandbox-clear-history": "delete a sandbox tester's purchase history "
+                             "(irreversible; may take hours to propagate)",
     # State-dependent ops: SAFE on a DRAFT in-app purchase (state
     # MISSING_METADATA / READY_TO_SUBMIT — never yet approved), destructive on a
     # LIVE/approved one. Their handlers call _guard_state_dependent, which reads
@@ -864,6 +866,74 @@ def cmd_iap_screenshot(c, a):
                     body=commit_body), a.json)
 
 
+def _emit_sandbox_testers(obj, raw):
+    if obj is None:  # dry-run made no request
+        return
+    if raw:
+        print(json.dumps(obj, indent=2))
+        return
+    data = obj.get("data") if isinstance(obj, dict) else None
+    if not isinstance(data, list):
+        print(json.dumps(obj, indent=2))
+        return
+    if not data:
+        print("(no sandbox testers returned)")
+    for r in data:
+        attrs = r.get("attributes", {})
+        summary = " ".join(
+            f"{k}={attrs[k]}" for k in ("acAccountName", "territory")
+            if k in attrs
+        )
+        print(f"- {r.get('id')}  {summary}".rstrip())
+
+
+def cmd_sandbox_testers(c, a):
+    _emit_sandbox_testers(
+        c.request("GET", "/v2/sandboxTesters", {"limit": a.limit}), a.json)
+
+
+def _resolve_sandbox_tester_ids(c, a):
+    ids = list(a.tester)
+    if a.email:
+        if c.dry_run:
+            ids.extend(f"<id-for:{e}>" for e in a.email)
+        else:
+            obj = c.request("GET", "/v2/sandboxTesters", {"limit": 200})
+            by_email = {
+                r.get("attributes", {}).get("acAccountName"): r.get("id")
+                for r in (obj or {}).get("data", [])
+            }
+            for e in a.email:
+                tid = by_email.get(e)
+                if not tid:
+                    raise AscError(f"no sandbox tester with acAccountName {e!r}")
+                ids.append(tid)
+    return ids
+
+
+def cmd_sandbox_clear_history(c, a):
+    """Delete all sandbox purchase history for the named tester(s). DESTRUCTIVE
+    and IRREVERSIBLE (Apple: may take hours to propagate). sandboxTesters is a
+    to-many relationship — always sent as an array, even for one id."""
+    ids = _resolve_sandbox_tester_ids(c, a)
+    if not ids:
+        raise AscError("specify --tester <id> (repeatable) or --email <acAccountName>")
+    body = {"data": {
+        "type": "sandboxTestersClearPurchaseHistoryRequest",
+        "relationships": {
+            "sandboxTesters": {
+                "data": [{"id": i, "type": "sandboxTesters"} for i in ids]
+            }
+        },
+    }}
+    obj = c.request("POST", "/v2/sandboxTestersClearPurchaseHistoryRequest",
+                    body=body)
+    if c.dry_run:
+        return
+    print(f"cleared sandbox purchase history for: {', '.join(ids)}")
+    _emit(obj, a.json)
+
+
 SETUP_KEY_STEPS = """\
 To create the API key (.p8):
   1. App Store Connect > Users and Access > Integrations > App Store Connect API.
@@ -1103,6 +1173,21 @@ def build_parser():
     ishot.add_argument("--id", required=True, help="inAppPurchases id")
     ishot.add_argument("--file", required=True, help="path to the screenshot image")
     ishot.set_defaults(func=cmd_iap_screenshot)
+
+    s = sub.add_parser("sandbox", help="sandbox testers + purchase history")
+    ssub = s.add_subparsers(dest="sub", required=True)
+    st = ssub.add_parser("testers", help="list sandbox testers")
+    limit(st)
+    st.set_defaults(func=cmd_sandbox_testers)
+    sc = ssub.add_parser(
+        "clear-history",
+        help="DESTRUCTIVE: delete a sandbox tester's purchase history (irreversible)")
+    sc.add_argument("--tester", action="append", default=[],
+                    help="sandboxTesters id (repeatable)")
+    sc.add_argument("--email", action="append", default=[],
+                    help="sandbox tester acAccountName; resolved to an id (repeatable)")
+    sc.set_defaults(func=cmd_sandbox_clear_history,
+                    destructive_op="sandbox-clear-history")
 
     s = sub.add_parser("setup",
                        help="check + walk through creating the .p8 key and issuer ID")
