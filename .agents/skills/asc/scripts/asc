@@ -1,0 +1,707 @@
+#!/usr/bin/env python3
+"""App Store Connect REST API client.
+
+Capability-global tool: owns HOW to talk to App Store Connect (JWT auth, the
+endpoint cookbook, safety rails). Projects own WHEN (they pass the app's IDs).
+No app-specific identifier is hardcoded here.
+
+Credential resolution mirrors scripts/mas-upload.sh so this composes with the
+existing upload flow:
+  Key ID    env ASC_API_KEY_ID  > single AuthKey_<ID>.p8 in the key dir
+            (default ~/.appstoreconnect/private_keys, ASC_PRIVATE_KEYS_DIR
+            overrides; ASC_API_KEY_FILE points straight at a .p8).
+            Error on zero or multiple keys.
+  Issuer ID env ASC_ISSUER_ID   > ASC_ISSUER_FILE > .asc-issuer-id searched
+            from CWD upward. UUID-shape validated.
+
+Auth: ES256 JWT, 20-minute expiry, aud "appstoreconnect-v1" (App Manager role
+is sufficient). Signing prefers PyJWT, then the `cryptography` lib, then the
+`openssl` CLI, so it works with no third-party Python packages installed.
+
+SECRETS: the private key and the signed JWT are never printed. --dry-run shows
+the method, URL, and body it WOULD send, and never touches credentials.
+"""
+import argparse
+import base64
+import glob as _glob
+import json
+import os
+import re
+import subprocess
+import sys
+import time
+import urllib.error
+import urllib.parse
+import urllib.request
+
+BASE_URL = "https://api.appstoreconnect.apple.com"
+DEFAULT_KEY_DIR = os.path.expanduser("~/.appstoreconnect/private_keys")
+UUID_RE = re.compile(
+    r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-"
+    r"[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+)
+
+
+class AscError(Exception):
+    pass
+
+
+# ---------------------------------------------------------------- credentials
+
+def resolve_key():
+    """Return (key_id, key_path, key_pem_bytes)."""
+    key_file = os.environ.get("ASC_API_KEY_FILE")
+    key_dir = os.environ.get("ASC_PRIVATE_KEYS_DIR", DEFAULT_KEY_DIR)
+    env_id = os.environ.get("ASC_API_KEY_ID")
+
+    if key_file:
+        path = os.path.expanduser(key_file)
+        if not os.path.isfile(path):
+            raise AscError(f"ASC_API_KEY_FILE not found: {path}")
+        key_id = env_id or _key_id_from_name(os.path.basename(path))
+    else:
+        keys = sorted(_glob.glob(os.path.join(key_dir, "AuthKey_*.p8")))
+        if not keys and env_id:
+            raise AscError(
+                f"ASC_API_KEY_ID={env_id} set but no AuthKey_*.p8 in {key_dir}; "
+                "set ASC_API_KEY_FILE to the key path"
+            )
+        if not keys:
+            raise AscError(
+                f"no AuthKey_<ID>.p8 in {key_dir}\n"
+                "run `asc setup` for a step-by-step walkthrough of creating the key"
+            )
+        if len(keys) > 1:
+            listing = "\n      ".join(keys)
+            raise AscError(
+                "multiple AuthKey_*.p8 files — set ASC_API_KEY_ID (and "
+                f"ASC_API_KEY_FILE) to disambiguate:\n      {listing}"
+            )
+        path = keys[0]
+        key_id = env_id or _key_id_from_name(os.path.basename(path))
+
+    with open(path, "rb") as fh:
+        pem = fh.read()
+    return key_id, path, pem
+
+
+def _key_id_from_name(name):
+    return name[len("AuthKey_"):-len(".p8")] if name.startswith("AuthKey_") \
+        else name.rsplit(".", 1)[0]
+
+
+def resolve_issuer():
+    val = os.environ.get("ASC_ISSUER_ID")
+    if not val:
+        sentinel_file = os.environ.get("ASC_ISSUER_FILE")
+        if sentinel_file:
+            path = os.path.expanduser(sentinel_file)
+            if not os.path.isfile(path):
+                raise AscError(f"ASC_ISSUER_FILE not found: {path}")
+        else:
+            path = _find_upwards(".asc-issuer-id")
+            if not path:
+                raise AscError(
+                    "no issuer ID: set ASC_ISSUER_ID, or ASC_ISSUER_FILE, or "
+                    "put the issuer UUID in a .asc-issuer-id file at/above CWD\n"
+                    "run `asc setup` for a step-by-step walkthrough"
+                )
+        with open(path) as fh:
+            val = fh.readline().strip()
+    val = val.strip()
+    if not UUID_RE.match(val):
+        raise AscError(f"issuer ID does not look like a UUID: {val}")
+    return val
+
+
+def _find_upwards(name):
+    d = os.getcwd()
+    while True:
+        cand = os.path.join(d, name)
+        if os.path.isfile(cand):
+            return cand
+        parent = os.path.dirname(d)
+        if parent == d:
+            return None
+        d = parent
+
+
+# ------------------------------------------------------------------- jwt/es256
+
+def _b64url(data):
+    if isinstance(data, str):
+        data = data.encode()
+    return base64.urlsafe_b64encode(data).rstrip(b"=").decode()
+
+
+def _der_to_raw(der):
+    """SEQUENCE(INTEGER r, INTEGER s) DER ECDSA sig -> 64-byte r||s (JOSE)."""
+    if not der or der[0] != 0x30:
+        raise AscError("malformed ECDSA signature (no SEQUENCE)")
+    i = 2
+    if der[1] & 0x80:  # long-form length, skip length-of-length bytes
+        i = 2 + (der[1] & 0x7F)
+
+    def read_int(pos):
+        if der[pos] != 0x02:
+            raise AscError("malformed ECDSA signature (no INTEGER)")
+        ln = der[pos + 1]
+        val = der[pos + 2:pos + 2 + ln]
+        return val.lstrip(b"\x00"), pos + 2 + ln
+
+    r, i = read_int(i)
+    s, _ = read_int(i)
+    return r.rjust(32, b"\x00") + s.rjust(32, b"\x00")
+
+
+def _es256_sign(signing_input, key_path, key_pem):
+    # 1) cryptography lib, if importable
+    try:
+        from cryptography.hazmat.primitives import hashes, serialization
+        from cryptography.hazmat.primitives.asymmetric import ec, utils
+        key = serialization.load_pem_private_key(key_pem, password=None)
+        der = key.sign(signing_input, ec.ECDSA(hashes.SHA256()))
+        r, s = utils.decode_dss_signature(der)
+        return r.to_bytes(32, "big") + s.to_bytes(32, "big")
+    except ImportError:
+        pass
+    # 2) openssl CLI (feeds the on-disk key path; never copies the secret)
+    proc = subprocess.run(
+        ["openssl", "dgst", "-sha256", "-sign", key_path],
+        input=signing_input, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+    )
+    if proc.returncode != 0:
+        raise AscError("openssl signing failed: " + proc.stderr.decode().strip())
+    return _der_to_raw(proc.stdout)
+
+
+def make_jwt(key_id, key_path, key_pem, issuer, ttl=1200):
+    iat = int(time.time())
+    payload = {
+        "iss": issuer,
+        "iat": iat,
+        "exp": iat + ttl,
+        "aud": "appstoreconnect-v1",
+    }
+    header = {"alg": "ES256", "kid": key_id, "typ": "JWT"}
+    # Prefer PyJWT when present.
+    try:
+        import jwt as _pyjwt
+        return _pyjwt.encode(
+            payload, key_pem.decode(), algorithm="ES256",
+            headers={"kid": key_id},
+        ), header, payload
+    except ImportError:
+        pass
+    signing_input = (_b64url(json.dumps(header, separators=(",", ":"))) + "."
+                     + _b64url(json.dumps(payload, separators=(",", ":"))))
+    sig = _es256_sign(signing_input.encode(), key_path, key_pem)
+    return signing_input + "." + _b64url(sig), header, payload
+
+
+# ----------------------------------------------------------------------- http
+
+class Client:
+    def __init__(self, dry_run=False):
+        self.dry_run = dry_run
+        self._token = None
+
+    def _auth(self):
+        if self._token is None:
+            key_id, key_path, key_pem = resolve_key()
+            issuer = resolve_issuer()
+            self._token, _, _ = make_jwt(key_id, key_path, key_pem, issuer)
+        return self._token
+
+    def request(self, method, path, params=None, body=None):
+        url = BASE_URL + path
+        if params:
+            flat = []
+            for k, v in params.items():
+                if v is None:
+                    continue
+                flat.append((k, ",".join(v) if isinstance(v, list) else str(v)))
+            if flat:
+                url += "?" + urllib.parse.urlencode(flat)
+        if self.dry_run:
+            print(f"DRY RUN: {method} {url}")
+            print("Authorization: Bearer <redacted>")
+            if body is not None:
+                print("Body:")
+                print(json.dumps(body, indent=2))
+            return None
+
+        data = json.dumps(body).encode() if body is not None else None
+        req = urllib.request.Request(url, data=data, method=method)
+        req.add_header("Authorization", "Bearer " + self._auth())
+        req.add_header("Accept", "application/json")
+        if data is not None:
+            req.add_header("Content-Type", "application/json")
+        try:
+            with urllib.request.urlopen(req) as resp:
+                raw = resp.read()
+                return json.loads(raw) if raw else {}
+        except urllib.error.HTTPError as exc:
+            _raise_api_error(exc)
+
+
+def _raise_api_error(exc):
+    detail = ""
+    try:
+        payload = json.loads(exc.read())
+        errs = payload.get("errors", [])
+        detail = "\n".join(
+            f"  [{e.get('status', '?')}] {e.get('title', '')}: "
+            f"{e.get('detail', '')}".rstrip()
+            for e in errs
+        ) or json.dumps(payload)
+    except Exception:
+        detail = str(exc)
+    raise AscError(f"App Store Connect API error (HTTP {exc.code}):\n{detail}")
+
+
+def _emit(obj, raw):
+    if obj is None:  # dry-run made no request
+        return
+    if raw:
+        print(json.dumps(obj, indent=2))
+        return
+    data = obj.get("data") if isinstance(obj, dict) else None
+    if isinstance(data, list):
+        if not data:
+            print("(no resources returned)")
+        for r in data:
+            attrs = r.get("attributes", {})
+            summary = " ".join(
+                f"{k}={attrs[k]}" for k in
+                ("name", "identifier", "productId", "version",
+                 "processingState", "email", "profileType", "state")
+                if k in attrs
+            )
+            print(f"- {r.get('type')}/{r.get('id')}  {summary}".rstrip())
+    elif isinstance(data, dict):
+        print(f"{data.get('type')}/{data.get('id')}")
+        print(json.dumps(data.get("attributes", {}), indent=2))
+    else:
+        print(json.dumps(obj, indent=2))
+
+
+# Destructive / production ops: mutate live/production state or delete data.
+# The client hard-refuses these unless --approve-destructive=<op> names the op.
+# The asc skill mandates that the calling agent obtain the user's explicit
+# approval (their own words) before ever passing that flag.
+DESTRUCTIVE_OPS = {
+    "testers-remove": "delete a beta tester (data loss)",
+    "build-assign": "assign a build to beta groups (distributes it to testers)",
+}
+
+
+# -------------------------------------------------------------------- commands
+
+def cmd_bundle_ids(c, a):
+    params = {"limit": a.limit}
+    if a.identifier:
+        params["filter[identifier]"] = a.identifier
+    _emit(c.request("GET", "/v1/bundleIds", params), a.json)
+
+
+def cmd_profiles_list(c, a):
+    params = {"limit": a.limit}
+    if a.name:
+        params["filter[name]"] = a.name
+    _emit(c.request("GET", "/v1/profiles", params), a.json)
+
+
+def cmd_profiles_create(c, a):
+    rel = {
+        "bundleId": {"data": {"type": "bundleIds", "id": a.bundle_id}},
+        "certificates": {
+            "data": [{"type": "certificates", "id": x} for x in a.certificate]
+        },
+    }
+    if a.device:
+        rel["devices"] = {
+            "data": [{"type": "devices", "id": x} for x in a.device]
+        }
+    body = {"data": {
+        "type": "profiles",
+        "attributes": {"name": a.name, "profileType": a.type},
+        "relationships": rel,
+    }}
+    obj = c.request("POST", "/v1/profiles", body=body)
+    if obj is None:
+        return
+    _emit(obj, a.json)
+    if not a.no_download:
+        _write_profile(obj.get("data", {}), a.out)
+
+
+def cmd_profiles_download(c, a):
+    if a.id:
+        obj = c.request("GET", f"/v1/profiles/{a.id}")
+        res = obj.get("data") if obj else None
+    else:
+        obj = c.request("GET", "/v1/profiles",
+                        {"filter[name]": a.name, "limit": 200})
+        if obj is None:  # dry-run
+            return
+        matches = obj.get("data", [])
+        if not matches:
+            raise AscError(f"no profile named {a.name!r}")
+        res = matches[0]
+    if res is None:
+        return
+    _write_profile(res, a.out)
+
+
+def _write_profile(res, out):
+    content = res.get("attributes", {}).get("profileContent")
+    if not content:
+        raise AscError("response has no profileContent")
+    name = res.get("attributes", {}).get("name", res.get("id", "profile"))
+    path = os.path.expanduser(
+        out or os.path.join("~/Downloads", f"{name}.provisionprofile"))
+    with open(path, "wb") as fh:
+        fh.write(base64.b64decode(content))
+    print(f"wrote {path}")
+
+
+def cmd_groups(c, a):
+    params = {"limit": a.limit}
+    if a.app:
+        params["filter[app]"] = a.app
+    _emit(c.request("GET", "/v1/betaGroups", params), a.json)
+
+
+def cmd_testers_list(c, a):
+    params = {"limit": a.limit}
+    if a.group:
+        params["filter[betaGroups]"] = a.group
+    if a.email:
+        params["filter[email]"] = a.email
+    _emit(c.request("GET", "/v1/betaTesters", params), a.json)
+
+
+def cmd_testers_add(c, a):
+    attrs = {"email": a.email}
+    if a.first_name:
+        attrs["firstName"] = a.first_name
+    if a.last_name:
+        attrs["lastName"] = a.last_name
+    body = {"data": {
+        "type": "betaTesters",
+        "attributes": attrs,
+        "relationships": {
+            "betaGroups": {
+                "data": [{"type": "betaGroups", "id": x} for x in a.group]
+            }
+        },
+    }}
+    _emit(c.request("POST", "/v1/betaTesters", body=body), a.json)
+
+
+def cmd_testers_remove(c, a):
+    c.request("DELETE", f"/v1/betaTesters/{a.id}")
+    if not c.dry_run:
+        print(f"deleted betaTesters/{a.id}")
+
+
+def cmd_builds(c, a):
+    params = {
+        "limit": a.limit,
+        "sort": "-uploadedDate",
+        "fields[builds]": "version,processingState,uploadedDate,"
+                          "usesNonExemptEncryption,expired",
+    }
+    if a.app:
+        params["filter[app]"] = a.app
+    if a.version:
+        params["filter[version]"] = a.version
+    _emit(c.request("GET", "/v1/builds", params), a.json)
+
+
+def cmd_build_assign(c, a):
+    body = {"data": [{"type": "betaGroups", "id": g} for g in a.group]}
+    c.request("POST", f"/v1/builds/{a.build}/relationships/betaGroups",
+              body=body)
+    if not c.dry_run:
+        print(f"assigned build {a.build} to groups: {', '.join(a.group)}")
+
+
+def cmd_compliance(c, a):
+    body = {"data": {
+        "type": "builds",
+        "id": a.build,
+        "attributes": {"usesNonExemptEncryption": a.uses_encryption},
+    }}
+    obj = c.request("PATCH", f"/v1/builds/{a.build}", body=body)
+    if obj is None:
+        return
+    print(f"set usesNonExemptEncryption={a.uses_encryption} on build {a.build}")
+    _emit(obj, a.json)
+
+
+def cmd_build_wait(c, a):
+    if c.dry_run:
+        c.request("GET", f"/v1/builds/{a.build}")
+        return
+    deadline = time.time() + a.timeout
+    while True:
+        obj = c.request("GET", f"/v1/builds/{a.build}",
+                        {"fields[builds]": "processingState,version"})
+        state = obj.get("data", {}).get("attributes", {}).get("processingState")
+        print(f"build {a.build}: {state}")
+        if state == "VALID":
+            return
+        if state in ("FAILED", "INVALID"):
+            raise AscError(f"build finished in state {state}")
+        if time.time() >= deadline:
+            raise AscError(f"timed out after {a.timeout}s (last state {state})")
+        time.sleep(a.interval)
+
+
+def cmd_iap_list(c, a):
+    _emit(c.request("GET", f"/v1/apps/{a.app}/inAppPurchasesV2",
+                    {"limit": a.limit}), a.json)
+
+
+def cmd_iap_create(c, a):
+    attrs = {"name": a.name, "productId": a.product_id,
+             "inAppPurchaseType": a.type}
+    if a.review_note:
+        attrs["reviewNote"] = a.review_note
+    body = {"data": {
+        "type": "inAppPurchases",
+        "attributes": attrs,
+        "relationships": {"app": {"data": {"type": "apps", "id": a.app}}},
+    }}
+    _emit(c.request("POST", "/v2/inAppPurchases", body=body), a.json)
+
+
+def cmd_iap_update(c, a):
+    attrs = {}
+    if a.name:
+        attrs["name"] = a.name
+    if a.review_note is not None:
+        attrs["reviewNote"] = a.review_note
+    body = {"data": {"type": "inAppPurchases", "id": a.id, "attributes": attrs}}
+    _emit(c.request("PATCH", f"/v2/inAppPurchases/{a.id}", body=body), a.json)
+
+
+SETUP_KEY_STEPS = """\
+To create the API key (.p8):
+  1. App Store Connect > Users and Access > Integrations > App Store Connect API.
+  2. Under Keys, click Generate API Key (or the + button).
+  3. Give it a name and choose the App Manager role (sufficient for this tool).
+  4. Click Generate, then Download API Key. The AuthKey_<ID>.p8 downloads ONCE
+     — Apple never lets you download it again.
+  5. Move it into place and lock it down:
+       mkdir -p ~/.appstoreconnect/private_keys
+       mv ~/Downloads/AuthKey_*.p8 ~/.appstoreconnect/private_keys/
+       chmod 600 ~/.appstoreconnect/private_keys/AuthKey_*.p8
+     The client auto-derives the Key ID from the filename (ASC_API_KEY_ID overrides)."""
+
+SETUP_ISSUER_STEPS = """\
+To provide the Issuer ID:
+  1. On the same Keys page, copy the Issuer ID shown near the top (a UUID).
+  2. Either export it for this shell:
+       export ASC_ISSUER_ID=<issuer-uuid>
+     or store it once in the project's gitignored sentinel (recommended for
+     a repo's release flow) at the repo root or a chosen path:
+       echo '<issuer-uuid>' > .asc-issuer-id     # add .asc-issuer-id to .gitignore
+     The client searches for .asc-issuer-id from CWD upward (ASC_ISSUER_FILE
+     points at an explicit path; ASC_ISSUER_ID env wins over both)."""
+
+
+def cmd_setup(c, a):
+    print("App Store Connect credential setup\n")
+    key_ok = False
+    try:
+        key_id, key_path, _ = resolve_key()
+        print(f"[ok]      API key: {key_id}  ({key_path})")
+        key_ok = True
+    except AscError as exc:
+        print(f"[missing] API key: {str(exc).splitlines()[0]}")
+    issuer_ok = False
+    try:
+        issuer = resolve_issuer()
+        print(f"[ok]      Issuer ID: {issuer}")
+        issuer_ok = True
+    except AscError:
+        print("[missing] Issuer ID")
+    print()
+    if not key_ok:
+        print(SETUP_KEY_STEPS + "\n")
+    if not issuer_ok:
+        print(SETUP_ISSUER_STEPS + "\n")
+    if key_ok and issuer_ok:
+        print("Credentials resolve. Run `asc token` to confirm JWT generation, "
+              "or `asc bundle-ids` for a read-only live check.")
+
+
+def cmd_token(c, a):
+    """Diagnostic: resolve creds + generate a JWT. Prints claims, never the token."""
+    key_id, key_path, key_pem = resolve_key()
+    issuer = resolve_issuer()
+    _, header, payload = make_jwt(key_id, key_path, key_pem, issuer)
+    print(f"key_id: {key_id}")
+    print(f"key_file: {key_path}")
+    print(f"issuer: {issuer}")
+    print("header: " + json.dumps(header))
+    print("claims: " + json.dumps(payload))
+    print("token: <redacted; ES256 JWT generated OK>")
+
+
+# ------------------------------------------------------------------------ main
+
+def build_parser():
+    p = argparse.ArgumentParser(prog="asc", description=__doc__.splitlines()[0])
+    p.add_argument("--dry-run", action="store_true",
+                   help="print the request instead of sending it")
+    p.add_argument("--json", action="store_true",
+                   help="print raw JSON response")
+    p.add_argument("--approve-destructive", metavar="OP",
+                   help="explicitly approve a destructive/production op by name "
+                        "(" + ", ".join(sorted(DESTRUCTIVE_OPS)) + ")")
+    sub = p.add_subparsers(dest="cmd", required=True)
+
+    def limit(sp, default=50):
+        sp.add_argument("--limit", type=int, default=default)
+
+    s = sub.add_parser("bundle-ids", help="list bundle IDs")
+    s.add_argument("--identifier", help="filter by reverse-DNS identifier")
+    limit(s)
+    s.set_defaults(func=cmd_bundle_ids)
+
+    s = sub.add_parser("profiles", help="provisioning profiles")
+    psub = s.add_subparsers(dest="sub", required=True)
+    pl = psub.add_parser("list")
+    pl.add_argument("--name")
+    limit(pl)
+    pl.set_defaults(func=cmd_profiles_list)
+    pc = psub.add_parser("create")
+    pc.add_argument("--name", required=True)
+    pc.add_argument("--type", required=True,
+                    help="profileType, e.g. MAC_APP_STORE, MAC_APP_DIRECT, "
+                         "IOS_APP_STORE, IOS_APP_DEVELOPMENT")
+    pc.add_argument("--bundle-id", required=True, help="bundleIds resource id")
+    pc.add_argument("--certificate", action="append", default=[], required=True,
+                    help="certificate id (repeatable)")
+    pc.add_argument("--device", action="append", default=[],
+                    help="device id (repeatable, dev profiles)")
+    pc.add_argument("--out", help="output path (default ~/Downloads/<name>.provisionprofile)")
+    pc.add_argument("--no-download", action="store_true")
+    pc.set_defaults(func=cmd_profiles_create)
+    pd = psub.add_parser("download")
+    pdg = pd.add_mutually_exclusive_group(required=True)
+    pdg.add_argument("--id", help="profile resource id")
+    pdg.add_argument("--name", help="profile name")
+    pd.add_argument("--out", help="output path (default ~/Downloads/<name>.provisionprofile)")
+    pd.set_defaults(func=cmd_profiles_download)
+
+    s = sub.add_parser("groups", help="list TestFlight beta groups")
+    s.add_argument("--app", help="filter by app id")
+    limit(s)
+    s.set_defaults(func=cmd_groups)
+
+    s = sub.add_parser("testers", help="TestFlight beta testers")
+    tsub = s.add_subparsers(dest="sub", required=True)
+    tl = tsub.add_parser("list")
+    tl.add_argument("--group", help="filter by betaGroup id")
+    tl.add_argument("--email")
+    limit(tl)
+    tl.set_defaults(func=cmd_testers_list)
+    ta = tsub.add_parser("add")
+    ta.add_argument("--email", required=True)
+    ta.add_argument("--first-name")
+    ta.add_argument("--last-name")
+    ta.add_argument("--group", action="append", default=[], required=True,
+                    help="betaGroup id (repeatable)")
+    ta.set_defaults(func=cmd_testers_add)
+    tr = tsub.add_parser("remove")
+    tr.add_argument("--id", required=True, help="betaTester id")
+    tr.set_defaults(func=cmd_testers_remove, destructive_op="testers-remove")
+
+    s = sub.add_parser("builds", help="list builds + processing state")
+    s.add_argument("--app", help="filter by app id")
+    s.add_argument("--version", help="filter by build version")
+    limit(s)
+    s.set_defaults(func=cmd_builds)
+
+    s = sub.add_parser("build-assign", help="assign a build to beta groups")
+    s.add_argument("--build", required=True, help="build id")
+    s.add_argument("--group", action="append", default=[], required=True,
+                   help="betaGroup id (repeatable)")
+    s.set_defaults(func=cmd_build_assign, destructive_op="build-assign")
+
+    s = sub.add_parser("compliance",
+                       help="set a build's export-compliance encryption flag")
+    s.add_argument("--build", required=True, help="build id")
+    grp = s.add_mutually_exclusive_group(required=True)
+    grp.add_argument("--uses-encryption", dest="uses_encryption",
+                     action="store_true")
+    grp.add_argument("--exempt", dest="uses_encryption", action="store_false",
+                     help="uses only exempt encryption (usesNonExemptEncryption=false)")
+    s.set_defaults(func=cmd_compliance)
+
+    s = sub.add_parser("build-wait",
+                       help="poll a build until processingState is VALID")
+    s.add_argument("--build", required=True, help="build id")
+    s.add_argument("--timeout", type=int, default=1800)
+    s.add_argument("--interval", type=int, default=30)
+    s.set_defaults(func=cmd_build_wait)
+
+    s = sub.add_parser("iap", help="in-app purchases (v2)")
+    isub = s.add_subparsers(dest="sub", required=True)
+    il = isub.add_parser("list")
+    il.add_argument("--app", required=True, help="app id")
+    limit(il)
+    il.set_defaults(func=cmd_iap_list)
+    ic = isub.add_parser("create")
+    ic.add_argument("--app", required=True, help="app id")
+    ic.add_argument("--name", required=True, help="reference name")
+    ic.add_argument("--product-id", required=True)
+    ic.add_argument("--type", required=True,
+                    help="CONSUMABLE, NON_CONSUMABLE, NON_RENEWING_SUBSCRIPTION")
+    ic.add_argument("--review-note")
+    ic.set_defaults(func=cmd_iap_create)
+    iu = isub.add_parser("update")
+    iu.add_argument("--id", required=True, help="inAppPurchases id")
+    iu.add_argument("--name")
+    iu.add_argument("--review-note")
+    iu.set_defaults(func=cmd_iap_update)
+
+    s = sub.add_parser("setup",
+                       help="check + walk through creating the .p8 key and issuer ID")
+    s.set_defaults(func=cmd_setup)
+
+    s = sub.add_parser("token",
+                       help="diagnostic: resolve creds + generate a JWT (redacted)")
+    s.set_defaults(func=cmd_token)
+    return p
+
+
+def main(argv=None):
+    args = build_parser().parse_args(argv)
+    op = getattr(args, "destructive_op", None)
+    if op and not args.dry_run and getattr(args, "approve_destructive", None) != op:
+        print(
+            f"error: '{op}' is a destructive/production action "
+            f"({DESTRUCTIVE_OPS[op]}).\n"
+            f"It requires explicit approval: re-run with --approve-destructive={op}\n"
+            "Only pass that flag after the user has approved this exact action. "
+            "Use --dry-run to preview the request safely.",
+            file=sys.stderr,
+        )
+        return 2
+    client = Client(dry_run=args.dry_run)
+    try:
+        args.func(client, args)
+    except AscError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
