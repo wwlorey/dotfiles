@@ -3,32 +3,6 @@
 Deferred config/tooling follow-ups. Lightweight — one `##` heading per item,
 newest first. Not deployed anywhere; repo documentation only.
 
-## Global `asc` skill — App Store Connect via the official REST API
-
-**Design-approved in principle (2026-07), gated by the user on "after the
-first app publishes"; also awaits a scope/tier decision.**
-
-Packages "how agents drive App Store Connect" as a reusable global skill —
-the knowledge is not project-specific (the `.p8` key + issuer live in
-`~/.appstoreconnect/`, not any repo). Split: **capability in the skill,
-enforcement in each project.** The skill owns the *how* (ES256 JWT from the
-`.p8`; thin subcommands for provisioning profiles, TestFlight groups/testers/
-builds, IAP, export-compliance declaration, build-processing polling; the
-"app-record creation is UI-only" boundary; secret-handling + confirm-before-
-destructive rules). Each project's justfile/specs own the *when* (e.g.
-sanctora's `mas-postupload` / `mas-release` targets — tracked project-side by
-`issues/asc-api-release-tooling-202607.md`).
-
-**Decisions pending from the user before building:**
-1. Publish gate — user said hold until the first app is live (0.1.4 not yet up).
-2. Automation tier: (1) post-upload only (compliance + TestFlight assign),
-   (2) + yearly profile renewal, (3) full one-command `mas-release`.
-3. Client language: pure bash+openssl (zero deps) vs small Python + `pyjwt`
-   (cleaner; hooks already assume Python).
-
-**Refs:** `~/.appstoreconnect/`, sanctora `scripts/mas-upload.sh` (existing
-credential resolution to reuse), `issues/asc-api-release-tooling-202607.md`.
-
 ## Non-blocking swallowed-text audio advisory (voice)
 
 **Deferred fast-follow from the 2026-07 voice redesign.**
