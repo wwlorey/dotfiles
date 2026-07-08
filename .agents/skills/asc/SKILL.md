@@ -120,6 +120,24 @@ Export compliance: `asc compliance --build <id> --exempt` sets
 Compliance" answer); `--uses-encryption` sets it true. This is SAFE on an
 unreleased build.
 
+## TestFlight distribution: internal groups auto-receive builds
+
+An **internal** beta group (`isInternalGroup: true`) — especially one with
+`hasAccessToAllBuilds: true` — automatically receives every build as soon as
+the build reaches `processingState=VALID` and export compliance is set
+(`asc compliance --build <id> --exempt`). No `build-assign`, and no Beta App
+Review, are involved: for internal testing the release sequence ENDS at
+`compliance`, and the build is already installable by the internal testers.
+
+`build-assign` is only needed to distribute to an **external** group (which
+additionally gates behind Beta App Review). So BEFORE offering or preparing a
+`build-assign`, read the target group's flags with `asc --json groups` and
+check `isInternalGroup` / `hasAccessToAllBuilds`. If the group is internal (or
+otherwise already has all-builds access), do NOT offer `build-assign` — tell
+the user no assignment is needed because the build is already available to that
+group once processing + compliance complete. Reserve `build-assign` (and its
+hard gate below) for genuine external-group distribution.
+
 ## Destructive / production ops — HARD gate
 
 Some ops mutate production state or delete data. They are gated in two layers.
