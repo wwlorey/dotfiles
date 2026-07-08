@@ -29,6 +29,7 @@ DESTRUCTIVE_OPS = {
     "iap-rename":       "state-dependent",  # PATCH name of a live IAP
     "iap-price":        "state-dependent",  # price schedule on a live IAP
     "iap-availability": "state-dependent",  # availability on a live IAP
+    "iap-screenshot":   "state-dependent",  # review screenshot on a live IAP
 }
 
 

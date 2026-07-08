@@ -64,7 +64,7 @@ asc testers list [--group <groupId>] [--email <addr>]
 asc builds --app <appId> [--version <v>]   # includes processingState
 asc build-wait --build <buildId> [--timeout 1800] [--interval 30]
 asc iap list --app <appId>
-asc iap status --id <iap>                  # state + which of {localization,price,availability} are missing
+asc iap status --id <iap> [--locale en-US] # state + completeness of {localization,price,availability,screenshot}
 asc iap price-points --id <iap> [--territory USA] [--limit 100]   # pick a --tier for `iap price`
 asc compliance --build <buildId> --exempt           # or --uses-encryption
 asc token                                  # diagnostic: resolve creds + gen JWT
@@ -84,17 +84,29 @@ asc iap rename --id <iap> --name "<reference name>"          # internal name
 asc iap localize --id <iap> --locale en-US --name "<display>" --description "<desc>"
 asc iap price --id <iap> --tier <pricePointId> [--base-territory USA] [--start-date YYYY-MM-DD]
 asc iap availability --id <iap> (--territory USA [...] | --all-territories) [--new-territories]
+asc iap screenshot --id <iap> --file <path>   # upload the App Review screenshot (3-step reserve/upload/commit)
 ```
 
 Completing a MISSING_METADATA in-app purchase so StoreKit will return it takes
-three edits — a localization, a price, and an availability. Discover the state
-and what's left with `asc iap status --id <iap>`; pick a price point with
-`asc iap price-points --id <iap>` (the point's `id` is the `--tier` value).
-`iap localize` creates the localization, or PATCHes the existing one if that
-locale already has one. `iap price` sets the base/manual price schedule from a
-single price point (effective immediately unless `--start-date` is given).
-`iap availability` sets the territories; a single request covers up to 50, and
-`--all-territories` fetches the full territory list and adds the rest in chunks.
+four edits — a localization, a price, an availability, and the App Review
+screenshot. Discover the state and what's still incomplete with
+`asc iap status --id <iap>`; it reads INTO each relationship and reports the
+real gap (price `MISSING (empty schedule)` when the schedule has no manual
+price, localization `INCOMPLETE` when the locale lacks a name or description,
+`screenshot: MISSING` — the usual final READY_TO_SUBMIT blocker), not mere
+existence. Pick a price point with `asc iap price-points --id <iap>` (the
+point's `id` is the `--tier` value). `iap localize` creates the localization,
+or PATCHes the existing one if that locale already has one. `iap price` sets the
+base/manual price schedule from a single price point (effective immediately
+unless `--start-date` is given). `iap availability` sets the territories; a
+single request covers up to 50, and `--all-territories` fetches the full
+territory list and adds the rest in chunks. `iap screenshot` uploads the App
+Review screenshot via Apple's 3-step reserved-asset flow: it POSTs a reservation
+(`inAppPurchaseAppStoreReviewScreenshots`, with `fileName`/`fileSize` related to
+the IAP), PUTs the bytes to each returned `uploadOperations` url with its
+headers, then PATCHes the reservation with `uploaded: true` and the file's md5
+`sourceFileChecksum`. `--dry-run` prints the reservation request without
+sending.
 
 `profiles create`/`download` decode the base64 `profileContent` and write a
 `.provisionprofile` file (default `~/Downloads/<name>.provisionprofile`).
@@ -118,7 +130,7 @@ Two are **unconditional** — always production:
 | `testers-remove` | `DELETE /v1/betaTesters/{id}` | deletes data |
 | `build-assign` | assigns a build to beta groups | distributes the build to real testers |
 
-Three are **state-dependent** — SAFE on a draft in-app purchase, destructive on
+Four are **state-dependent** — SAFE on a draft in-app purchase, destructive on
 a live one:
 
 | op | what it does | gated only when |
@@ -126,10 +138,12 @@ a live one:
 | `iap-rename` | PATCH the reference name (`iap rename`, or `iap update --name`) | the IAP is live/approved |
 | `iap-price` | set the price schedule (`iap price`) | the IAP is live/approved |
 | `iap-availability` | set territory availability (`iap availability`) | the IAP is live/approved |
+| `iap-screenshot` | upload the App Review screenshot (`iap screenshot`) | the IAP is live/approved |
 
 An in-app purchase in state `MISSING_METADATA` or `READY_TO_SUBMIT` has never
-been approved — it is a **draft**, and editing its name/price/availability is
-safe, so those ops run freely (no flag). Any other state means the product has
+been approved — it is a **draft**, and editing its name/price/availability or
+uploading its review screenshot is safe, so those ops run freely (no flag). Any
+other state means the product has
 been submitted/approved and changes reach real, possibly paying users; the
 client reads the IAP's `state` before each of these ops and, when it is not a
 draft (or the state can't be read — fail safe), refuses unless
@@ -139,8 +153,9 @@ price/availability change, and is never gated.
 
 Everything else above is SAFE (all reads/lists including `iap status` and
 `iap price-points`, downloading a profile, creating a draft profile/IAP,
-localizing an IAP, editing a draft IAP's price/availability, declaring
-export-compliance on an unreleased build). Beyond this client, treat as
+localizing an IAP, editing a draft IAP's price/availability, uploading a draft
+IAP's review screenshot, declaring export-compliance on an unreleased build).
+Beyond this client, treat as
 destructive/production anything that deletes or expires a build, removes a
 build from a group, deletes a tester or profile, submits a version for review,
 or changes the price/availability of a live product.

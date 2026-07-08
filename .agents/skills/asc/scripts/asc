@@ -24,6 +24,7 @@ the method, URL, and body it WOULD send, and never touches credentials.
 import argparse
 import base64
 import glob as _glob
+import hashlib
 import json
 import os
 import re
@@ -303,6 +304,7 @@ DESTRUCTIVE_OPS = {
     "iap-rename": "an in-app purchase's reference name",
     "iap-price": "an in-app purchase's price",
     "iap-availability": "an in-app purchase's territory availability",
+    "iap-screenshot": "an in-app purchase's App Review screenshot",
 }
 
 # A draft in-app purchase (never approved) can be edited freely; any other
@@ -602,7 +604,11 @@ def cmd_iap_price(c, a):
     effective immediately and indefinitely). --tier is an inAppPurchasePricePoint
     id from `iap price-points`."""
     _guard_state_dependent(c, a, a.id, "iap-price")
-    ref = "price-1"
+    # Inline creation: the manualPrices relationship references the price object
+    # being created alongside it, and BOTH the reference AND the `included`
+    # object's id must use the JSON:API local-id form `${local-id}` (a bare
+    # `price-1` is rejected HTTP 409 on both counts).
+    ref = "${price-1}"
     body = {
         "data": {
             "type": "inAppPurchasePriceSchedules",
@@ -674,48 +680,188 @@ def cmd_iap_availability(c, a):
         print(f"added {len(chunk)} more territories")
 
 
-def _rel_present(c, path):
+def _rel_total(obj, rel):
+    """Total count of a to-many relationship. ASC only populates the linkage
+    meta/data when the relationship is `include`d, so callers must request it."""
+    d = (obj or {}).get("data") or {}
+    r = d.get("relationships", {}).get(rel, {})
+    total = r.get("meta", {}).get("paging", {}).get("total")
+    if total is None:
+        total = len(r.get("data") or [])
+    return total or 0
+
+
+def _status_localization(c, iap_id, locale):
+    """(ok, detail). Complete iff the target locale has both name+description."""
     try:
-        obj = c.request("GET", path)
+        obj = c.request(
+            "GET", f"/v2/inAppPurchases/{iap_id}/inAppPurchaseLocalizations",
+            {"limit": 200})
     except AscError:
-        return False
-    return bool((obj or {}).get("data"))
+        return False, "MISSING"
+    locs = (obj or {}).get("data", [])
+    match = next(
+        (r for r in locs
+         if r.get("attributes", {}).get("locale") == locale), None)
+    if match is None:
+        return False, (f"MISSING (no {locale} localization)" if locs
+                       else "MISSING (no localization)")
+    la = match.get("attributes", {})
+    gaps = [k for k in ("name", "description") if not la.get(k)]
+    if gaps:
+        return False, f"INCOMPLETE ({locale} missing {' + '.join(gaps)})"
+    return True, f"present ({locale})"
+
+
+def _status_price(c, iap_id):
+    """(ok, detail). Complete iff the schedule has >=1 manual price."""
+    try:
+        obj = c.request("GET", f"/v2/inAppPurchases/{iap_id}/iapPriceSchedule",
+                        {"include": "manualPrices"})
+    except AscError:
+        return False, "MISSING (no price schedule)"
+    if not (obj or {}).get("data"):
+        return False, "MISSING (no price schedule)"
+    n = _rel_total(obj, "manualPrices")
+    if n > 0:
+        return True, f"present (manualPrices={n})"
+    return False, "MISSING (empty schedule)"
+
+
+def _status_availability(c, iap_id):
+    """(ok, detail). Complete iff at least one territory is available."""
+    try:
+        obj = c.request(
+            "GET", f"/v2/inAppPurchases/{iap_id}/inAppPurchaseAvailability",
+            {"include": "availableTerritories"})
+    except AscError:
+        return False, "MISSING"
+    if not (obj or {}).get("data"):
+        return False, "MISSING"
+    n = _rel_total(obj, "availableTerritories")
+    if n > 0:
+        return True, f"present ({n} territories)"
+    return False, "MISSING (no territories)"
+
+
+def _status_screenshot(c, iap_id):
+    """(ok, detail). The App Review screenshot is the usual final
+    READY_TO_SUBMIT blocker; it is a to-one relationship (null when unset)."""
+    try:
+        obj = c.request(
+            "GET", f"/v2/inAppPurchases/{iap_id}/appStoreReviewScreenshot")
+    except AscError:
+        return False, "MISSING"
+    return (True, "present") if (obj or {}).get("data") else (False, "MISSING")
 
 
 def cmd_iap_status(c, a):
-    """Show the product's state and which of {localization, price,
-    availability} are still missing (the three pieces StoreKit needs before it
-    returns the product)."""
+    """Show the product's state and, reading INTO each relationship, whether
+    localization / price / availability / screenshot are actually COMPLETE (not
+    merely present-but-empty). These four plus a VALID state are what App Store
+    Connect needs before a MISSING_METADATA product becomes READY_TO_SUBMIT."""
     obj = c.request("GET", f"/v2/inAppPurchases/{a.id}",
                     {"fields[inAppPurchases]": "name,productId,state"})
     if obj is None:
         return
     attrs = obj.get("data", {}).get("attributes", {})
     state = attrs.get("state")
-    has_loc = _rel_present(
-        c, f"/v2/inAppPurchases/{a.id}/inAppPurchaseLocalizations")
-    has_price = _rel_present(c, f"/v2/inAppPurchases/{a.id}/iapPriceSchedule")
-    has_avail = _rel_present(
-        c, f"/v2/inAppPurchases/{a.id}/inAppPurchaseAvailability")
-    pieces = [("localization", has_loc), ("price", has_price),
-              ("availability", has_avail)]
+    loc_ok, loc_d = _status_localization(c, a.id, a.locale)
+    price_ok, price_d = _status_price(c, a.id)
+    avail_ok, avail_d = _status_availability(c, a.id)
+    shot_ok, shot_d = _status_screenshot(c, a.id)
+    pieces = [("localization", loc_ok, loc_d), ("price", price_ok, price_d),
+              ("availability", avail_ok, avail_d),
+              ("screenshot", shot_ok, shot_d)]
     if a.json:
         print(json.dumps({
             "id": a.id, "productId": attrs.get("productId"),
             "name": attrs.get("name"), "state": state,
-            "localization": has_loc, "price": has_price,
-            "availability": has_avail,
-            "missing": [k for k, v in pieces if not v],
+            "localization": loc_ok, "price": price_ok,
+            "availability": avail_ok, "screenshot": shot_ok,
+            "detail": {k: d for k, _, d in pieces},
+            "missing": [k for k, ok, _ in pieces if not ok],
         }, indent=2))
         return
     print(f"inAppPurchases/{a.id}  {attrs.get('productId')}  "
           f"{attrs.get('name')}")
     print(f"  state:        {state}")
-    for label, present in pieces:
-        print(f"  {label + ':':<13} {'present' if present else 'MISSING'}")
-    missing = [k for k, v in pieces if not v]
+    for label, _, detail in pieces:
+        print(f"  {label + ':':<14}{detail}")
+    missing = [k for k, ok, _ in pieces if not ok]
     print(f"  -> still missing: {', '.join(missing)}" if missing
-          else "  -> localization + price + availability all present")
+          else "  -> localization + price + availability + screenshot all "
+               "complete")
+
+
+def _put_asset_part(op, blob):
+    """Upload one reservation part: PUT the byte range to the operation's url
+    with exactly the headers Apple handed back. Not a Client.request — the
+    target is a signed upload URL on a different host, takes raw bytes (no JWT,
+    no JSON), and carries its own headers."""
+    url = op.get("url")
+    method = op.get("method") or "PUT"
+    offset = op.get("offset") or 0
+    length = op.get("length")
+    chunk = blob[offset:offset + length] if length is not None else blob[offset:]
+    req = urllib.request.Request(url, data=chunk, method=method)
+    for h in op.get("requestHeaders") or []:
+        if h.get("name") and h.get("value") is not None:
+            req.add_header(h["name"], h["value"])
+    try:
+        with urllib.request.urlopen(req) as resp:
+            resp.read()
+    except urllib.error.HTTPError as exc:
+        body = exc.read().decode(errors="replace")[:300]
+        raise AscError(f"asset upload failed (HTTP {exc.code}): {body}")
+
+
+def cmd_iap_screenshot(c, a):
+    """Upload the App Review screenshot for an in-app purchase — the usual final
+    MISSING_METADATA blocker — via Apple's 3-step reserved-asset flow:
+      1. POST a reservation (fileName + fileSize, related to the IAP) → get the
+         uploadOperations.
+      2. PUT the image bytes to each operation's url with its headers.
+      3. PATCH the reservation with uploaded=true + sourceFileChecksum (md5).
+    A draft-metadata edit: state-dependent (safe on a draft, gated on a live
+    product), like `iap price`/`availability`."""
+    path = os.path.expanduser(a.file)
+    if not os.path.isfile(path):
+        raise AscError(f"screenshot file not found: {path}")
+    with open(path, "rb") as fh:
+        blob = fh.read()
+    reserve_body = {"data": {
+        "type": "inAppPurchaseAppStoreReviewScreenshots",
+        "attributes": {"fileName": os.path.basename(path), "fileSize": len(blob)},
+        "relationships": {
+            "inAppPurchaseV2": {
+                "data": {"type": "inAppPurchases", "id": a.id}}
+        },
+    }}
+    _guard_state_dependent(c, a, a.id, "iap-screenshot")
+    obj = c.request("POST", "/v1/inAppPurchaseAppStoreReviewScreenshots",
+                    body=reserve_body)
+    if obj is None:  # dry-run: reservation printed; stop before upload/commit
+        print("# next (not shown): PUT the bytes to each uploadOperations url, "
+              "then PATCH the reservation with uploaded=true and "
+              "sourceFileChecksum=md5(file)")
+        return
+    res = obj.get("data", {})
+    shot_id = res.get("id")
+    ops = res.get("attributes", {}).get("uploadOperations") or []
+    if not ops:
+        raise AscError("reservation returned no uploadOperations")
+    for op in ops:
+        _put_asset_part(op, blob)
+    checksum = hashlib.md5(blob).hexdigest()
+    commit_body = {"data": {
+        "type": "inAppPurchaseAppStoreReviewScreenshots",
+        "id": shot_id,
+        "attributes": {"uploaded": True, "sourceFileChecksum": checksum},
+    }}
+    _emit(c.request("PATCH",
+                    f"/v1/inAppPurchaseAppStoreReviewScreenshots/{shot_id}",
+                    body=commit_body), a.json)
 
 
 SETUP_KEY_STEPS = """\
@@ -944,9 +1090,19 @@ def build_parser():
     iav.set_defaults(func=cmd_iap_availability)
 
     ist = isub.add_parser(
-        "status", help="show state + missing metadata (localization/price/availability)")
+        "status",
+        help="show state + completeness (localization/price/availability/screenshot)")
     ist.add_argument("--id", required=True, help="inAppPurchases id")
+    ist.add_argument("--locale", default="en-US",
+                     help="locale checked for a complete localization (default en-US)")
     ist.set_defaults(func=cmd_iap_status)
+
+    ishot = isub.add_parser(
+        "screenshot",
+        help="upload the App Review screenshot (reserve -> upload -> commit)")
+    ishot.add_argument("--id", required=True, help="inAppPurchases id")
+    ishot.add_argument("--file", required=True, help="path to the screenshot image")
+    ishot.set_defaults(func=cmd_iap_screenshot)
 
     s = sub.add_parser("setup",
                        help="check + walk through creating the .p8 key and issuer ID")
