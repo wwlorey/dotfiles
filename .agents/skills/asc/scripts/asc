@@ -275,7 +275,9 @@ def _emit(obj, raw):
             summary = " ".join(
                 f"{k}={attrs[k]}" for k in
                 ("name", "identifier", "productId", "version",
-                 "processingState", "email", "profileType", "state")
+                 "processingState", "email", "profileType", "state",
+                 "locale", "customerPrice", "proceeds",
+                 "availableInNewTerritories")
                 if k in attrs
             )
             print(f"- {r.get('type')}/{r.get('id')}  {summary}".rstrip())
@@ -293,7 +295,54 @@ def _emit(obj, raw):
 DESTRUCTIVE_OPS = {
     "testers-remove": "delete a beta tester (data loss)",
     "build-assign": "assign a build to beta groups (distributes it to testers)",
+    # State-dependent ops: SAFE on a DRAFT in-app purchase (state
+    # MISSING_METADATA / READY_TO_SUBMIT — never yet approved), destructive on a
+    # LIVE/approved one. Their handlers call _guard_state_dependent, which reads
+    # the product's state and requires --approve-destructive=<op> only when the
+    # product is not a draft (fail-safe: unknown state also requires approval).
+    "iap-rename": "an in-app purchase's reference name",
+    "iap-price": "an in-app purchase's price",
+    "iap-availability": "an in-app purchase's territory availability",
 }
+
+# A draft in-app purchase (never approved) can be edited freely; any other
+# state means the product has been submitted/approved and changes to its
+# price/availability/name reach real users.
+DRAFT_SAFE_STATES = {"MISSING_METADATA", "READY_TO_SUBMIT"}
+
+
+def _iap_state(c, iap_id):
+    obj = c.request("GET", f"/v2/inAppPurchases/{iap_id}",
+                    {"fields[inAppPurchases]": "state,name,productId"})
+    return (obj or {}).get("data", {}).get("attributes", {}).get("state")
+
+
+def _guard_state_dependent(c, a, iap_id, op):
+    """State-dependent destructive gate. A draft product edits freely; a
+    live/approved product (or one whose state can't be read) requires
+    --approve-destructive=<op>. Mirrors the unconditional gate in main(), but
+    decided per-product. The PreToolUse hook blocks the agent from ever running
+    a command carrying --approve-destructive, so live-product mutations are
+    handed to the user regardless."""
+    if c.dry_run:
+        return  # preview only: no credentials, no network
+    try:
+        state = _iap_state(c, iap_id)
+    except AscError:
+        state = None
+    if state in DRAFT_SAFE_STATES:
+        return
+    if getattr(a, "approve_destructive", None) == op:
+        return
+    label = state or "unknown"
+    raise AscError(
+        f"'{op}' targets in-app purchase {iap_id} in state {label}, which is "
+        f"not a draft (draft states: {', '.join(sorted(DRAFT_SAFE_STATES))}). "
+        f"Changing {DESTRUCTIVE_OPS[op]} on a live/approved product affects "
+        "paying users and is a production change.\n"
+        f"Re-run with --approve-destructive={op} only after the user has "
+        "approved this exact action (use --dry-run to preview safely)."
+    )
 
 
 # -------------------------------------------------------------------- commands
@@ -479,6 +528,8 @@ def cmd_iap_create(c, a):
 
 
 def cmd_iap_update(c, a):
+    if a.name:
+        _guard_state_dependent(c, a, a.id, "iap-rename")
     attrs = {}
     if a.name:
         attrs["name"] = a.name
@@ -486,6 +537,185 @@ def cmd_iap_update(c, a):
         attrs["reviewNote"] = a.review_note
     body = {"data": {"type": "inAppPurchases", "id": a.id, "attributes": attrs}}
     _emit(c.request("PATCH", f"/v2/inAppPurchases/{a.id}", body=body), a.json)
+
+
+def cmd_iap_rename(c, a):
+    """Set the internal reference name (attributes.name) of an in-app purchase."""
+    _guard_state_dependent(c, a, a.id, "iap-rename")
+    body = {"data": {"type": "inAppPurchases", "id": a.id,
+                     "attributes": {"name": a.name}}}
+    _emit(c.request("PATCH", f"/v2/inAppPurchases/{a.id}", body=body), a.json)
+
+
+def cmd_iap_localize(c, a):
+    """Create (or update, if one already exists for the locale) the user-facing
+    localization (display name + description). Editing localization metadata is
+    a safe draft edit; on a live product it is a normal metadata change that
+    goes through review, not a price/availability change, so it is not gated."""
+    existing_id = None
+    if not c.dry_run:
+        obj = c.request(
+            "GET", f"/v2/inAppPurchases/{a.id}/inAppPurchaseLocalizations",
+            {"limit": 200})
+        for r in (obj or {}).get("data", []):
+            if r.get("attributes", {}).get("locale") == a.locale:
+                existing_id = r["id"]
+                break
+    if existing_id:
+        attrs = {"name": a.name}
+        if a.description is not None:
+            attrs["description"] = a.description
+        body = {"data": {"type": "inAppPurchaseLocalizations",
+                         "id": existing_id, "attributes": attrs}}
+        _emit(c.request("PATCH",
+                        f"/v1/inAppPurchaseLocalizations/{existing_id}",
+                        body=body), a.json)
+    else:
+        attrs = {"locale": a.locale, "name": a.name}
+        if a.description is not None:
+            attrs["description"] = a.description
+        body = {"data": {
+            "type": "inAppPurchaseLocalizations",
+            "attributes": attrs,
+            "relationships": {
+                "inAppPurchaseV2": {
+                    "data": {"type": "inAppPurchases", "id": a.id}}
+            },
+        }}
+        _emit(c.request("POST", "/v1/inAppPurchaseLocalizations", body=body),
+              a.json)
+
+
+def cmd_iap_price_points(c, a):
+    """List available price points for the product in a territory. The point
+    `id` is the value to pass to `iap price --tier`."""
+    params = {"limit": a.limit, "include": "territory",
+              "filter[territory]": a.territory,
+              "fields[inAppPurchasePricePoints]":
+                  "customerPrice,proceeds,territory"}
+    _emit(c.request("GET", f"/v2/inAppPurchases/{a.id}/pricePoints", params),
+          a.json)
+
+
+def cmd_iap_price(c, a):
+    """Set the price schedule from a single price point (the base/manual price,
+    effective immediately and indefinitely). --tier is an inAppPurchasePricePoint
+    id from `iap price-points`."""
+    _guard_state_dependent(c, a, a.id, "iap-price")
+    ref = "price-1"
+    body = {
+        "data": {
+            "type": "inAppPurchasePriceSchedules",
+            "relationships": {
+                "inAppPurchase": {
+                    "data": {"type": "inAppPurchases", "id": a.id}},
+                "baseTerritory": {
+                    "data": {"type": "territories", "id": a.base_territory}},
+                "manualPrices": {
+                    "data": [{"type": "inAppPurchasePrices", "id": ref}]},
+            },
+        },
+        "included": [{
+            "type": "inAppPurchasePrices",
+            "id": ref,
+            "attributes": {"startDate": a.start_date},
+            "relationships": {
+                "inAppPurchasePricePoint": {
+                    "data": {"type": "inAppPurchasePricePoints",
+                             "id": a.tier}}
+            },
+        }],
+    }
+    _emit(c.request("POST", "/v1/inAppPurchasePriceSchedules", body=body),
+          a.json)
+
+
+def cmd_iap_availability(c, a):
+    """Set territory availability. Pass --territory (repeatable) and/or
+    --all-territories. A single POST accepts up to 50 territories; the rest are
+    added in 50-id chunks via the availableTerritories relationship."""
+    _guard_state_dependent(c, a, a.id, "iap-availability")
+    territories = list(a.territory)
+    if a.all_territories:
+        if c.dry_run:
+            territories = ["USA", "GBR", "...(all ~175 territories fetched live)"]
+        else:
+            terrs = c.request("GET", "/v1/territories", {"limit": 200})
+            territories = [t["id"] for t in (terrs or {}).get("data", [])]
+    if not territories:
+        raise AscError("specify --territory <id> (repeatable) or --all-territories")
+    first, rest = territories[:50], territories[50:]
+    body = {"data": {
+        "type": "inAppPurchaseAvailabilities",
+        "attributes": {"availableInNewTerritories": a.new_territories},
+        "relationships": {
+            "inAppPurchase": {"data": {"type": "inAppPurchases", "id": a.id}},
+            "availableTerritories": {
+                "data": [{"type": "territories", "id": t} for t in first]},
+        },
+    }}
+    obj = c.request("POST", "/v1/inAppPurchaseAvailabilities", body=body)
+    if obj is None:  # dry-run
+        if rest:
+            print(f"# note: {len(rest)} more territories would be added in "
+                  "chunks of 50 via "
+                  "POST /v1/inAppPurchaseAvailabilities/{id}/relationships/"
+                  "availableTerritories")
+        return
+    _emit(obj, a.json)
+    avail_id = obj.get("data", {}).get("id")
+    for i in range(0, len(rest), 50):
+        chunk = rest[i:i + 50]
+        c.request(
+            "POST",
+            f"/v1/inAppPurchaseAvailabilities/{avail_id}/relationships/"
+            "availableTerritories",
+            body={"data": [{"type": "territories", "id": t} for t in chunk]})
+        print(f"added {len(chunk)} more territories")
+
+
+def _rel_present(c, path):
+    try:
+        obj = c.request("GET", path)
+    except AscError:
+        return False
+    return bool((obj or {}).get("data"))
+
+
+def cmd_iap_status(c, a):
+    """Show the product's state and which of {localization, price,
+    availability} are still missing (the three pieces StoreKit needs before it
+    returns the product)."""
+    obj = c.request("GET", f"/v2/inAppPurchases/{a.id}",
+                    {"fields[inAppPurchases]": "name,productId,state"})
+    if obj is None:
+        return
+    attrs = obj.get("data", {}).get("attributes", {})
+    state = attrs.get("state")
+    has_loc = _rel_present(
+        c, f"/v2/inAppPurchases/{a.id}/inAppPurchaseLocalizations")
+    has_price = _rel_present(c, f"/v2/inAppPurchases/{a.id}/iapPriceSchedule")
+    has_avail = _rel_present(
+        c, f"/v2/inAppPurchases/{a.id}/inAppPurchaseAvailability")
+    pieces = [("localization", has_loc), ("price", has_price),
+              ("availability", has_avail)]
+    if a.json:
+        print(json.dumps({
+            "id": a.id, "productId": attrs.get("productId"),
+            "name": attrs.get("name"), "state": state,
+            "localization": has_loc, "price": has_price,
+            "availability": has_avail,
+            "missing": [k for k, v in pieces if not v],
+        }, indent=2))
+        return
+    print(f"inAppPurchases/{a.id}  {attrs.get('productId')}  "
+          f"{attrs.get('name')}")
+    print(f"  state:        {state}")
+    for label, present in pieces:
+        print(f"  {label + ':':<13} {'present' if present else 'MISSING'}")
+    missing = [k for k, v in pieces if not v]
+    print(f"  -> still missing: {', '.join(missing)}" if missing
+          else "  -> localization + price + availability all present")
 
 
 SETUP_KEY_STEPS = """\
@@ -670,6 +900,53 @@ def build_parser():
     iu.add_argument("--name")
     iu.add_argument("--review-note")
     iu.set_defaults(func=cmd_iap_update)
+
+    ir = isub.add_parser("rename", help="set the internal reference name")
+    ir.add_argument("--id", required=True, help="inAppPurchases id")
+    ir.add_argument("--name", required=True, help="new reference name (internal)")
+    ir.set_defaults(func=cmd_iap_rename)
+
+    iloc = isub.add_parser(
+        "localize", help="create/update the display name + description")
+    iloc.add_argument("--id", required=True, help="inAppPurchases id")
+    iloc.add_argument("--locale", required=True, help="e.g. en-US")
+    iloc.add_argument("--name", required=True, help="user-facing display name")
+    iloc.add_argument("--description")
+    iloc.set_defaults(func=cmd_iap_localize)
+
+    ipp = isub.add_parser(
+        "price-points", help="list available price points (pick a --tier)")
+    ipp.add_argument("--id", required=True, help="inAppPurchases id")
+    ipp.add_argument("--territory", default="USA",
+                     help="territory id filter (default USA)")
+    limit(ipp, default=100)
+    ipp.set_defaults(func=cmd_iap_price_points)
+
+    ip = isub.add_parser("price", help="set the price schedule from a price point")
+    ip.add_argument("--id", required=True, help="inAppPurchases id")
+    ip.add_argument("--tier", required=True,
+                    help="inAppPurchasePricePoint id (from `iap price-points`)")
+    ip.add_argument("--base-territory", default="USA",
+                    help="base territory id (default USA)")
+    ip.add_argument("--start-date", default=None,
+                    help="YYYY-MM-DD; omit for a permanent base price")
+    ip.set_defaults(func=cmd_iap_price)
+
+    iav = isub.add_parser("availability", help="set territory availability")
+    iav.add_argument("--id", required=True, help="inAppPurchases id")
+    iav.add_argument("--territory", action="append", default=[],
+                     help="territory id (repeatable)")
+    iav.add_argument("--all-territories", action="store_true",
+                     help="make available in every territory")
+    iav.add_argument("--new-territories", dest="new_territories",
+                     action="store_true",
+                     help="also available in territories Apple adds later")
+    iav.set_defaults(func=cmd_iap_availability)
+
+    ist = isub.add_parser(
+        "status", help="show state + missing metadata (localization/price/availability)")
+    ist.add_argument("--id", required=True, help="inAppPurchases id")
+    ist.set_defaults(func=cmd_iap_status)
 
     s = sub.add_parser("setup",
                        help="check + walk through creating the .p8 key and issuer ID")

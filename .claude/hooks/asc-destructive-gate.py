@@ -13,6 +13,24 @@ import json
 import re
 import sys
 
+# Kept in sync with DESTRUCTIVE_OPS in the asc client
+# (~/.agents/skills/asc/scripts/asc). Two categories:
+#   unconditional   — always production; blocked on the bare subcommand token.
+#   state-dependent — SAFE to edit on a DRAFT in-app purchase, destructive on a
+#                     LIVE/approved one. The client decides per-product and only
+#                     attaches --approve-destructive when the product is live, so
+#                     this hook must NOT block these on their bare token (that
+#                     would wrongly block legitimate draft edits). They are
+#                     caught instead by the --approve-destructive rule below,
+#                     which fires exactly when the product is live.
+DESTRUCTIVE_OPS = {
+    "testers-remove":   "unconditional",   # DELETE /v1/betaTesters/{id}
+    "build-assign":     "unconditional",   # distributes a build to testers
+    "iap-rename":       "state-dependent",  # PATCH name of a live IAP
+    "iap-price":        "state-dependent",  # price schedule on a live IAP
+    "iap-availability": "state-dependent",  # availability on a live IAP
+}
+
 
 def main():
     try:
