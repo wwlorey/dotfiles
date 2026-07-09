@@ -83,8 +83,9 @@ Read the full filled BrandScript back to the user — all seven elements — and
 1. Write the **one-liner** using Character + Problem + Plan + Success:
    *"We help [character] who struggle with [problem] by [plan] so that they [success]."*
    ([character] = the one-sentence customer description from Step 1.1; the core desire surfaces through [success].)
-2. Run the **grunt test** on the result.
-3. If a name or tagline came up, run the **tap test**.
+2. Distill the **controlling idea** (SB 2.0) — the single *internal* sentence that filters all messaging ("if it doesn't support this, cut it"), distinct from the customer-facing one-liner. See `references/sb7-primer.md` Part 3. Skip it if the brand's organizing idea is a multi-threaded *platform* that won't compress to one sentence — that's a brand platform, not a controlling idea, and forcing the reduction cracks it.
+3. Run the **grunt test** on the one-liner.
+4. If a name or tagline came up, run the **tap test**.
 
 ### Step 9 — Implement
 
@@ -93,7 +94,7 @@ Hand off to the user (and where applicable, the `storybrand-website` skill) for:
 ## Run these checkpoints at the moments shown
 
 - **Grunt test** — after the one-liner is drafted, and after any website hero copy is drafted. Can a stranger answer "What do you offer? How does it improve my life? What do I do to buy?" in 5 seconds?
-- **Tap test** — after any name, tagline, or controlling idea (the single theme a brand hangs on) is drafted. Would a cold reader, with zero context, guess what the product does just from the words? (If they can't, the "curse of knowledge" is operating.)
+- **Tap test** — after any name, tagline, or hero line is drafted. Would a cold reader, with zero context, guess what the product does just from the words? (If they can't, the "curse of knowledge" is operating.) Do NOT tap-test the *controlling idea* — it is internal and never shown cold; check it by alignment (does all messaging support it?), not legibility.
 - **Hero check** — after every element. If the *brand* is cast as the hero — winning or achieving in "we…/our…" terms — redirect to "you…" (the customer). Sanctioned exception: Guide-step empathy and authority statements ("We understand how frustrating…", "We've helped 5,000 clients…") are correctly "we" and must not be flagged.
 
 ## Coaching heuristics (always on)

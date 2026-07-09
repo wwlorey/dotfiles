@@ -278,6 +278,14 @@ Examples:
 
 Memorize it. Put it in email signatures. Print it on business cards. Repeat it until it feels excessive — you're nowhere close to over-using it.
 
+### The Controlling Idea (the internal filter) — SB 2.0
+
+StoryBrand 2.0 adds a companion to the one-liner: the **controlling idea** — a *single internal sentence* that captures what you offer and why it matters, used to **filter every piece of marketing**. Where the one-liner is the *external* tool (customer-facing: problem → solution → result), the controlling idea is the *internal* compass — if a headline, email, tweet, or landing page doesn't support it, cut it. It need never be shown to a customer; its job is consistency, not persuasion.
+
+Form: one honest, specific, aspirational sentence (see Part 5, "A good controlling idea is honest"). Derive it by distilling the Character's want + the Success into a single line held for the team, not the market.
+
+**Don't confuse it with a brand platform.** A controlling idea is *one lean sentence that compresses cleanly* — a filter. If the organizing idea refuses to compress because it is trying to carry depth, lineage, differentiation strategy, and several audiences at once, that is a **brand platform / brand essence** — a multi-threaded, enduring foundation — not a controlling idea. Forcing a platform into the one-sentence controlling-idea slot is a category error that cracks every time (no single sentence gathers a genuinely multi-threaded brand). Let the platform be a structured constellation of elements; let the controlling idea be the single filter distilled *from* it.
+
 ---
 
 ## Part 4: The 5 Things Every Website Must Have
