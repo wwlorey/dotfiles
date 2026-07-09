@@ -58,7 +58,8 @@
         "files.pythonhosted.org",
         "storage.googleapis.com",
         "api.instantdb.com",
-        "api.openai.com"
+        "api.openai.com",
+        "api.appstoreconnect.apple.com"
       ],
       "allowLocalBinding": true
     }
