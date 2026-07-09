@@ -92,6 +92,12 @@ WRAPPER_PREFIXES = (
     "<command-name",
     "<command-message",
     "<command-args",
+    # Skill-tool body delivery: a skill's SKILL.md arrives as a user-role message
+    # starting with this line. Counting it as a genuine user prompt would reset
+    # the "since last user message" window PAST a just-invoked skill and defeat
+    # the family-suppression below. [Runtime-specific marker; the capability is
+    # "a skill-body injection, not a user directive."]
+    "Base directory for this skill:",
 )
 
 
