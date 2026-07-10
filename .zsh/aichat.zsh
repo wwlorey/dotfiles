@@ -14,7 +14,11 @@
 #   - .env: a sibling config-dir/.env blocks the launch — aichat auto-loads it
 #     into the environment before config, re-supplying any refused var.
 #   - ARGS: only a small safe set of flags is permitted; -m/--model must name a
-#     declared model; every other flag (‑s/‑a/‑e/‑r/--session/--serve/--rag/
+#     declared model. -s/--session is permitted so an interactive session can
+#     hold multi-turn context (the plain REPL keeps none) — safe because the
+#     checker enforces save_session:false, so the session lives only in memory
+#     and is never written to disk (so it does not survive exit or resume across
+#     invocations). Every other flag (‑a/‑e/‑r/--save-session/--serve/--rag/
 #     --macro/--agent …, and clap's attached/stacked short forms) blocks.
 # Bypass is possible with `command aichat` / an absolute path — this is a
 # guardrail for normal use, not an adversarial control against yourself.
@@ -22,9 +26,11 @@
 # RESIDUAL RISK (launch-time gate cannot close these — source-audited at
 # aichat v0.30.0): once the REPL is open, `.model <any-name>` accepts models
 # outside config.yaml (aichat synthesizes unknown gemini-*/claude-*/mistral-*
-# names and sends them to Vertex), and `.set save true` / `.save session`
-# write the transcript to disk despite save:false. Don't use those REPL
-# commands. Also, $GOOGLE_CLOUD_HIPAA_PROJECT_ID chooses the GCP project —
+# names and sends them to Vertex), and `.set save true` / `.set save_session
+# true` / `.save session` write the transcript to disk despite save:false /
+# save_session:false. Don't use those REPL commands — an `-s` session stays in
+# memory only as long as save_session:false holds. Also,
+# $GOOGLE_CLOUD_HIPAA_PROJECT_ID chooses the GCP project —
 # keep it pointed at the BAA-covered project.
 aichat() {
   local check="$HOME/.local/bin/aichat-hipaa-check"
@@ -59,12 +65,15 @@ aichat() {
   fi
 
   # ARG allowlist: permit only known-safe flags. Everything else beginning with
-  # '-' is blocked — this covers the whole dangerous flag surface (‑s/--session,
-  # --save-session, --serve, --rag/--rebuild-rag, --macro, -a/--agent, -r/--role,
-  # -e/--execute, --sync-models) AND clap's attached (-mVAL), stacked (-Sm VAL),
-  # and =forms that plain token-matching misses. A permitted -m/--model value is
-  # checked against the declared allowlist (aichat otherwise synthesizes unknown
-  # model names and sends them to Vertex). Bare text (the prompt) is always fine.
+  # '-' is blocked — this covers the whole dangerous flag surface
+  # (--save-session, --serve, --rag/--rebuild-rag, --macro, -a/--agent,
+  # -r/--role, -e/--execute, --sync-models) AND clap's attached (-mVAL), stacked
+  # (-Sm VAL), and =forms that plain token-matching misses. A permitted
+  # -m/--model value is checked against the declared allowlist (aichat otherwise
+  # synthesizes unknown model names and sends them to Vertex). -s/--session is
+  # permitted so an interactive session can hold multi-turn context (the plain
+  # REPL keeps none); it stays in memory and cannot persist to disk while the
+  # checker holds save_session:false. Bare text (the prompt) is always fine.
   local -a allowed
   allowed=(${(f)"$("$check" --list-models 2>/dev/null)"})
   local a m i=1 rest=0
@@ -82,13 +91,18 @@ aichat() {
         (( i++ )) ;;
       -f=*|--file=*|--prompt=*)
         ;;
+      -s|--session|-s=*|--session=*)   # session: multi-turn context within one
+        ;;                             # interactive run. The value is optional
+                                       # — a separate name token is harmless
+                                       # plain text — and save_session:false
+                                       # (checker-enforced) keeps it in memory.
       -S|--no-stream|-c|--code|--dry-run|--info|\
       --list-models|--list-roles|--list-sessions|--list-agents|--list-rags|--list-macros|\
       -h|--help|-V|--version)          # safe booleans / read-only utilities
         ;;
       -*)
         print -ru2 -- "⛔ aichat blocked: flag '$a' is not permitted by the HIPAA gate."
-        print -ru2 -- "   Permitted: -m/--model <declared>, -f/--file <path>, --prompt, -S, -c, --dry-run, --list-*, and plain text."
+        print -ru2 -- "   Permitted: -m/--model <declared>, -s/--session, -f/--file <path>, --prompt, -S, -c, --dry-run, --list-*, and plain text."
         return 1 ;;
     esac
     if [[ -n $m ]] && (( ! ${allowed[(Ie)$m]} )); then
