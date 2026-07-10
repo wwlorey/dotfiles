@@ -16,10 +16,19 @@ Compliance invariant — ALL must hold:
   3. Every explicitly-declared model is GA — no preview / experimental
      snapshots. GA models are what the BAA covers.
 
+  4. The top-level `model:` default resolves to a declared client:model pair —
+     aichat synthesizes unknown model names at request time instead of
+     rejecting them, so an undeclared default would silently route to an
+     unvetted model.
+
 Exit status: 0 = compliant, 1 = violations found, 2 = usage/parse error.
 Use on demand, or as a gate (e.g. a git pre-commit hook) via the exit code.
 
-Usage: aichat-hipaa-check [path/to/config.yaml]
+`--list-models` prints the declared client:model allowlist (one per line)
+instead of checking — the zsh wrapper uses this to validate `-m/--model`
+values, since aichat itself does not enforce membership in the declared list.
+
+Usage: aichat-hipaa-check [--list-models] [path/to/config.yaml]
 Default: ~/Library/Application Support/aichat/config.yaml
 """
 
@@ -41,6 +50,20 @@ DEFAULT_CONFIG = os.path.expanduser(
 def _non_ga(name: str) -> bool:
     low = name.lower()
     return any(marker in low for marker in NON_GA_MARKERS)
+
+
+def allowed_models(cfg: dict) -> list[str]:
+    """Declared client:model ids for BAA-covered clients."""
+    ids: list[str] = []
+    for client in cfg.get("clients") or []:
+        if client.get("type") not in ALLOWED_CLIENT_TYPES:
+            continue
+        cname = client.get("name") or client.get("type")
+        for m in client.get("models") or []:
+            name = m.get("name", "")
+            if name:
+                ids.append(f"{cname}:{name}")
+    return ids
 
 
 def check(cfg: dict) -> list[str]:
@@ -88,11 +111,27 @@ def check(cfg: dict) -> list[str]:
                     f"(preview/experimental) — GA only under the BAA"
                 )
 
+    default = cfg.get("model")
+    if not default:
+        problems.append(
+            "no top-level model: declared — the default must be pinned to a "
+            "declared client:model pair"
+        )
+    elif default not in allowed_models(cfg):
+        problems.append(
+            f"default model '{default}' is not a declared client:model pair — "
+            f"aichat would synthesize and send it anyway, unvetted"
+        )
+
     return problems
 
 
 def main() -> int:
-    path = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_CONFIG
+    args = sys.argv[1:]
+    list_models = "--list-models" in args
+    if list_models:
+        args.remove("--list-models")
+    path = args[0] if args else DEFAULT_CONFIG
     try:
         with open(path) as f:
             cfg = yaml.safe_load(f) or {}
@@ -102,6 +141,11 @@ def main() -> int:
     except yaml.YAMLError as exc:
         print(f"aichat-hipaa-check: invalid YAML in {path}: {exc}", file=sys.stderr)
         return 2
+
+    if list_models:
+        for model_id in allowed_models(cfg):
+            print(model_id)
+        return 0
 
     problems = check(cfg)
     if problems:
