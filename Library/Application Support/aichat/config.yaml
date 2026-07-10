@@ -42,18 +42,11 @@ clients:
         output_price: 10.00
         supports_vision: true
         supports_function_calling: true
-      # gemini-3.5-flash is GA (2026-05-19) and BAA-eligible, but Vertex serves
-      # it from the GLOBAL endpoint only — no us-central1 — and aichat 0.30.0
-      # cannot build the global-endpoint URL (it always prefixes the region onto
-      # the hostname). Declared so the allowlist is ready; requests fail with
-      # NOT_FOUND until aichat is upgraded, location handling re-audited, and
-      # the global endpoint's "no in-region processing guarantee" accepted.
-      - name: gemini-3.5-flash
-        max_input_tokens: 1000000
-        max_output_tokens: 65536
-        input_price: 1.50
-        output_price: 9.00
-        supports_vision: true
-        supports_function_calling: true
-      # Gemini 3.1 Pro exists ONLY as gemini-3.1-pro-preview — pre-GA, which
-      # Google's HIPAA terms exclude from PHI use. Do not add it here.
+      # NOT declared, and why:
+      # - gemini-3.5-flash: GA (2026-05-19) and BAA-eligible, but Vertex serves
+      #   it from the GLOBAL endpoint only (no us-central1) and aichat 0.30.0
+      #   cannot build the global-endpoint URL. Re-add after upgrading aichat,
+      #   re-auditing location handling, and accepting that the global endpoint
+      #   guarantees no in-region processing.
+      # - Gemini 3.1 Pro: exists ONLY as gemini-3.1-pro-preview — pre-GA, which
+      #   Google's HIPAA terms exclude from PHI use. Do not add.
