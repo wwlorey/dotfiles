@@ -5,11 +5,19 @@
 # runs on every invocation against the config aichat will actually use, so
 # config drift is caught at the moment of use.
 #
-# Fail-closed: a missing check, a failing check, a config/model/save env
-# override, an undeclared -m/--model value, or a save-to-disk flag all block
-# the launch. Bypass is possible with `command aichat` / an absolute path —
-# this is a guardrail for normal use, not an adversarial control against
-# yourself.
+# Fail-closed via ALLOWLISTS, not denylists (aichat's override surface is too
+# large and version-growing to enumerate safely — source-audited at v0.30.0):
+#   - ENV: any AICHAT_* or GOOGLE_CLOUD_HIPAA_* var (except the required
+#     PROJECT_ID) blocks the launch. This covers AICHAT_PATCH_<client>_<api>,
+#     which can rewrite the request URL to ANY host (PHI exfiltration) while the
+#     gate still prints ✓, plus model/provider/save/dir overrides.
+#   - .env: a sibling config-dir/.env blocks the launch — aichat auto-loads it
+#     into the environment before config, re-supplying any refused var.
+#   - ARGS: only a small safe set of flags is permitted; -m/--model must name a
+#     declared model; every other flag (‑s/‑a/‑e/‑r/--session/--serve/--rag/
+#     --macro/--agent …, and clap's attached/stacked short forms) blocks.
+# Bypass is possible with `command aichat` / an absolute path — this is a
+# guardrail for normal use, not an adversarial control against yourself.
 #
 # RESIDUAL RISK (launch-time gate cannot close these — source-audited at
 # aichat v0.30.0): once the REPL is open, `.model <any-name>` accepts models
@@ -26,46 +34,62 @@ aichat() {
     return 1
   fi
 
-  # Refuse env overrides. Config-path vars could point aichat at a different,
-  # unvalidated config; AICHAT_MODEL routes to any model name (aichat does not
-  # check it against the declared list); the save/messages/sessions vars
-  # re-enable or relocate disk persistence; provider/platform/location vars
-  # could redirect the client. The gate validates the DEFAULT config, so force
-  # aichat to use exactly it.
+  # ENV allowlist: refuse ANY aichat-influencing env var. aichat honors a large,
+  # version-growing AICHAT_* surface — model, provider, platform, save/session/
+  # history, roles/macros/functions/rags dirs, and critically
+  # AICHAT_PATCH_<CLIENT>_<API>, whose JSON value can rewrite the request URL to
+  # any host (PHI exfiltration). Enumerating the dangerous ones is a losing game,
+  # so block on the whole namespace; keep only the required project id.
   local v
-  for v in AICHAT_CONFIG_DIR AICHAT_CONFIG_FILE AICHAT_ENV_FILE \
-           AICHAT_MODEL AICHAT_SAVE AICHAT_SAVE_SESSION \
-           AICHAT_MESSAGES_FILE AICHAT_SESSIONS_DIR \
-           AICHAT_PROVIDER AICHAT_PLATFORM GOOGLE_CLOUD_HIPAA_LOCATION; do
-    if [[ -n ${(P)v} ]]; then
-      print -ru2 -- "⛔ aichat blocked: $v is set — unset it so the validated default config is used."
-      return 1
-    fi
+  for v in ${(Mk)parameters:#(AICHAT_*|GOOGLE_CLOUD_HIPAA_*)}; do
+    [[ $v == GOOGLE_CLOUD_HIPAA_PROJECT_ID ]] && continue
+    print -ru2 -- "⛔ aichat blocked: $v is set — aichat honors AICHAT_*/GOOGLE_CLOUD_HIPAA_* env overrides that can redirect the model, provider, request URL, or persistence. Unset it and retry."
+    return 1
   done
 
-  # Walk the args: block flags that persist conversation to disk (PHI hygiene)
-  # or open a network server, and validate any -m/--model value against the
-  # declared allowlist — aichat itself synthesizes undeclared model names and
-  # sends them to Vertex instead of rejecting them, so membership is enforced
-  # here.
+  # Refuse a sibling .env: aichat auto-loads config_dir/.env into the process
+  # environment BEFORE config init (main.rs load_env_file → env::set_var), so
+  # any var refused above can be smuggled back in via that file, and neither the
+  # wrapper (which reads only the live shell env) nor the checker (which parses
+  # only config.yaml) would see it. Block the launch if it exists.
+  local envfile="$HOME/Library/Application Support/aichat/.env"
+  if [[ -e $envfile ]]; then
+    print -ru2 -- "⛔ aichat blocked: $envfile exists — aichat auto-loads it into the environment before config, re-supplying refused overrides. Remove it."
+    return 1
+  fi
+
+  # ARG allowlist: permit only known-safe flags. Everything else beginning with
+  # '-' is blocked — this covers the whole dangerous flag surface (‑s/--session,
+  # --save-session, --serve, --rag/--rebuild-rag, --macro, -a/--agent, -r/--role,
+  # -e/--execute, --sync-models) AND clap's attached (-mVAL), stacked (-Sm VAL),
+  # and =forms that plain token-matching misses. A permitted -m/--model value is
+  # checked against the declared allowlist (aichat otherwise synthesizes unknown
+  # model names and sends them to Vertex). Bare text (the prompt) is always fine.
   local -a allowed
   allowed=(${(f)"$("$check" --list-models 2>/dev/null)"})
-  local a m i=1
+  local a m i=1 rest=0
   while (( i <= $# )); do
     a=${@[i]}
+    if (( rest )); then (( i++ )); continue; fi   # after `--`, all args are text
     m=""
     case "$a" in
-      -s|--session|--save-session)
-        print -ru2 -- "⛔ aichat blocked: session/save flags persist PHI to disk — not allowed."
-        return 1 ;;
-      --serve)
-        print -ru2 -- "⛔ aichat blocked: --serve exposes an ungated HTTP endpoint — not allowed."
-        return 1 ;;
+      --) rest=1 ;;
       -m|--model)
-        (( i++ ))
-        m=${@[i]:-} ;;
+        (( i++ )); m=${@[i]:-} ;;
       -m=*|--model=*)
         m=${a#*=} ;;
+      -f|--file|--prompt)              # safe, value-taking: consume the value
+        (( i++ )) ;;
+      -f=*|--file=*|--prompt=*)
+        ;;
+      -S|--no-stream|-c|--code|--dry-run|--info|\
+      --list-models|--list-roles|--list-sessions|--list-agents|--list-rags|--list-macros|\
+      -h|--help|-V|--version)          # safe booleans / read-only utilities
+        ;;
+      -*)
+        print -ru2 -- "⛔ aichat blocked: flag '$a' is not permitted by the HIPAA gate."
+        print -ru2 -- "   Permitted: -m/--model <declared>, -f/--file <path>, --prompt, -S, -c, --dry-run, --list-*, and plain text."
+        return 1 ;;
     esac
     if [[ -n $m ]] && (( ! ${allowed[(Ie)$m]} )); then
       print -ru2 -- "⛔ aichat blocked: model '$m' is not declared in config.yaml."

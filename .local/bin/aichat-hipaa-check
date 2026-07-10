@@ -40,7 +40,10 @@ import sys
 import yaml
 
 ALLOWED_CLIENT_TYPES = {"vertexai"}
-NON_GA_MARKERS = ("preview", "-exp", "experimental", "nightly", "-rc", "-test")
+NON_GA_MARKERS = (
+    "preview", "-exp", "experimental", "nightly", "-rc", "-test", "beta",
+    "latest",
+)
 
 DEFAULT_CONFIG = os.path.expanduser(
     "~/Library/Application Support/aichat/config.yaml"
@@ -48,7 +51,7 @@ DEFAULT_CONFIG = os.path.expanduser(
 
 
 def _non_ga(name: str) -> bool:
-    low = name.lower()
+    low = str(name).lower()
     return any(marker in low for marker in NON_GA_MARKERS)
 
 
@@ -60,7 +63,7 @@ def allowed_models(cfg: dict) -> list[str]:
             continue
         cname = client.get("name") or client.get("type")
         for m in client.get("models") or []:
-            name = m.get("name", "")
+            name = str(m.get("name", ""))
             if name:
                 ids.append(f"{cname}:{name}")
     return ids
@@ -74,6 +77,11 @@ def check(cfg: dict) -> list[str]:
     if cfg.get("save_session", False) is not False:
         problems.append(
             "save_session is not false — session history could persist PHI"
+        )
+    if cfg.get("save_shell_history", False) is not False:
+        problems.append(
+            "save_shell_history is not false — -e/.shell prompts (potential PHI) "
+            "persist to aichat's history file"
         )
 
     clients = cfg.get("clients") or []
@@ -95,6 +103,17 @@ def check(cfg: dict) -> list[str]:
                 f"BAA-covered{hint}"
             )
             continue
+
+        if client.get("patch"):
+            problems.append(
+                f"client '{label}' declares patch: — can rewrite the request "
+                f"URL/headers/body, redirecting PHI off the BAA endpoint"
+            )
+        if client.get("extra"):
+            problems.append(
+                f"client '{label}' declares extra: — can set a proxy or other "
+                f"transport override, redirecting PHI"
+            )
 
         models = client.get("models") or []
         if not models:

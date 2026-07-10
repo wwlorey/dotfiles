@@ -31,9 +31,9 @@ from typing import Optional
 
 
 MSG = (
-    "BLOCKED: Claude must never run `aichat`. It is the user's "
-    "HIPAA-compliant Vertex AI chat client, for their own interactive use "
-    "only — the agent pointing it (potentially at PHI) at an LLM is "
+    "BLOCKED: Claude must never run `aichat` (nor its `ah` alias). It is the "
+    "user's HIPAA-compliant Vertex AI chat client, for their own interactive "
+    "use only — the agent pointing it (potentially at PHI) at an LLM is "
     "off-limits. There is no override; if aichat needs to run, the user runs "
     "it themselves in their own terminal. Hook: ~/.claude/hooks/block-aichat.py"
 )
@@ -42,6 +42,17 @@ MSG = (
 # a shell separator, a path slash, a quote, or an assignment `=`, and not part
 # of a longer identifier (aichat-notes, aichat.py).
 RAW_RE = re.compile(r"""(?:^|[\s;&|()`"'=/])aichat(?![\w.\-])""")
+
+# The `ah` alias resolves to the same gated `aichat` function in the user's
+# shell, so it's a second name the agent must never run. `ah` is short and
+# common as an argument/string (`echo ah`, `-m ah`), so — unlike `aichat`,
+# which is blocked in any position — `ah` is blocked ONLY in command position:
+# at the start or immediately after a shell control operator.
+AH_RE = re.compile(r"""(?:^|[;&|()`])\s*ah(?![\w.\-])""")
+
+# Shell control-operator token (all punctuation): after one, the next token is
+# in command position.
+_OP_RE = re.compile(r"^[;&|()<>`]+$")
 
 # -c style shell flags that take a command string: -c, -lc, -ic, -lic, ...
 _C_FLAG = re.compile(r"^-[a-z]*c[a-z]*$")
@@ -57,23 +68,28 @@ def _tokenize(command: str) -> Optional[list[str]]:
 
 
 def _has_aichat_token(tokens: list[str]) -> bool:
+    in_cmd_pos = True  # first token is a command word
     for idx, tok in enumerate(tokens):
-        if os.path.basename(tok) == "aichat":
+        base = os.path.basename(tok)
+        if base == "aichat":
+            return True
+        if base == "ah" and in_cmd_pos:
             return True
         # `sh -c '<subcommand>'` — re-tokenize the following argument one level.
         if _C_FLAG.match(tok) and idx + 1 < len(tokens):
             sub = _tokenize(tokens[idx + 1])
-            if sub and any(os.path.basename(t) == "aichat" for t in sub):
+            if sub and _has_aichat_token(sub):
                 return True
+        in_cmd_pos = bool(_OP_RE.match(tok))
     return False
 
 
 def is_blocked(command: str) -> bool:
-    if "aichat" not in command:  # cheap pre-filter
+    if "aichat" not in command and "ah" not in command:  # cheap pre-filter
         return False
     tokens = _tokenize(command)
-    if tokens is None:
-        return bool(RAW_RE.search(command))  # malformed shell → fail closed
+    if tokens is None:  # malformed shell → fail closed
+        return bool(RAW_RE.search(command)) or bool(AH_RE.search(command))
     return _has_aichat_token(tokens)
 
 
