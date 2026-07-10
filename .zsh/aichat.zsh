@@ -53,3 +53,14 @@ aichat() {
 
   command aichat "$@"
 }
+
+# Short alias for interactive use. `ah` expands to the word `aichat`, which
+# resolves to the gate function above (functions win over the binary), so
+# every `ah` launch still runs the compliance check. Never point the alias at
+# `command aichat` or an absolute path — that would skip the gate.
+# Interactive-only: non-interactive (agent) shells must not gain an `ah`
+# entry point that the block-aichat hook — which matches the `aichat` token —
+# would miss.
+if [[ -o interactive ]]; then
+  alias ah='aichat'
+fi
