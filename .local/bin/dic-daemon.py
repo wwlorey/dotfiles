@@ -105,7 +105,15 @@ def get_tts():
     global _tts
     with _tts_lock:
         if _tts is None:
+            import mlx.core as mx
             from kokoro_mlx import KokoroTTS
+            # MLX's default cache limit is the whole device memory: freed
+            # synthesis buffers are retained indefinitely, so the daemon's
+            # footprint ratchets up ~3.7 GB per distinct utterance shape
+            # (observed 10+ GB over a long session). Cap the cache so excess
+            # returns to the OS; the model weights live in active memory and
+            # are unaffected, so speech stays warm.
+            mx.set_cache_limit(1 << 30)
             _tts = KokoroTTS.from_pretrained()
         return _tts
 
@@ -231,6 +239,8 @@ def handle(req: dict) -> dict:
         global _tts
         with _tts_lock, _synth_lock:
             _tts = None
+            import mlx.core as mx
+            mx.clear_cache()
         _restart_warmkeeper()
         return {"ok": True}
     if action == "list_voices":
