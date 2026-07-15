@@ -1,0 +1,41 @@
+# goose — HIPAA-locked Google Vertex AI setup
+#
+# This file lives under a DEDICATED root ($HOME/.config/goose-hipaa). The
+# goose() gate (~/.zsh/goose.zsh) injects GOOSE_PATH_ROOT=$HOME/.config/goose-hipaa
+# at launch, so goose reads THIS file and the checker validates THIS file — the
+# two can no longer drift to different paths, and any non-gated entrypoint (a
+# bash script, cron, the Desktop app) that reads goose's default location finds
+# no config here and fails closed rather than running unlocked.
+#
+# Every model request stays inside your BAA-covered Vertex project. Auth is
+# gcloud Application Default Credentials (ADC):
+#   gcloud auth application-default login
+# The project id is NOT in this file — the gate injects it from
+# $GOOGLE_CLOUD_HIPAA_PROJECT_ID, so this file is safe to commit publicly.
+#
+# The gate refuses to launch unless goose-hipaa-check passes against this file:
+# Vertex-only provider, a GA model, telemetry off, a pinned region, a
+# human-in-the-loop mode (not fully autonomous), and no remote MCP extensions.
+#
+# NOTE: `gcp_vertex_ai`, the model name, the GOOSE_PATH_ROOT sub-layout
+# (config/config.yaml), and `GOOSE_MODE: approve` are Goose's published
+# identifiers but were set without an installed binary to verify against —
+# confirm them on the first launch; a mismatch shows up immediately.
+
+GOOSE_PROVIDER: gcp_vertex_ai
+GOOSE_MODEL: gemini-2.5-pro          # strongest GA model for harness reasoning
+GCP_LOCATION: us-central1            # regional endpoint (2.5 models; not global)
+GOOSE_TELEMETRY_ENABLED: false       # no PostHog usage-data egress
+
+# A coding harness runs shell commands, so it can exfiltrate PHI over the
+# network (curl/git/scp) regardless of where the MODEL endpoint points. The
+# endpoint lock cannot prevent that; `approve` mode makes it non-silent — every
+# tool call (shell, file write) requires your explicit approval, so nothing
+# leaves the machine without a human checkpoint. Relax to `smart_approve` (gate
+# only risky ops) or `auto` (no gate) only if you accept that residual egress.
+GOOSE_MODE: approve
+
+# No `extensions:` block, so Goose enables only its local `developer` builtin
+# (shell + filesystem) — what a harness needs, with no outbound channel. Do NOT
+# add sse / streamable_http / http extensions or any carrying a uri/url/endpoint:
+# goose-hipaa-check rejects them as off-BAA egress paths.

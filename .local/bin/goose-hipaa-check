@@ -1,0 +1,214 @@
+#!/usr/bin/env python3
+"""Confirm a Goose config is HIPAA-locked to Google Vertex AI.
+
+Goose is a full agentic harness (it edits files and runs shell commands), so
+its compliance surface is wider than a chat client's: besides where the model
+request goes, an MCP extension can open its own outbound channel, and usage
+telemetry (PostHog) is on by default. This checker locks the NETWORK-EGRESS
+axis — every model request stays inside your BAA-covered Vertex project, and
+nothing else phones out. (Session persistence to the local SQLite DB is a
+separate at-rest axis, handled by disk encryption + the gate's offer to wipe
+stale sessions, not by this checker.)
+
+Compliance invariant — ALL must hold in ~/.config/goose/config.yaml:
+
+  1. GOOSE_PROVIDER is `gcp_vertex_ai` — the only Goose provider that routes to
+     Google Vertex AI under your signed BAA. This REJECTS in particular the
+     `google` / `gemini` provider (Google AI Studio, the consumer Generative
+     Language API, NOT BAA-covered) plus openai / anthropic / databricks /
+     bedrock / azure / ollama / openrouter (non-Vertex routes).
+
+  2. GOOSE_MODEL names a declared GA model — no preview / experimental
+     snapshots. GA models are what the Vertex BAA covers.
+
+  3. GOOSE_TELEMETRY_ENABLED is false — no anonymous usage data leaves the
+     machine (Goose's PostHog telemetry is opt-out and on by default).
+
+  4. GCP_LOCATION is present (a real region). The project id is deliberately
+     NOT in this file — the goose() gate injects it from
+     $GOOGLE_CLOUD_HIPAA_PROJECT_ID at launch, so config.yaml is safe to commit
+     publicly.
+
+  5. GOOSE_MODE is present and not `auto` — a coding harness can exfiltrate PHI
+     over the network via the shell commands it runs (curl/git), which no
+     endpoint lock can prevent. A human-in-the-loop mode (approve / smart_approve
+     / chat) keeps that egress from happening silently. Full autonomy (`auto`)
+     is REJECTED.
+
+  6. No MCP extension is remote or transport-overriding. A local builtin/stdio
+     extension (developer shell+fs) is fine; an sse / streamable_http / http
+     extension, or one carrying a uri/url/endpoint, is an off-BAA egress path
+     and is REJECTED.
+
+Exit status: 0 = locked, 1 = violations found, 2 = usage/parse error.
+
+`--list-models` prints the GA model allowlist (one per line) instead of
+checking — the zsh gate uses this to surface allowed models on a violation.
+
+Usage: goose-hipaa-check [--list-models] [path/to/config.yaml]
+Default: ~/.config/goose-hipaa/config/config.yaml (the gate's pinned root)
+
+NOTE: the exact provider id (`gcp_vertex_ai`) and model names should be
+confirmed once against `goose configure`'s live provider/model list — they are
+Goose's published identifiers but were not verified against an installed binary
+when this was written. A mismatch surfaces immediately on the first launch.
+"""
+
+from __future__ import annotations
+
+import os
+import sys
+
+import yaml
+
+ALLOWED_PROVIDERS = {"gcp_vertex_ai"}
+
+# GA Vertex models covered by the BAA (mirrors the aichat allowlist). Extend
+# this set to widen what GOOSE_MODEL may name; keep every entry GA.
+GA_MODELS = {
+    "gemini-2.5-pro",
+    "gemini-2.5-flash",
+    "gemini-2.5-flash-lite",
+}
+
+NON_GA_MARKERS = (
+    "preview", "-exp", "experimental", "nightly", "-rc", "-test", "beta",
+    "latest",
+)
+
+# Extension transport types / keys that reach off-machine (or override the
+# transport) and so can carry PHI off the BAA endpoint.
+REMOTE_EXT_TYPES = {"sse", "streamable_http", "http", "remote", "websocket"}
+REMOTE_EXT_KEYS = ("uri", "url", "endpoint")
+
+DEFAULT_CONFIG = os.path.expanduser("~/.config/goose-hipaa/config/config.yaml")
+
+# Human-in-the-loop modes: the harness pauses for approval before acting. `auto`
+# (full autonomy) is rejected; an absent mode is rejected (fail closed).
+ALLOWED_MODES = {"approve", "smart_approve", "chat"}
+
+
+def _non_ga(name: str) -> bool:
+    low = str(name).lower()
+    return any(marker in low for marker in NON_GA_MARKERS)
+
+
+def _iter_extensions(cfg: dict):
+    """Yield (label, spec) for each configured extension, tolerating both the
+    map form (extensions: {name: {...}}) and a list form."""
+    exts = cfg.get("extensions")
+    if isinstance(exts, dict):
+        for name, spec in exts.items():
+            yield str(name), (spec if isinstance(spec, dict) else {})
+    elif isinstance(exts, list):
+        for i, spec in enumerate(exts):
+            spec = spec if isinstance(spec, dict) else {}
+            yield str(spec.get("name") or f"#{i}"), spec
+
+
+def check(cfg: dict) -> list[str]:
+    problems: list[str] = []
+
+    provider = cfg.get("GOOSE_PROVIDER")
+    if provider not in ALLOWED_PROVIDERS:
+        hint = ""
+        if provider in ("google", "gemini"):
+            hint = " ('google'/'gemini' = Google AI Studio, NOT BAA-covered)"
+        problems.append(
+            f"GOOSE_PROVIDER is '{provider}' — only 'gcp_vertex_ai' routes to "
+            f"your BAA-covered Vertex project{hint}"
+        )
+
+    model = cfg.get("GOOSE_MODEL")
+    if not model:
+        problems.append("no GOOSE_MODEL declared — pin a GA Vertex model")
+    elif _non_ga(model):
+        problems.append(
+            f"GOOSE_MODEL '{model}' looks non-GA (preview/experimental) — GA "
+            f"only under the BAA"
+        )
+    elif model not in GA_MODELS:
+        problems.append(
+            f"GOOSE_MODEL '{model}' is not in the GA allowlist — "
+            f"allowed: {', '.join(sorted(GA_MODELS))}"
+        )
+
+    tele = cfg.get("GOOSE_TELEMETRY_ENABLED", True)
+    if tele is not False:
+        problems.append(
+            "GOOSE_TELEMETRY_ENABLED is not false — Goose's PostHog usage "
+            "telemetry would egress. Set it to false."
+        )
+
+    if not cfg.get("GCP_LOCATION"):
+        problems.append(
+            "no GCP_LOCATION declared — pin the Vertex region (e.g. us-central1)"
+        )
+
+    mode = cfg.get("GOOSE_MODE")
+    if mode not in ALLOWED_MODES:
+        problems.append(
+            f"GOOSE_MODE is '{mode}' — a harness runs shell commands that can "
+            f"exfiltrate PHI, so it must stay human-in-the-loop. Set one of "
+            f"{', '.join(sorted(ALLOWED_MODES))} (not 'auto')."
+        )
+
+    for label, spec in _iter_extensions(cfg):
+        etype = str(spec.get("type", "")).lower()
+        if etype in REMOTE_EXT_TYPES:
+            problems.append(
+                f"extension '{label}' has type '{etype}' — a remote MCP "
+                f"transport is an off-BAA egress path; only local "
+                f"builtin/stdio extensions are permitted"
+            )
+        for k in REMOTE_EXT_KEYS:
+            if spec.get(k):
+                problems.append(
+                    f"extension '{label}' declares {k}: — a remote endpoint is "
+                    f"an off-BAA egress path"
+                )
+                break
+
+    return problems
+
+
+def main() -> int:
+    args = sys.argv[1:]
+    list_models = "--list-models" in args
+    if list_models:
+        args.remove("--list-models")
+        for name in sorted(GA_MODELS):
+            print(name)
+        return 0
+
+    path = args[0] if args else DEFAULT_CONFIG
+    try:
+        with open(path) as f:
+            cfg = yaml.safe_load(f) or {}
+    except FileNotFoundError:
+        print(f"goose-hipaa-check: config not found: {path}", file=sys.stderr)
+        return 2
+    except yaml.YAMLError as exc:
+        print(f"goose-hipaa-check: invalid YAML in {path}: {exc}", file=sys.stderr)
+        return 2
+
+    if not isinstance(cfg, dict):
+        print(f"goose-hipaa-check: {path} is not a YAML mapping", file=sys.stderr)
+        return 2
+
+    problems = check(cfg)
+    if problems:
+        print(f"✗ NOT HIPAA-locked: {path}")
+        for p in problems:
+            print(f"  - {p}")
+        return 1
+
+    print(
+        f"✓ HIPAA-locked (Vertex-only, GA model, telemetry off, "
+        f"human-in-the-loop, no remote extensions): {path}"
+    )
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
