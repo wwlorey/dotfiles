@@ -7,21 +7,31 @@
 #   export GOOGLE_CLOUD_HIPAA_PROJECT_ID="your-hipaa-project-id"
 # All traffic stays inside your BAA-covered Vertex project.
 
-model: google_cloud_hipaa:gemini-2.5-flash-lite   # default: GA, cheap, HIPAA-eligible
+model: google_cloud_hipaa:gemini-3.5-flash   # default: latest GA model, HIPAA-eligible
 stream: true
 save: false            # do NOT persist sessions/messages to disk (PHI hygiene)
 save_session: false
 save_shell_history: false   # -e/.shell prompts (potential PHI) must not persist
 
 clients:
+  # Single client on the GLOBAL endpoint. The latest Gemini models (3.x) are
+  # served ONLY via locations/global on Vertex — they 404 at every region and
+  # the us/eu multi-regions (verified 2026-07-15 via countTokens; corroborated
+  # by Google's docs + release notes). Global also serves the full 2.5 lineup,
+  # so one client reaches everything AND project_id still resolves from the
+  # client-name env var. Still Vertex AI under the same Google BAA (the BAA
+  # attaches to the service, not a region), so global routing is covered.
+  # Trade-off: global load-balances worldwide (no data-residency guarantee) and
+  # cannot serve US-pinned PHI — if a rule stricter than HIPAA ever requires
+  # US-only processing, pin a US region, but that limits you to the 2.5 tier.
   - type: vertexai
     name: google_cloud_hipaa
-    location: us-central1
-    # project_id resolved from $GOOGLE_CLOUD_HIPAA_PROJECT_ID at request time.
-    # Declaring models: overrides aichat's built-in catalog for this client,
-    # so we list every GA model we want. All GA => HIPAA-eligible under the BAA.
+    location: global
+    # Declaring models overrides aichat's built-in catalog for this client, so
+    # we list every GA model we want. All GA => HIPAA-eligible under the BAA.
+    # Prices are display-only (no compliance impact) — confirm on Vertex pricing.
     models:
-      - name: gemini-2.5-flash-lite      # cheapest daily driver
+      - name: gemini-2.5-flash-lite      # cheapest option
         max_input_tokens: 1000000
         max_output_tokens: 65536
         input_price: 0.10
@@ -35,11 +45,18 @@ clients:
         output_price: 2.50
         supports_vision: true
         supports_function_calling: true
-      - name: gemini-2.5-pro             # most performant model reachable from
-        # us-central1 in aichat 0.30.0; >200k-token prompts bill at a higher tier
+      - name: gemini-2.5-pro             # newest GA Pro reachable — 3.x Pro is
+        # preview-only and not BAA-safe, so it's deliberately excluded
         max_input_tokens: 1000000
         max_output_tokens: 65536
         input_price: 1.25
         output_price: 10.00
+        supports_vision: true
+        supports_function_calling: true
+      - name: gemini-3.5-flash           # default; latest GA model (2026-05-19), Sonnet-tier
+        max_input_tokens: 1000000
+        max_output_tokens: 65536
+        input_price: 0.30
+        output_price: 2.50
         supports_vision: true
         supports_function_calling: true
