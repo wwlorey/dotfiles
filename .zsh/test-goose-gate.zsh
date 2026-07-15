@@ -51,6 +51,16 @@ expect_block "--with-builtin"          "GOOGLE_CLOUD_HIPAA_PROJECT_ID=$TESTPROJ 
 expect_block "run --provider override" "GOOGLE_CLOUD_HIPAA_PROJECT_ID=$TESTPROJ goose run --provider openai -t hi"
 expect_block "run --model override"    "GOOGLE_CLOUD_HIPAA_PROJECT_ID=$TESTPROJ goose run --model gpt-4o -t hi"
 
+# custom-providers guard: a declarative provider def under the pinned root must
+# block the launch (it could define an off-Vertex base_url). Create a dummy,
+# assert block, always clean up — the trap covers an interrupt mid-test so a
+# stray file can't wedge real launches.
+cpd="$HOME/.config/goose-hipaa/config/custom_providers"
+trap 'rm -f "$cpd/zz-gate-test.json" 2>/dev/null; rmdir "$cpd" 2>/dev/null' EXIT INT TERM
+mkdir -p "$cpd"; print '{}' > "$cpd/zz-gate-test.json"
+expect_block "custom_providers dir non-empty" "GOOGLE_CLOUD_HIPAA_PROJECT_ID=$TESTPROJ goose session"
+rm -f "$cpd/zz-gate-test.json"; rmdir "$cpd" 2>/dev/null; trap - EXIT INT TERM
+
 print "=== Happy path → attest + run + correct injected env ==="
 out=$(GOOGLE_CLOUD_HIPAA_PROJECT_ID=$TESTPROJ goose session 2>&1)
 [[ $out == *"✓ HIPAA-locked"* ]] && ok "prints ✓ attestation" || bad "attestation" "no ✓: ${out:0:80}"

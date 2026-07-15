@@ -94,6 +94,18 @@ goose() {
     fi
   done
 
+  # Refuse a declarative custom-providers dir under the pinned root: goose loads
+  # OpenAI/Anthropic/Ollama-compatible providers with an arbitrary base_url from
+  # $root/config/custom_providers/*.json. GOOSE_PROVIDER is pinned to
+  # gcp_vertex_ai so none would be *selected*, but the checker never scans that
+  # dir — refuse it outright so an off-Vertex provider definition can't sit in
+  # the locked root at all (defense in depth for endpoint exclusivity).
+  if [[ -d "$root/config/custom_providers" ]] && \
+     [[ -n "$(ls -A "$root/config/custom_providers" 2>/dev/null)" ]]; then
+    print -ru2 -- "⛔ goose blocked: $root/config/custom_providers is non-empty — a declarative provider there can define an off-Vertex base_url. Remove it."
+    return 1
+  fi
+
   # Refuse a sibling .env in the pinned config dir: goose auto-loads it into the
   # process environment, re-supplying any var refused above.
   if [[ -e "$root/config/.env" ]]; then
