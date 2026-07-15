@@ -246,7 +246,9 @@
 
       "Bash(security find-*)",
       "Bash(security dump-*)",
-      "Bash(security export-*)"
+      "Bash(security export-*)",
+
+      "Bash(aichat:*)"
     ]
   },
   "hooks": {
@@ -324,7 +326,7 @@
           },
           {
             "type": "command",
-            "command": "python3 $HOME/.claude/hooks/block-goose.py"
+            "command": "python3 $HOME/.claude/hooks/block-aichat.py"
           },
           {
             "type": "command",

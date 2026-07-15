@@ -17,7 +17,7 @@ in Bash with the same pointer.
 A change is **security-enforcing** if it is a gate, hook, wrapper, or checker
 that upholds a security or compliance invariant — anything touching PHI,
 secrets, credentials, network egress, at-rest storage, auth, or sandboxing
-(e.g. the `*-hipaa-check` scripts, the `aichat`/`goose` gates, the `block-*`
+(e.g. the `*-hipaa-check` scripts, the `aichat` gate, the `block-*`
 hooks). The routine wrap-up below (syntax + `agent ls`) is NOT sufficient for
 these. Treat them as high-risk code and clear ALL of the following before
 saying "done" — never on the strength of reading the code or testing pieces in
