@@ -129,12 +129,11 @@ def t_bullet_stripped() -> None:
     )
 
 
-def t_word_cap() -> None:
+def t_long_line_uncapped() -> None:
     body = " ".join(f"word{i}" for i in range(60))
     out = mod._spoken_from_text(body, SANCT)
-    n = len(out.split())
-    check("word_cap_40", n <= 40, f"{n} words: {out!r}")
-    check("word_cap_leads_basename", out.startswith("Sanctora."), repr(out))
+    check("long_line_spoken_in_full", out.endswith("word59"), repr(out))
+    check("long_line_leads_basename", out.startswith("Sanctora."), repr(out))
 
 
 def t_empty_silent() -> None:
@@ -372,7 +371,7 @@ def main() -> None:
         t_basename_speechify,
         t_markdown_backticks,
         t_bullet_stripped,
-        t_word_cap,
+        t_long_line_uncapped,
         t_empty_silent,
         t_resolve_text_falsy,
         t_resolve_text_transcript_fallback,

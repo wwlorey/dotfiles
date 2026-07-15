@@ -71,7 +71,6 @@ import time
 
 BREADCRUMB_LOG = "/tmp/claude/voice-report.log"
 LOG_CAP_BYTES = 64 * 1024
-MAX_WORDS = 40
 
 _SUMMARY_LABEL_RE = re.compile(
     r"^\s*summary\b\s*(?:of\b[^:–—-]*)?[:–—-]\s*(.*)$",
@@ -272,9 +271,6 @@ def _spoken_from_text(text: str, cwd: str) -> str:
     else:
         spoken = f"{base}. {remainder}".strip()
 
-    words = spoken.split()
-    if len(words) > MAX_WORDS:
-        spoken = " ".join(words[:MAX_WORDS])
     return spoken.strip()
 
 
