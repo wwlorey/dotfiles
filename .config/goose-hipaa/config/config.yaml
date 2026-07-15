@@ -23,13 +23,19 @@
 # confirm them on the first launch; a mismatch shows up immediately.
 
 GOOSE_PROVIDER: gcp_vertex_ai
-GOOSE_MODEL: gemini-3.5-flash        # GA on Vertex (2026-05-19); Sonnet-tier, lower cost
-GCP_LOCATION: global                 # the 3.x Gemini family is global-endpoint-only for
-                                     # this project (regional returns 404). Still Vertex AI
-                                     # under the SAME Google BAA (the BAA attaches to the
-                                     # service, not a region), so global routing is covered;
-                                     # trade-off is worldwide load-balancing = no
-                                     # data-residency guarantee, acceptable under HIPAA.
+GOOSE_MODEL: gemini-2.5-flash        # GA on Vertex, flash-tier (low cost), served regionally.
+                                     # Swap to gemini-2.5-pro for a more capable coding model
+                                     # (both are in the checker's GA allowlist).
+GCP_LOCATION: us-central1            # a specific US Vertex region inside the BAA project.
+                                     # Regional (not `global`) is chosen for two reasons:
+                                     #   1. DATA RESIDENCY — traffic stays in a US region, a
+                                     #      stronger HIPAA posture than global load-balancing.
+                                     #   2. goose's gcp_vertex_ai provider mis-builds the global
+                                     #      endpoint URL for 3.x models (block/goose #6186) and
+                                     #      silently falls back to us-central1 anyway, so a
+                                     #      `global` value here does NOT take effect. That is why
+                                     #      gemini-3.5-flash (global-endpoint-only) returned 404:
+                                     #      it is not served from us-central1. 2.5-flash is.
 GOOSE_TELEMETRY_ENABLED: false       # no PostHog usage-data egress
 
 # A coding harness runs shell commands, so it can exfiltrate PHI over the

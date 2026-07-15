@@ -26,9 +26,10 @@
 #     goose's own path precedence) could run instead of the locked one.
 #   - .env: a sibling .env in the pinned config dir blocks the launch — goose
 #     auto-loads it into the environment, re-supplying any refused var.
-#   - ARGS: ad-hoc MCP extension injection (--with-extension arbitrary-command,
-#     --with-remote-extension URL) is blocked — each opens an outbound channel
-#     the config-level extension check never sees. Everything else passes.
+#   - ARGS: request-time overrides that bypass the config lock are blocked —
+#     ad-hoc MCP extensions (--with-*), provider/model overrides (--provider/
+#     --model), and recipe loading (--recipe, whose settings/extensions override
+#     the locked config unseen by the checker). Everything else passes.
 #
 # Bypass is possible with `command goose` / an absolute path — this is a
 # guardrail for normal use, not an adversarial control against yourself.
@@ -71,14 +72,34 @@ goose() {
   #   - HTTP(S)_PROXY / ALL_PROXY (both cases) — a proxy would route the
   #     PHI-bound Vertex traffic through a third party (observe/redirect, and
   #     with a planted CA, decrypt).
-  #   - SSL_CERT_FILE / SSL_CERT_DIR / REQUESTS_CA_BUNDLE / CURL_CA_BUNDLE — a
-  #     rogue CA bundle can make a MITM proxy's cert trusted, enabling PHI
-  #     decryption in transit.
-  # Fail closed on all of them.
+  #   - SSL_CERT_* / REQUESTS_CA_BUNDLE / CURL_CA_BUNDLE / AWS_CA_BUNDLE /
+  #     NODE_EXTRA_CA_CERTS — a rogue CA bundle can make a MITM proxy's cert
+  #     trusted, enabling PHI decryption in transit.
+  #   - Trace/observability exporters that ship LLM prompts and responses (PHI)
+  #     to an operator-chosen host, each a distinct channel from the PostHog
+  #     usage telemetry that GOOSE_TELEMETRY_* governs:
+  #       * OTEL_* — goose's built-in OpenTelemetry/OTLP exporter
+  #         (OTEL_EXPORTER_OTLP_ENDPOINT = arbitrary collector). Refused here AND
+  #         killed via OTEL_SDK_DISABLED in the injected env below; OTEL_SDK_
+  #         DISABLED itself is exempt (it can only turn tracing OFF, and the
+  #         injected value overrides any inherited one).
+  #       * LANGFUSE_* — goose's Langfuse integration captures full prompt/
+  #         completion traces the moment these vars are present, to LANGFUSE_URL/
+  #         _BASE_URL (any host). No build flag needed, so refuse them.
+  #       * SECURITY_PROMPT_* — the prompt-injection classifier POSTs prompt
+  #         content to SECURITY_PROMPT_CLASSIFIER_ENDPOINT for scoring.
+  #     Any future goose exporter env is a new hole — add its prefix here.
+  # Per-provider host/base-url overrides (OPENAI_HOST, OLLAMA_HOST, …) are NOT
+  # refused here: they are inert while GOOSE_PROVIDER is pinned to Vertex, a
+  # drifted provider is caught by the checker on this same launch before goose
+  # runs, and blocking them by prefix would trip on an unrelated OPENAI_API_KEY.
+  # The config-side equivalent (a host/base-url/endpoint key in config.yaml) IS
+  # rejected by goose-hipaa-check, which is where such drift actually persists.
+  # Fail closed on all of the below.
   local v
-  for v in ${(Mk)parameters:#(GOOSE_*|GCP_*|GOOGLE_*|VERTEX_*|XDG_CONFIG_HOME|XDG_DATA_HOME|HTTP_PROXY|HTTPS_PROXY|ALL_PROXY|http_proxy|https_proxy|all_proxy|SSL_CERT_FILE|SSL_CERT_DIR|REQUESTS_CA_BUNDLE|CURL_CA_BUNDLE)}; do
-    [[ $v == GOOGLE_CLOUD_HIPAA_PROJECT_ID ]] && continue
-    print -ru2 -- "⛔ goose blocked: $v is set — it can redirect the provider, model, endpoint, telemetry, config location, or route/decrypt PHI traffic through a proxy. Unset it and retry."
+  for v in ${(Mk)parameters:#(GOOSE_*|GCP_*|GOOGLE_*|VERTEX_*|OTEL_*|LANGFUSE_*|SECURITY_PROMPT_*|XDG_CONFIG_HOME|XDG_DATA_HOME|HTTP_PROXY|HTTPS_PROXY|ALL_PROXY|http_proxy|https_proxy|all_proxy|SSL_CERT_FILE|SSL_CERT_DIR|REQUESTS_CA_BUNDLE|CURL_CA_BUNDLE|AWS_CA_BUNDLE|NODE_EXTRA_CA_CERTS)}; do
+    [[ $v == GOOGLE_CLOUD_HIPAA_PROJECT_ID || $v == OTEL_SDK_DISABLED ]] && continue
+    print -ru2 -- "⛔ goose blocked: $v is set — it can redirect the provider, model, endpoint, config location, stream PHI traces to an OTLP collector, or route/decrypt PHI traffic through a proxy. Unset it and retry."
     return 1
   done
 
@@ -123,6 +144,13 @@ goose() {
   #   - --provider / --model (on `goose run`) override the validated config at
   #     request time and can route PHI to a non-Vertex endpoint or a non-GA
   #     model. Change the model in the locked config, not on the CLI.
+  #   - --recipe (on `goose run`) loads a recipe YAML (local file OR GitHub repo)
+  #     whose `settings.goose_provider` / `goose_model` and `extensions:` OVERRIDE
+  #     the locked config at execution time — the checker only validates
+  #     config/config.yaml and never sees the recipe, so a recipe can route PHI
+  #     to a non-Vertex provider/host or attach a remote MCP extension while the
+  #     gate still prints ✓. Refuse it; put anything a recipe would carry into
+  #     the locked config instead.
   local a
   for a in "$@"; do
     case "$a" in
@@ -131,6 +159,9 @@ goose() {
         return 1 ;;
       --provider|--provider=*|--model|--model=*)
         print -ru2 -- "⛔ goose blocked: '$a' overrides the validated provider/model at the CLI, bypassing the config lock (can route PHI off-Vertex or to a non-GA model). Change the locked config instead."
+        return 1 ;;
+      --recipe|--recipe=*)
+        print -ru2 -- "⛔ goose blocked: '$a' loads a recipe whose settings/extensions override the locked config (unvalidated by the checker) — it can route PHI off-Vertex or attach a remote MCP extension. Put it in the locked config instead."
         return 1 ;;
     esac
   done
@@ -148,11 +179,14 @@ goose() {
   print -ru2 -- "$report"
 
   # Inject, exec-local: the pinned root (so goose reads the validated config),
-  # the BAA project from the trusted source, and telemetry-off (both the config
-  # flag and the env kill-switch, belt-and-suspenders).
+  # the BAA project from the trusted source, telemetry-off (both the config flag
+  # and the env kill-switch), and the OpenTelemetry kill-switch (goose's OTLP
+  # tracer is a SEPARATE channel from PostHog and would otherwise export prompt/
+  # response content — PHI — if any OTEL_EXPORTER_OTLP_ENDPOINT default applied).
   GOOSE_PATH_ROOT="$root" \
   GCP_PROJECT_ID="$GOOGLE_CLOUD_HIPAA_PROJECT_ID" \
   GOOSE_TELEMETRY_ENABLED=false \
   GOOSE_TELEMETRY_OFF=1 \
+  OTEL_SDK_DISABLED=true \
     command goose "$@"
 }

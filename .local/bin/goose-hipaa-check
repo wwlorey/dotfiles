@@ -35,10 +35,13 @@ Compliance invariant — ALL must hold in ~/.config/goose/config.yaml:
      / chat) keeps that egress from happening silently. Full autonomy (`auto`)
      is REJECTED.
 
-  6. No MCP extension is remote or transport-overriding. A local builtin/stdio
-     extension (developer shell+fs) is fine; an sse / streamable_http / http
-     extension, or one carrying a uri/url/endpoint, is an off-BAA egress path
-     and is REJECTED.
+  6. Every configured MCP extension is a LOCAL, no-network builtin from a small
+     allowlist (developer, memory, tutorial). A stdio extension (whose `cmd` can
+     be ANY command, e.g. a curl exfil pipe), a remote transport (sse /
+     streamable_http / http), or an unlisted builtin is an off-BAA egress path
+     and is REJECTED. Gating on transport type alone is insufficient — a
+     "local" stdio extension is an arbitrary command — so this gates on the
+     builtin NAME.
 
 Exit status: 0 = locked, 1 = violations found, 2 = usage/parse error.
 
@@ -77,10 +80,14 @@ NON_GA_MARKERS = (
     "latest",
 )
 
-# Extension transport types / keys that reach off-machine (or override the
-# transport) and so can carry PHI off the BAA endpoint.
-REMOTE_EXT_TYPES = {"sse", "streamable_http", "http", "remote", "websocket"}
-REMOTE_EXT_KEYS = ("uri", "url", "endpoint")
+# Extensions are locked to a small allowlist of LOCAL, no-network builtins.
+# Everything else — any stdio extension (an arbitrary command, e.g. a curl
+# pipe), any remote transport (sse/http/streamable_http), or an unlisted
+# builtin (e.g. computercontroller, which browses the web) — is an off-BAA
+# egress path and is REJECTED. Inspecting a stdio extension's transport alone
+# is not enough (its `cmd` can be any exfil tool), so the allowlist gates on the
+# builtin NAME, not the transport type.
+ALLOWED_BUILTIN_EXTENSIONS = {"developer", "memory", "tutorial"}
 
 DEFAULT_CONFIG = os.path.expanduser("~/.config/goose-hipaa/config/config.yaml")
 
@@ -160,6 +167,11 @@ def check(cfg: dict) -> list[str]:
     # invisible to the gate — a rogue CA/client cert makes a MITM proxy's cert
     # trusted for the Vertex TLS connection (PHI decryptable in transit), and a
     # proxy reroutes it. Reject any such key by shape, so renames don't reopen it.
+    # goose reads trace exporters (OTEL/OTLP, Langfuse — both ship prompt/
+    # response content) and per-provider host/base-url/endpoint overrides from
+    # config OR env. The zsh gate refuses the env form; a value placed in
+    # config.yaml (drift, `goose configure`, a bad commit) is invisible to the
+    # gate, so reject it here by shape too.
     for key in cfg:
         up = str(key).upper()
         if any(m in up for m in ("PROXY", "CERT", "CA_BUNDLE")):
@@ -167,22 +179,36 @@ def check(cfg: dict) -> list[str]:
                 f"config key '{key}' can redirect or expose PHI in transit "
                 f"(proxy / CA / client-cert override) — remove it"
             )
+        elif any(m in up for m in ("OTEL", "OTLP", "LANGFUSE")):
+            problems.append(
+                f"config key '{key}' configures LLM trace export (OTLP / "
+                f"Langfuse), which ships prompts/responses (PHI) off-machine "
+                f"— remove it"
+            )
+        elif up.endswith(("_HOST", "_BASE_URL")) or "ENDPOINT" in up:
+            problems.append(
+                f"config key '{key}' can point the model provider at a "
+                f"non-Vertex host/endpoint — remove it"
+            )
 
     for label, spec in _iter_extensions(cfg):
         etype = str(spec.get("type", "")).lower()
-        if etype in REMOTE_EXT_TYPES:
-            problems.append(
-                f"extension '{label}' has type '{etype}' — a remote MCP "
-                f"transport is an off-BAA egress path; only local "
-                f"builtin/stdio extensions are permitted"
-            )
-        for k in REMOTE_EXT_KEYS:
-            if spec.get(k):
+        if etype == "builtin":
+            name = str(spec.get("name") or label).lower()
+            if name not in ALLOWED_BUILTIN_EXTENSIONS:
                 problems.append(
-                    f"extension '{label}' declares {k}: — a remote endpoint is "
-                    f"an off-BAA egress path"
+                    f"extension '{label}' is builtin '{name}' — only local, "
+                    f"no-network builtins are permitted "
+                    f"({', '.join(sorted(ALLOWED_BUILTIN_EXTENSIONS))})"
                 )
-                break
+        else:
+            # stdio (arbitrary command) or any remote transport — off-BAA egress.
+            problems.append(
+                f"extension '{label}' has type '{etype or '(unset)'}' — only "
+                f"local builtin extensions "
+                f"({', '.join(sorted(ALLOWED_BUILTIN_EXTENSIONS))}) are "
+                f"permitted; stdio/remote extensions are off-BAA egress paths"
+            )
 
     return problems
 

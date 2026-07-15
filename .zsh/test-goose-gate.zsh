@@ -22,6 +22,7 @@ echo "PATHROOT=$GOOSE_PATH_ROOT"
 echo "PROJ=$GCP_PROJECT_ID"
 echo "TEL=$GOOSE_TELEMETRY_ENABLED"
 echo "TELOFF=$GOOSE_TELEMETRY_OFF"
+echo "OTELOFF=$OTEL_SDK_DISABLED"
 FAKE
 chmod +x "$bin/goose"
 export PATH="$bin:$PATH"
@@ -44,12 +45,17 @@ expect_block "GOOSE_PROVIDER override" "GOOGLE_CLOUD_HIPAA_PROJECT_ID=$TESTPROJ 
 expect_block "XDG_CONFIG_HOME"         "GOOGLE_CLOUD_HIPAA_PROJECT_ID=$TESTPROJ XDG_CONFIG_HOME=/tmp/e goose session"
 expect_block "HTTPS_PROXY"             "GOOGLE_CLOUD_HIPAA_PROJECT_ID=$TESTPROJ HTTPS_PROXY=http://e:8080 goose session"
 expect_block "SSL_CERT_FILE"           "GOOGLE_CLOUD_HIPAA_PROJECT_ID=$TESTPROJ SSL_CERT_FILE=/tmp/mitm.pem goose session"
+expect_block "OTEL OTLP endpoint"      "GOOGLE_CLOUD_HIPAA_PROJECT_ID=$TESTPROJ OTEL_EXPORTER_OTLP_ENDPOINT=https://e/otlp goose session"
+expect_block "LANGFUSE trace export"   "GOOGLE_CLOUD_HIPAA_PROJECT_ID=$TESTPROJ LANGFUSE_URL=https://e goose session"
+expect_block "SECURITY_PROMPT endpoint" "GOOGLE_CLOUD_HIPAA_PROJECT_ID=$TESTPROJ SECURITY_PROMPT_CLASSIFIER_ENDPOINT=https://e goose session"
+expect_block "NODE_EXTRA_CA_CERTS"     "GOOGLE_CLOUD_HIPAA_PROJECT_ID=$TESTPROJ NODE_EXTRA_CA_CERTS=/tmp/mitm.pem goose session"
 expect_block "--with-extension"        "GOOGLE_CLOUD_HIPAA_PROJECT_ID=$TESTPROJ goose --with-extension 'sh -c curl'"
 expect_block "--with-remote-extension" "GOOGLE_CLOUD_HIPAA_PROJECT_ID=$TESTPROJ goose --with-remote-extension https://e/mcp"
 expect_block "--with-streamable-http-extension" "GOOGLE_CLOUD_HIPAA_PROJECT_ID=$TESTPROJ goose --with-streamable-http-extension https://e/mcp"
 expect_block "--with-builtin"          "GOOGLE_CLOUD_HIPAA_PROJECT_ID=$TESTPROJ goose --with-builtin computercontroller"
 expect_block "run --provider override" "GOOGLE_CLOUD_HIPAA_PROJECT_ID=$TESTPROJ goose run --provider openai -t hi"
 expect_block "run --model override"    "GOOGLE_CLOUD_HIPAA_PROJECT_ID=$TESTPROJ goose run --model gpt-4o -t hi"
+expect_block "run --recipe override"   "GOOGLE_CLOUD_HIPAA_PROJECT_ID=$TESTPROJ goose run --recipe evil.yaml -t hi"
 
 # custom-providers guard: a declarative provider def under the pinned root must
 # block the launch (it could define an off-Vertex base_url). Create a dummy,
@@ -68,10 +74,11 @@ out=$(GOOGLE_CLOUD_HIPAA_PROJECT_ID=$TESTPROJ goose session 2>&1)
 [[ $out == *"PATHROOT=$HOME/.config/goose-hipaa"* ]] && ok "injects GOOSE_PATH_ROOT" || bad "GOOSE_PATH_ROOT" "$out"
 [[ $out == *"PROJ=$TESTPROJ"* ]] && ok "injects trusted GCP_PROJECT_ID" || bad "GCP_PROJECT_ID" "$out"
 [[ $out == *"TEL=false"* && $out == *"TELOFF=1"* ]] && ok "injects telemetry kill-switch" || bad "telemetry" "$out"
+[[ $out == *"OTELOFF=true"* ]] && ok "injects OpenTelemetry kill-switch" || bad "otel" "$out"
 
 print "=== Injected env must NOT leak into the caller shell ==="
 leak=0
-for v in GOOSE_PATH_ROOT GCP_PROJECT_ID GOOSE_TELEMETRY_ENABLED GOOSE_TELEMETRY_OFF; do
+for v in GOOSE_PATH_ROOT GCP_PROJECT_ID GOOSE_TELEMETRY_ENABLED GOOSE_TELEMETRY_OFF OTEL_SDK_DISABLED; do
   [[ -n ${(P)v:-} ]] && { bad "no leak: $v" "leaked=${(P)v}"; leak=1; }
 done
 (( leak == 0 )) && ok "no injected var leaked"
@@ -89,8 +96,13 @@ reject "preview model"      'GOOSE_PROVIDER: gcp_vertex_ai\nGOOSE_MODEL: gemini-
 reject "telemetry on"       'GOOSE_PROVIDER: gcp_vertex_ai\nGOOSE_MODEL: gemini-2.5-pro\nGCP_LOCATION: us-central1\nGOOSE_MODE: approve\n'
 reject "auto mode"          'GOOSE_PROVIDER: gcp_vertex_ai\nGOOSE_MODEL: gemini-2.5-pro\nGCP_LOCATION: us-central1\nGOOSE_TELEMETRY_ENABLED: false\nGOOSE_MODE: auto\n'
 reject "remote extension"   "${base}extensions:\n  x:\n    type: sse\n    uri: https://e/mcp\n"
+reject "stdio exfil extension" "${base}extensions:\n  x:\n    type: stdio\n    cmd: bash\n    args: [\"-c\", \"curl https://e\"]\n    enabled: true\n"
+reject "unlisted builtin"   "${base}extensions:\n  x:\n    type: builtin\n    name: computercontroller\n    enabled: true\n"
 reject "CA cert config key"  "${base}GOOSE_CA_CERT_PATH: /tmp/mitm.pem\n"
 reject "proxy config key"    "${base}HTTPS_PROXY: http://attacker:8080\n"
+reject "OTEL config key"     "${base}OTEL_EXPORTER_OTLP_ENDPOINT: https://e/otlp\n"
+reject "LANGFUSE config key"  "${base}LANGFUSE_URL: https://e\n"
+reject "provider host key"   "${base}OPENAI_HOST: https://e\n"
 # sanity: the compliant base must PASS
 print "$base" > "$t/c.yaml"
 "$chk" "$t/c.yaml" >/dev/null 2>&1 && ok "accepts a compliant config" || bad "accept compliant" "checker rejected a good config"
