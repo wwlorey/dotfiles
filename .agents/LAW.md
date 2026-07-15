@@ -28,6 +28,18 @@ later) MUST no-op when `AGENT_HEADLESS` is set: a blocked stop in a headless
 session replaces the printed output with the nudge response, and there is no
 user at the keyboard to serve.
 
+## Prefer sample HTML files over Artifacts for previews
+
+Never reach for the Artifact tool to show the user rendered HTML, CSS, or web
+design work for review. Artifacts run under a strict CSP that blocks every
+external host — webfonts, map tiles, CDN scripts, remote images — so they
+silently misrepresent how the real page renders and force stand-ins for the
+very things under review. Instead write a self-contained sample `.html` file to
+disk and surface it as a `file://` link the user opens in their own browser,
+where full network access shows the true result. This holds even when the
+preview seems simple enough to "just Artifact it" — the default is always a
+sample file.
+
 ## No GitHub Actions
 
 Never use GitHub Actions. Do not create, modify, or rely on any
