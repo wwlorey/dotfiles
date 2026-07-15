@@ -23,11 +23,12 @@ TAB=$'\t'         # yt-dlp --print prints the template verbatim; use a real tab
 
 STATE_DIR="$HOME/.local/state/jms"
 STATE_FILE="$STATE_DIR/last-sent"
-# Auto-captions often lag a freshly-published episode by hours. When discovery
-# finds an episode whose captions aren't published yet, its id and metadata are
-# parked in this marker; the hourly --retry-only job drains it with exponential
-# backoff (RETRY_BASE, doubling each time) until captions appear or it gives up
-# after RETRY_CAP attempts.
+# Cron runs park unfinished work in this marker; the hourly --retry-only job
+# drains it with exponential backoff (RETRY_BASE, doubling each time) until it
+# succeeds or gives up after RETRY_CAP attempts. Two stages: "discovery" — the
+# weekly run couldn't get a usable episode listing (e.g. it fired inside a
+# dark-wake window on a sleeping laptop with no real network) — and "captions"
+# — episode found but its auto-captions aren't published yet.
 PENDING_FILE="$STATE_DIR/pending"
 RETRY_BASE=3600 # first backoff step in seconds (1h); each retry doubles it
 RETRY_CAP=5     # give up after this many failed retries (~31h total window)
@@ -57,27 +58,42 @@ now_epoch() { date '+%s'; }
 
 # Email a failure/retry notice — only for unattended (cron) runs; manual
 # --force/--dry-run runs surface errors on the terminal. Best-effort: a failed
-# alert never masks the original failure. Args: $1 = body detail, $2 = subject tail.
+# alert never masks the original failure, but its outcome is always logged so a
+# silent week stays diagnosable. Args: $1 = body detail, $2 = subject tail.
 alert() {
   [ "$FORCE" -eq 0 ] && [ "$DRY_RUN" -eq 0 ] || return 0
   [ -f "$SEND_EMAIL" ] || return 0
-  printf 'The JMS digest run did not deliver a digest.\n\nReason: %s\n\n— jms-digest on %s at %s\n' \
+  local err rc=0
+  err="$(printf 'The JMS digest run did not deliver a digest.\n\nReason: %s\n\n— jms-digest on %s at %s\n' \
     "$1" "$(hostname -s 2>/dev/null || echo host)" "$(date '+%Y-%m-%dT%H:%M:%S')" |
     python3 "$SEND_EMAIL" --from "$SENDER" --to "$RECIPIENT" \
-      --subject "JMS digest alert: $2" >/dev/null 2>&1 || true
+      --subject "JMS digest alert: $2" 2>&1 >/dev/null)" || rc=$?
+  if [ "$rc" -eq 0 ]; then
+    log "alert emailed: $2"
+  else
+    log "alert email FAILED (rc=$rc): $2 — $(printf '%s' "$err" | tr '\n' ' ' | head -c 200)"
+  fi
+  return 0
 }
 
-# Pending-episode marker (JSON): the video the retry job is draining.
-write_pending() { # vid title upload_date first_seen attempts next_eligible
+# Cheap connectivity probe. Cron runs that fire inside a dark-wake window (a
+# laptop asleep on battery) have no usable network; probing first lets them
+# defer without consuming a retry attempt or burning the weekly slot.
+network_up() { curl -sf --max-time 5 -o /dev/null "https://www.gstatic.com/generate_204"; }
+
+# Pending-work marker (JSON): what the retry job is draining. stage "discovery"
+# carries empty vid/title/upload_date (no episode known yet); stage "captions"
+# carries the episode the weekly run found.
+write_pending() { # stage vid title upload_date first_seen attempts next_eligible
   mkdir -p "$STATE_DIR"
-  jq -n --arg vid "$1" --arg title "$2" --arg ud "$3" \
-    --argjson fs "$4" --argjson at "$5" --argjson ne "$6" \
-    '{vid:$vid,title:$title,upload_date:$ud,first_seen:$fs,attempts:$at,next_eligible:$ne}' \
+  jq -n --arg stage "$1" --arg vid "$2" --arg title "$3" --arg ud "$4" \
+    --argjson fs "$5" --argjson at "$6" --argjson ne "$7" \
+    '{stage:$stage,vid:$vid,title:$title,upload_date:$ud,first_seen:$fs,attempts:$at,next_eligible:$ne}' \
     >"$PENDING_FILE"
 }
 clear_pending() { rm -f "$PENDING_FILE"; }
 
-for tool in yt-dlp claude jq python3; do
+for tool in yt-dlp claude jq python3 curl; do
   command -v "$tool" >/dev/null 2>&1 || { log "required tool not found: $tool"; exit 1; }
 done
 
@@ -198,11 +214,40 @@ EOF
   return 0
 }
 
-# --- retry-only mode: drain a pending episode with exponential backoff ---------
+# discover_latest — scan both tabs for the newest long-form episode. On success
+# prints "duration<TAB>vid<TAB>upload_date<TAB>title" and returns 0. Returns 20
+# on an empty fetch (network/yt-dlp failure), 21 when uploads were listed but
+# none clear MIN_DURATION. yt-dlp's stderr is left flowing to the job log so a
+# failed fetch stays diagnosable. Listings are captured before filtering — piping
+# yt-dlp straight into an awk that exits early would SIGPIPE it and trip
+# `set -o pipefail`.
+discover_latest() {
+  local listing="" tab selection
+  for tab in "${TABS[@]}"; do
+    listing+="$(
+      yt-dlp --no-warnings --ignore-errors --playlist-end "$SCAN_COUNT" \
+        --print "%(duration)s${TAB}%(id)s${TAB}%(upload_date)s${TAB}%(title)s" \
+        "$CHANNEL/$tab" || true
+    )"$'\n'
+  done
+  selection="$(
+    printf '%s\n' "$listing" |
+      awk -F"$TAB" -v min="$MIN_DURATION" '$1 ~ /^[0-9]+$/ && ($1 + 0) >= min' |
+      sort -t"$TAB" -k3,3nr | head -n1
+  )"
+  if [ -z "$selection" ]; then
+    [ -z "$(printf '%s' "$listing" | tr -d '[:space:]')" ] && return 20
+    return 21
+  fi
+  printf '%s\n' "$selection"
+}
+
+# --- retry-only mode: drain pending work with exponential backoff --------------
 # Cheap when idle: no pending marker means no work and no YouTube scraping.
 if [ "$RETRY_ONLY" -eq 1 ]; then
   [ -f "$PENDING_FILE" ] || exit 0
   pj="$(cat "$PENDING_FILE")"
+  stage="$(jq -r '.stage // "captions"' <<<"$pj")"
   vid="$(jq -r '.vid' <<<"$pj")"
   title="$(jq -r '.title' <<<"$pj")"
   upload_date="$(jq -r '.upload_date' <<<"$pj")"
@@ -211,6 +256,45 @@ if [ "$RETRY_ONLY" -eq 1 ]; then
   next_eligible="$(jq -r '.next_eligible' <<<"$pj")"
   now="$(now_epoch)"
   [ "$now" -ge "$next_eligible" ] || exit 0 # not yet due; stay quiet
+
+  # No usable network (a dark-wake tick, Wi-Fi down): defer without consuming an
+  # attempt — the marker stays due, so the next hourly tick tries again.
+  if ! network_up; then
+    log "network unreachable; deferring pending $stage retry (no attempt consumed)"
+    exit 0
+  fi
+
+  # A discovery-stage marker has no episode yet: redo discovery first.
+  if [ "$stage" = "discovery" ]; then
+    log "retrying discovery (attempt $((attempts + 1)) of $RETRY_CAP)"
+    rc=0
+    selection="$(discover_latest)" || rc=$?
+    if [ "$rc" -ne 0 ]; then
+      attempts=$((attempts + 1))
+      if [ "$attempts" -ge "$RETRY_CAP" ]; then
+        window=$(((now - first_seen) / 3600))
+        reason="gave up after $attempts discovery retries (~${window}h) — no usable episode listing (last rc=$rc)"
+        log "$reason"
+        alert "$reason" "gave up on discovery"
+        clear_pending
+        exit 1
+      fi
+      delay=$((RETRY_BASE * (1 << attempts)))
+      write_pending discovery "" "" "" "$first_seen" "$attempts" "$((now + delay))"
+      reason="retry $attempts/$RETRY_CAP: discovery still failing (rc=$rc); next attempt in ~$((delay / 3600))h"
+      log "$reason"
+      alert "$reason" "retry $attempts — discovery failing"
+      exit 1
+    fi
+    vid="$(printf '%s' "$selection" | cut -f2)"
+    upload_date="$(printf '%s' "$selection" | cut -f3)"
+    title="$(printf '%s' "$selection" | cut -f4-)"
+    log "discovery retry found $vid — $title ($upload_date)"
+    # Stage transition gets a fresh clock: a captions failure below restarts the
+    # backoff window rather than inheriting the discovery stage's attempts.
+    first_seen="$now"
+    attempts=0
+  fi
 
   # A weekly run may have already sent this episode; don't double-send.
   if [ -f "$STATE_FILE" ] && [ "$(cat "$STATE_FILE")" = "$vid" ]; then
@@ -234,7 +318,7 @@ if [ "$RETRY_ONLY" -eq 1 ]; then
   fi
   delay=$((RETRY_BASE * (1 << attempts)))
   next=$((now + delay))
-  write_pending "$vid" "$title" "$upload_date" "$first_seen" "$attempts" "$next"
+  write_pending captions "$vid" "$title" "$upload_date" "$first_seen" "$attempts" "$next"
   # Per-retry email only for the caption-lag case; summarization failure was
   # already alerted inside process_episode.
   if [ "$rc" -eq 10 ]; then
@@ -248,31 +332,40 @@ fi
 # --- discovery mode: find the newest long-form episode, send if new ------------
 # Merge both tabs, keep rows over the duration floor, newest upload_date wins.
 log "discovering latest episode on $CHANNEL (tabs: ${TABS[*]})"
-# Capture each tab's listing first, then filter — piping yt-dlp straight into an
-# awk that exits early would SIGPIPE it and trip `set -o pipefail`.
-listing=""
-for tab in "${TABS[@]}"; do
-  listing+="$(
-    yt-dlp --no-warnings --ignore-errors --playlist-end "$SCAN_COUNT" \
-      --print "%(duration)s${TAB}%(id)s${TAB}%(upload_date)s${TAB}%(title)s" \
-      "$CHANNEL/$tab" 2>/dev/null || true
-  )"$'\n'
-done
-selection="$(
-  printf '%s\n' "$listing" |
-    awk -F"$TAB" -v min="$MIN_DURATION" '$1 ~ /^[0-9]+$/ && ($1 + 0) >= min' |
-    sort -t"$TAB" -k3,3nr | head -n1
-)"
-if [ -z "$selection" ]; then
-  # Distinguish a transient empty fetch (network/yt-dlp hiccup) from a real
-  # "nothing long-form recently" so the cron log is diagnosable.
-  if [ -z "$(printf '%s' "$listing" | tr -d '[:space:]')" ]; then
-    reason="discovery returned an empty listing (transient yt-dlp/network failure?); will retry next run"
+
+# Cron run with no usable network (typical of a calendar job fired inside a
+# dark-wake window on a sleeping laptop): park a discovery marker due
+# immediately and let the hourly retry job take over once the machine is
+# properly awake. No attempt is consumed and no alert is sent — an email
+# couldn't get out either.
+if [ "$FORCE" -eq 0 ] && [ "$DRY_RUN" -eq 0 ] && ! network_up; then
+  now="$(now_epoch)"
+  write_pending discovery "" "" "" "$now" 0 "$now"
+  log "network unreachable; parked discovery for the hourly retry job"
+  exit 1
+fi
+
+rc=0
+selection="$(discover_latest)" || rc=$?
+if [ "$rc" -ne 0 ]; then
+  # Distinguish an empty fetch (yt-dlp/network failure) from a real "nothing
+  # long-form recently" so the cron log is diagnosable.
+  if [ "$rc" -eq 20 ]; then
+    reason="discovery returned an empty listing (yt-dlp/network failure)"
   else
     reason="no episode over ${MIN_DURATION}s in the latest $SCAN_COUNT uploads per tab"
   fi
   log "$reason"
-  alert "$reason" "no episode found"
+  if [ "$FORCE" -eq 0 ] && [ "$DRY_RUN" -eq 0 ] && [ "$rc" -eq 20 ]; then
+    # An empty fetch is retryable; park it for the hourly job instead of losing
+    # the week. A long-form-free listing is a fact about the channel, not a
+    # failure — alert and stop.
+    now="$(now_epoch)"
+    write_pending discovery "" "" "" "$now" 0 "$((now + RETRY_BASE))"
+    alert "$reason; scheduled hourly discovery retries (up to $RETRY_CAP)" "discovery failed — retrying"
+  else
+    alert "$reason" "no episode found"
+  fi
   exit 1
 fi
 

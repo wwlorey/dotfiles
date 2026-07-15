@@ -1,6 +1,6 @@
 ---
 name: jms
-description: Producing a summary digest of The Jack Mallers Show (Bitcoin / macro / markets podcast on youtube.com/@thejackmallersshow). Consult whenever the user asks to summarize the latest JMS episode, wants the weekly Jack Mallers Show digest, says "what did Jack Mallers cover this week", or any phrasing that means catch me up on the newest episode. Also consult when the weekly launchd cron (co.lorey.jms-weekly) or its hourly caption-retry companion (co.lorey.jms-retry) needs to run the digest unattended.
+description: Producing a summary digest of The Jack Mallers Show (Bitcoin / macro / markets podcast on youtube.com/@thejackmallersshow). Consult whenever the user asks to summarize the latest JMS episode, wants the weekly Jack Mallers Show digest, says "what did Jack Mallers cover this week", or any phrasing that means catch me up on the newest episode. Also consult when the weekly launchd cron (co.lorey.jms-weekly) or its hourly retry companion (co.lorey.jms-retry) needs to run the digest unattended.
 ---
 
 # JMS Digest
@@ -23,22 +23,36 @@ pipeline is one deterministic script — run it and relay the result.
 
 - **Unattended (cron):** two launchd agents cooperate. `co.lorey.jms-weekly`
   runs `jms-digest` with no flags every Tuesday 9:01am — it does the heavy
-  discovery. `co.lorey.jms-retry` runs `jms-digest --retry-only` hourly — it
-  does no discovery and is near-zero cost when idle, existing only to drain a
-  *pending* episode (see below) with exponential backoff. The idempotency guard
+  discovery. `co.lorey.jms-retry` runs `jms-digest --retry-only` hourly — it is
+  near-zero cost when idle, existing only to drain a *pending* marker (see
+  below) with exponential backoff. The idempotency guard
   (`~/.local/state/jms/last-sent`) ensures an episode is emailed at most once
   across both.
 
-  **Caption lag → pending + backoff.** Auto-captions often lag a fresh episode
-  by hours, and a live-streamed show can take much longer. When the weekly run
-  finds an episode whose captions aren't published yet, it parks the episode in
-  `~/.local/state/jms/pending` and emails a `captions not ready — retrying`
-  notice instead of silently waiting a whole week. The hourly retry job then
-  reattempts on a doubling schedule (~1h, +2h, +4h, +8h, +16h), emailing a
-  `retry N — captions not ready` notice on each still-failing attempt and a
-  `gave up` notice if captions never appear within ~31h (`RETRY_CAP` attempts).
-  A successful send clears the marker; the digest email itself is the success
-  signal.
+  **Pending + backoff.** Two failures can leave the weekly run empty-handed;
+  both park a staged marker in `~/.local/state/jms/pending` for the hourly
+  retry job instead of losing the week:
+
+  - *Discovery failure* (`stage: discovery`) — the episode listing came back
+    empty. The classic cause is the weekly job firing inside a dark-wake
+    window on a sleeping laptop, where there is no usable network. Cron runs
+    probe connectivity first (`network_up`): if the network is down they park
+    or defer **without consuming a retry attempt or emailing** (an alert
+    couldn't get out either); if the network is up but the listing is still
+    empty they email a `discovery failed — retrying` notice and back off. When
+    a retry finds the episode it proceeds normally, transitioning to the
+    captions stage with a fresh attempt clock if captions aren't ready.
+  - *Caption lag* (`stage: captions`) — auto-captions often lag a fresh
+    episode by hours (live-streamed shows much longer). The weekly run parks
+    the episode and emails a `captions not ready — retrying` notice.
+
+  Retries follow a doubling schedule (~1h, +2h, +4h, +8h, +16h), emailing a
+  `retry N` notice on each still-failing attempt and a `gave up` notice if the
+  stage never succeeds within `RETRY_CAP` attempts (~31h). A successful send
+  clears the marker; the digest email itself is the success signal. Every
+  alert attempt's outcome is logged (`alert emailed:` / `alert email FAILED`),
+  so a silent week is diagnosable from `/tmp/jms-weekly.log` and
+  `/tmp/jms-retry.log`.
 
 ## What the script does
 
@@ -46,14 +60,15 @@ pipeline is one deterministic script — run it and relay the result.
    `/streams` tab (live-streamed shows) or `/videos` (pre-recorded uploads), so
    it scans **both**, keeps uploads over `MIN_DURATION` (20min, excluding
    Shorts/clips), and picks the newest by upload date. On an unattended (cron)
-   run that finds no episode — empty fetch or nothing long-form — it emails a
-   `JMS digest alert: no episode found` notice to `jms@lorey.co` and exits.
+   run, an empty fetch parks a `stage: discovery` pending marker for the hourly
+   retry job (see *Pending + backoff*); a listing with nothing long-form emails
+   a `JMS digest alert: no episode found` notice to `jms@lorey.co` and exits.
 2. Skips if that episode id was already sent (unless `--force`).
 3. Pulls the auto-generated English captions with `yt-dlp` and flattens them to
    plain text. If captions aren't published yet, a cron run parks the episode in
-   `~/.local/state/jms/pending` (id, title, upload date, attempt count, next-due
-   time) and exits so the hourly `--retry-only` job can drain it with backoff
-   rather than waiting for next week's discovery.
+   `~/.local/state/jms/pending` (stage, id, title, upload date, attempt count,
+   next-due time) and exits so the hourly `--retry-only` job can drain it with
+   backoff rather than waiting for next week's discovery.
 4. Summarizes the transcript into a two-part digest — a brief in-depth "Gist"
    (TL;DR) and a "Breakdown" that follows the episode's own segment order. The
    model must wrap the digest in `<<<DIGEST>>>`/`<<<END>>>` sentinels; if they're
@@ -94,10 +109,11 @@ launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/co.lorey.jms-retry.plist
   (`~/.agents/skills/send-email/scripts/send-email.py`) — `jms-digest` pipes the
   rendered digest to it. Bridge credentials are owned there, not here.
 - State: `~/.local/state/jms/last-sent` (idempotency marker) and
-  `~/.local/state/jms/pending` (JSON: the episode the retry job is draining).
+  `~/.local/state/jms/pending` (staged JSON: the work the retry job is
+  draining — `stage: discovery` or `stage: captions`).
 - Schedule: `~/Library/LaunchAgents/co.lorey.jms-weekly.plist` (weekly
   discovery) and `~/Library/LaunchAgents/co.lorey.jms-retry.plist` (hourly
-  caption retry, logs to `/tmp/jms-retry.log`).
+  pending-marker retry, logs to `/tmp/jms-retry.log`).
 - `scripts/fetch-transcript` — `fetch-transcript <video-id|url>` prints a video's
   cleaned auto-caption transcript (shared by `jms-digest` and the chat poller).
 
@@ -133,8 +149,11 @@ access (untrusted input can't make it act).
 
 ## Notes
 
-- Auto-captions can lag a freshly-published episode by hours (a long
-  live-streamed show, longer still). Rather than lose a whole week to that, the
-  weekly run parks the episode and the hourly `co.lorey.jms-retry` job drains it
-  with exponential backoff — so a caption lag delays the digest by hours, not a
-  week. See "Caption lag → pending + backoff" under *How to run*.
+- The weekly slot is fragile on a laptop: at 9:01am the machine may be asleep
+  on battery, and launchd then fires the job inside a seconds-long dark-wake
+  window with no usable network (discovery comes back empty). Auto-captions can
+  likewise lag a freshly-published episode by hours. Rather than lose a whole
+  week to either, the weekly run parks a staged pending marker and the hourly
+  `co.lorey.jms-retry` job drains it with exponential backoff — a bad Tuesday
+  morning delays the digest by hours, not a week. See "Pending + backoff"
+  under *How to run*.
