@@ -12,6 +12,41 @@ of configuration files, scripts, etc. in `$HOME`. Files there are deployed to
 `$HOME` from within the sandbox. A PreToolUse hook denies bare `save-config`
 in Bash with the same pointer.
 
+## Security-enforcing config is high-risk — not ordinary config
+
+A change is **security-enforcing** if it is a gate, hook, wrapper, or checker
+that upholds a security or compliance invariant — anything touching PHI,
+secrets, credentials, network egress, at-rest storage, auth, or sandboxing
+(e.g. the `*-hipaa-check` scripts, the `aichat`/`goose` gates, the `block-*`
+hooks). The routine wrap-up below (syntax + `agent ls`) is NOT sufficient for
+these. Treat them as high-risk code and clear ALL of the following before
+saying "done" — never on the strength of reading the code or testing pieces in
+isolation:
+
+1. **Execute the composed artifact end-to-end.** Run the real thing against
+   adversarial inputs — not `python3 <checker>` (that bypasses the executable
+   bit the gate relies on), not a stub function that omits the file's own
+   globals. Drive the actual function/hook through every guard path AND the
+   happy path. Bugs in a security control live in the seam between components
+   and the runtime — a missing `+x`, a variable whose name trips its own
+   filter — and only running the whole thing surfaces them. A read-only
+   reasoning pass is structurally blind to these.
+2. **Keep a committed test that does #1.** Co-locate a `test-<name>` script
+   next to the artifact (the repo convention — see `.claude/hooks/test-*` and
+   `.zsh/test-*-gate.zsh`), and re-run it after EVERY change to that artifact,
+   including fixes — a fix can introduce a fresh regression, so re-verify with
+   the full suite, not the same narrow check that already passed. "Verified" is
+   unsayable without a green run of this test.
+3. **Get an independent security-review.** The author's eyes rationalize the
+   author's blind spots. Invoke the `security-review` command, or spawn a
+   fresh-context reviewer that never saw the implementation — do not self-audit
+   and call it audited.
+
+State in the report that these ran and passed. If one genuinely could not run
+(e.g. the artifact needs a binary or credential unavailable in the run
+environment), say so plainly and describe the change as "unverified in field,"
+never as "verified."
+
 ## Editing config files
 
 - **Never edit config files directly in `~/`.** Always make changes in the
