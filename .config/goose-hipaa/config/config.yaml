@@ -35,7 +35,16 @@ GOOSE_TELEMETRY_ENABLED: false       # no PostHog usage-data egress
 # only risky ops) or `auto` (no gate) only if you accept that residual egress.
 GOOSE_MODE: approve
 
-# No `extensions:` block, so Goose enables only its local `developer` builtin
-# (shell + filesystem) — what a harness needs, with no outbound channel. Do NOT
-# add sse / streamable_http / http extensions or any carrying a uri/url/endpoint:
-# goose-hipaa-check rejects them as off-BAA egress paths.
+# Enable ONLY the local `developer` builtin (shell + filesystem) — what a coding
+# harness needs, with no network transport of its own. This MUST be declared
+# explicitly: an absent extensions section does NOT default to developer, it
+# exposes goose's `platform` tools instead (verified in a live session). Do NOT
+# add sse / streamable_http / http extensions or any carrying a uri/url/endpoint
+# — goose-hipaa-check rejects them as off-BAA egress paths.
+extensions:
+  developer:
+    type: builtin
+    name: developer
+    enabled: true
+    bundled: true
+    timeout: 300
