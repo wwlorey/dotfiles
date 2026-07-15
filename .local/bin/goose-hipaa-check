@@ -153,6 +153,20 @@ def check(cfg: dict) -> list[str]:
             f"{', '.join(sorted(ALLOWED_MODES))} (not 'auto')."
         )
 
+    # goose reads TLS/proxy overrides (GOOSE_CA_CERT_PATH, GOOSE_CLIENT_CERT_PATH/
+    # KEY, proxy vars) from config OR env. The zsh gate refuses the env form, but
+    # a value placed in config.yaml (drift, `goose configure`, a bad commit) is
+    # invisible to the gate — a rogue CA/client cert makes a MITM proxy's cert
+    # trusted for the Vertex TLS connection (PHI decryptable in transit), and a
+    # proxy reroutes it. Reject any such key by shape, so renames don't reopen it.
+    for key in cfg:
+        up = str(key).upper()
+        if any(m in up for m in ("PROXY", "CERT", "CA_BUNDLE")):
+            problems.append(
+                f"config key '{key}' can redirect or expose PHI in transit "
+                f"(proxy / CA / client-cert override) — remove it"
+            )
+
     for label, spec in _iter_extensions(cfg):
         etype = str(spec.get("type", "")).lower()
         if etype in REMOTE_EXT_TYPES:

@@ -101,13 +101,24 @@ goose() {
     return 1
   fi
 
-  # ARG guard: block ad-hoc MCP extension injection (an outbound channel the
-  # config-level check never sees). --with-builtin (local builtins only) passes.
+  # ARG guard. Two CLI surfaces bypass the config lock, so both are refused
+  # here (an allowlist-of-shape, not a denylist of specific flag names that
+  # drifts as goose renames them):
+  #   - ANY --with-* flag injects an extension/builtin (--with-extension,
+  #     --with-streamable-http-extension, --with-builtin, …) — an outbound
+  #     channel the config-level extension check never sees. Declare extensions
+  #     in the locked config instead.
+  #   - --provider / --model (on `goose run`) override the validated config at
+  #     request time and can route PHI to a non-Vertex endpoint or a non-GA
+  #     model. Change the model in the locked config, not on the CLI.
   local a
   for a in "$@"; do
     case "$a" in
-      --with-extension|--with-extension=*|--with-remote-extension|--with-remote-extension=*)
-        print -ru2 -- "⛔ goose blocked: '$a' injects an ad-hoc MCP extension — an off-BAA egress path. Not permitted by the HIPAA gate."
+      --with-*)
+        print -ru2 -- "⛔ goose blocked: '$a' injects an ad-hoc MCP extension/builtin — an off-BAA egress path. Declare extensions in the locked config instead."
+        return 1 ;;
+      --provider|--provider=*|--model|--model=*)
+        print -ru2 -- "⛔ goose blocked: '$a' overrides the validated provider/model at the CLI, bypassing the config lock (can route PHI off-Vertex or to a non-GA model). Change the locked config instead."
         return 1 ;;
     esac
   done

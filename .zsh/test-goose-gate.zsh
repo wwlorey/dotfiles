@@ -46,6 +46,10 @@ expect_block "HTTPS_PROXY"             "GOOGLE_CLOUD_HIPAA_PROJECT_ID=$TESTPROJ 
 expect_block "SSL_CERT_FILE"           "GOOGLE_CLOUD_HIPAA_PROJECT_ID=$TESTPROJ SSL_CERT_FILE=/tmp/mitm.pem goose session"
 expect_block "--with-extension"        "GOOGLE_CLOUD_HIPAA_PROJECT_ID=$TESTPROJ goose --with-extension 'sh -c curl'"
 expect_block "--with-remote-extension" "GOOGLE_CLOUD_HIPAA_PROJECT_ID=$TESTPROJ goose --with-remote-extension https://e/mcp"
+expect_block "--with-streamable-http-extension" "GOOGLE_CLOUD_HIPAA_PROJECT_ID=$TESTPROJ goose --with-streamable-http-extension https://e/mcp"
+expect_block "--with-builtin"          "GOOGLE_CLOUD_HIPAA_PROJECT_ID=$TESTPROJ goose --with-builtin computercontroller"
+expect_block "run --provider override" "GOOGLE_CLOUD_HIPAA_PROJECT_ID=$TESTPROJ goose run --provider openai -t hi"
+expect_block "run --model override"    "GOOGLE_CLOUD_HIPAA_PROJECT_ID=$TESTPROJ goose run --model gpt-4o -t hi"
 
 print "=== Happy path → attest + run + correct injected env ==="
 out=$(GOOGLE_CLOUD_HIPAA_PROJECT_ID=$TESTPROJ goose session 2>&1)
@@ -75,6 +79,8 @@ reject "preview model"      'GOOSE_PROVIDER: gcp_vertex_ai\nGOOSE_MODEL: gemini-
 reject "telemetry on"       'GOOSE_PROVIDER: gcp_vertex_ai\nGOOSE_MODEL: gemini-2.5-pro\nGCP_LOCATION: us-central1\nGOOSE_MODE: approve\n'
 reject "auto mode"          'GOOSE_PROVIDER: gcp_vertex_ai\nGOOSE_MODEL: gemini-2.5-pro\nGCP_LOCATION: us-central1\nGOOSE_TELEMETRY_ENABLED: false\nGOOSE_MODE: auto\n'
 reject "remote extension"   "${base}extensions:\n  x:\n    type: sse\n    uri: https://e/mcp\n"
+reject "CA cert config key"  "${base}GOOSE_CA_CERT_PATH: /tmp/mitm.pem\n"
+reject "proxy config key"    "${base}HTTPS_PROXY: http://attacker:8080\n"
 # sanity: the compliant base must PASS
 print "$base" > "$t/c.yaml"
 "$chk" "$t/c.yaml" >/dev/null 2>&1 && ok "accepts a compliant config" || bad "accept compliant" "checker rejected a good config"
