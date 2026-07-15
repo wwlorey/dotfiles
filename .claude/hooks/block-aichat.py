@@ -57,6 +57,16 @@ _OP_RE = re.compile(r"^[;&|()<>`]+$")
 # -c style shell flags that take a command string: -c, -lc, -ic, -lic, ...
 _C_FLAG = re.compile(r"^-[a-z]*c[a-z]*$")
 
+# A leading VAR=val assignment (`X=1 ah`) — command position carries past it.
+_ASSIGN_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
+
+# Transparent command-runner prefixes: `env X=1 ah`, `sudo ah`, `nohup ah` all
+# still run the alias, so command position must carry through them.
+_RUNNERS = frozenset({
+    "env", "sudo", "doas", "nohup", "nice", "ionice", "time", "stdbuf",
+    "setsid", "command", "builtin", "exec", "xargs", "timeout", "caffeinate",
+})
+
 
 def _tokenize(command: str) -> Optional[list[str]]:
     lex = shlex.shlex(command, posix=True, punctuation_chars=True)
@@ -80,7 +90,14 @@ def _has_aichat_token(tokens: list[str]) -> bool:
             sub = _tokenize(tokens[idx + 1])
             if sub and _has_aichat_token(sub):
                 return True
-        in_cmd_pos = bool(_OP_RE.match(tok))
+        if _OP_RE.match(tok):
+            in_cmd_pos = True                       # after ; | && ( etc.
+        elif in_cmd_pos and (
+            _ASSIGN_RE.match(tok) or base in _RUNNERS
+        ):
+            in_cmd_pos = True                       # VAR=val / env / sudo / … — carry through
+        else:
+            in_cmd_pos = False
     return False
 
 

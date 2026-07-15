@@ -72,16 +72,25 @@ def allowed_models(cfg: dict) -> list[str]:
 def check(cfg: dict) -> list[str]:
     problems: list[str] = []
 
-    if cfg.get("save", False) is not False:
-        problems.append("save is not false — sessions could persist PHI to disk")
-    if cfg.get("save_session", False) is not False:
+    # aichat DEFAULTS these to persist when the key is absent (save: true and
+    # save_shell_history: true; save_session: null = ask). So each must be
+    # EXPLICITLY present and false — an omitted key is a silent fail-open
+    # (transcripts / shell prompts with PHI written to disk while ✓ prints), the
+    # exact config-drift this checker exists to catch. `is not False` treats
+    # both absent (None) and true as violations.
+    if cfg.get("save") is not False:
         problems.append(
-            "save_session is not false — session history could persist PHI"
+            "save is not explicitly false — aichat defaults it to true, "
+            "persisting messages (PHI) to disk"
         )
-    if cfg.get("save_shell_history", False) is not False:
+    if cfg.get("save_session") is not False:
         problems.append(
-            "save_shell_history is not false — -e/.shell prompts (potential PHI) "
-            "persist to aichat's history file"
+            "save_session is not explicitly false — session history could persist PHI"
+        )
+    if cfg.get("save_shell_history") is not False:
+        problems.append(
+            "save_shell_history is not explicitly false — aichat defaults it to "
+            "true, persisting -e/.shell prompts (potential PHI) to its history file"
         )
 
     clients = cfg.get("clients") or []

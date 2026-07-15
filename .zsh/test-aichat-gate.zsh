@@ -33,7 +33,9 @@ expect_run() {  # label ; command-line
 print "=== Guard paths → block ==="
 expect_block "AICHAT_* env override"          "AICHAT_MODEL=x aichat hi"
 expect_block "GOOGLE_CLOUD_HIPAA_* override"   "GOOGLE_CLOUD_HIPAA_REGION=x aichat hi"
+expect_block "HTTPS_PROXY env"                "HTTPS_PROXY=http://e:8080 aichat hi"
 expect_block "disallowed flag --serve"        "aichat --serve"
+expect_block "-f swallowing --serve"          "aichat -f --serve"
 expect_block "undeclared -m model"            "aichat -m nope:nope hi"
 
 print "=== Allowed paths → run (binary must execute) ==="
@@ -53,6 +55,7 @@ reject() { local label=$1; print "$2" > "$t/c.yaml"
 reject "gemini (AI-Studio) client" 'model: g:m\nsave: false\nsave_session: false\nsave_shell_history: false\nclients:\n  - type: gemini\n    name: g\n    models:\n      - name: gemini-2.5-flash\n'
 reject "save: true"                'model: google_cloud_hipaa:gemini-2.5-flash-lite\nsave: true\nsave_session: false\nsave_shell_history: false\nclients:\n  - type: vertexai\n    name: google_cloud_hipaa\n    models:\n      - name: gemini-2.5-flash-lite\n'
 reject "preview model"             'model: google_cloud_hipaa:gemini-2.5-flash-preview\nsave: false\nsave_session: false\nsave_shell_history: false\nclients:\n  - type: vertexai\n    name: google_cloud_hipaa\n    models:\n      - name: gemini-2.5-flash-preview\n'
+reject "save key omitted (aichat defaults to persist)" 'model: google_cloud_hipaa:gemini-2.5-flash-lite\nsave_session: false\nsave_shell_history: false\nclients:\n  - type: vertexai\n    name: google_cloud_hipaa\n    models:\n      - name: gemini-2.5-flash-lite\n'
 print "$good" > "$t/c.yaml"
 "$chk" "$t/c.yaml" >/dev/null 2>&1 && ok "accepts a compliant config" || bad "accept compliant" "checker rejected a good config"
 

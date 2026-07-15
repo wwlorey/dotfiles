@@ -46,10 +46,14 @@ aichat() {
   # AICHAT_PATCH_<CLIENT>_<API>, whose JSON value can rewrite the request URL to
   # any host (PHI exfiltration). Enumerating the dangerous ones is a losing game,
   # so block on the whole namespace; keep only the required project id.
+  # Also refuse HTTP(S)_PROXY/ALL_PROXY (either case) and CA/cert overrides:
+  # aichat's reqwest client honors the system proxy env by default (it never
+  # calls .no_proxy()), so a stray proxy var reroutes the Vertex request off
+  # "only to Vertex" — and a rogue CA bundle lets a MITM proxy decrypt PHI.
   local v
-  for v in ${(Mk)parameters:#(AICHAT_*|GOOGLE_CLOUD_HIPAA_*)}; do
+  for v in ${(Mk)parameters:#(AICHAT_*|GOOGLE_CLOUD_HIPAA_*|HTTP_PROXY|HTTPS_PROXY|ALL_PROXY|http_proxy|https_proxy|all_proxy|SSL_CERT_FILE|SSL_CERT_DIR|REQUESTS_CA_BUNDLE|CURL_CA_BUNDLE)}; do
     [[ $v == GOOGLE_CLOUD_HIPAA_PROJECT_ID ]] && continue
-    print -ru2 -- "⛔ aichat blocked: $v is set — aichat honors AICHAT_*/GOOGLE_CLOUD_HIPAA_* env overrides that can redirect the model, provider, request URL, or persistence. Unset it and retry."
+    print -ru2 -- "⛔ aichat blocked: $v is set — it can redirect the model, provider, request URL, or persistence, or route/decrypt PHI traffic through a proxy. Unset it and retry."
     return 1
   done
 
@@ -87,8 +91,10 @@ aichat() {
         (( i++ )); m=${@[i]:-} ;;
       -m=*|--model=*)
         m=${a#*=} ;;
-      -f|--file|--prompt)              # safe, value-taking: consume the value
-        (( i++ )) ;;
+      -f|--file|--prompt)              # value-taking: consume the value, but ONLY
+        [[ ${@[i+1]:-} != -* ]] && (( i++ )) ;;  # if it isn't itself a flag — else
+                                       # a swallowed --serve/--rag/--macro would
+                                       # slip past the block arm below unseen.
       -f=*|--file=*|--prompt=*)
         ;;
       -s|--session|-s=*|--session=*)   # session: multi-turn context within one
