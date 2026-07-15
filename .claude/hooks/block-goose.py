@@ -19,6 +19,8 @@ start of the command, or immediately after a shell control operator (`;`, `|`,
   - `foo | goose …`, `x && goose …`
   - `sh -c 'goose …'` / `bash -lc 'goose …'`  (re-tokenizes the -c argument)
   - `/abs/path/to/goose …`   (basename in command position)
+  - `env X=1 goose`, `sudo goose`, `nohup goose`, `X=1 goose`  (command
+    position carries through leading VAR=val assignments and runner prefixes)
 while leaving harmless mentions as arguments (`grep goose`, `ls .config/goose`,
 `echo "run goose yourself"`) alone. Malformed shell fails closed via a
 command-position regex fallback. This is a guardrail against accidental agent
@@ -54,6 +56,17 @@ _C_FLAG = re.compile(r"^-[a-z]*c[a-z]*$")
 # Shell control-operator token: after one, the next token is a command word.
 _OP_RE = re.compile(r"^[;&|()<>`]+$")
 
+# A leading VAR=val assignment (`X=1 goose`) — command position carries past it.
+_ASSIGN_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
+
+# Transparent command-runner prefixes: `env X=1 goose`, `sudo goose`,
+# `nohup goose`, `command goose` all still run goose, so command position must
+# carry through them. (grep/ls are NOT here, so `grep goose` stays a mention.)
+_RUNNERS = frozenset({
+    "env", "sudo", "doas", "nohup", "nice", "ionice", "time", "stdbuf",
+    "setsid", "command", "builtin", "exec", "xargs", "timeout", "caffeinate",
+})
+
 
 def _tokenize(command: str) -> Optional[list[str]]:
     lex = shlex.shlex(command, posix=True, punctuation_chars=True)
@@ -74,7 +87,14 @@ def _has_goose_token(tokens: list[str]) -> bool:
             sub = _tokenize(tokens[idx + 1])
             if sub and _has_goose_token(sub):
                 return True
-        in_cmd_pos = bool(_OP_RE.match(tok))
+        if _OP_RE.match(tok):
+            in_cmd_pos = True                       # after ; | && ( etc.
+        elif in_cmd_pos and (
+            _ASSIGN_RE.match(tok) or os.path.basename(tok) in _RUNNERS
+        ):
+            in_cmd_pos = True                       # VAR=val / env / sudo / … — carry through
+        else:
+            in_cmd_pos = False
     return False
 
 

@@ -44,11 +44,12 @@
 # (edit the config in the dotfiles repo, not via configure). Session content
 # persists to a local SQLite DB under the pinned root by design — keep the disk
 # encrypted (FileVault) and wipe stale sessions when they may hold PHI.
-GOOSE_HIPAA_ROOT="$HOME/.config/goose-hipaa"
-
 goose() {
+  # `root` is a function-local, NOT a global named GOOSE_* — a GOOSE_*-namespaced
+  # global would be caught by this gate's own ENV allowlist below and block every
+  # launch. Locals named check/root/cfg/… don't match the refused patterns.
   local check="$HOME/.local/bin/goose-hipaa-check"
-  local root="$GOOSE_HIPAA_ROOT"
+  local root="$HOME/.config/goose-hipaa"
   local cfg="$root/config/config.yaml"
 
   if [[ ! -x "$check" ]]; then
@@ -56,21 +57,28 @@ goose() {
     return 1
   fi
 
-  if [[ -z "$GOOGLE_CLOUD_HIPAA_PROJECT_ID" ]]; then
+  if [[ -z "${GOOGLE_CLOUD_HIPAA_PROJECT_ID:-}" ]]; then
     print -ru2 -- "⛔ goose blocked: \$GOOGLE_CLOUD_HIPAA_PROJECT_ID is not set — the gate injects it as the BAA Vertex project. Set it in your private dotfiles and retry."
     return 1
   fi
 
   # ENV allowlist: refuse any goose-/Vertex-influencing env var except the
   # required project id (which the gate re-injects below from the trusted
-  # source, so a pre-set value is refused rather than trusted). XDG_CONFIG_HOME
-  # and XDG_DATA_HOME are refused too: goose resolves its config/data dirs
-  # through them, so a set value would point goose at a config file the checker
-  # never validated. Fail closed on all of them.
+  # source, so a pre-set value is refused rather than trusted). Also refused:
+  #   - XDG_CONFIG_HOME / XDG_DATA_HOME — goose resolves its config/data dirs
+  #     through them, so a set value would point goose at a config file the
+  #     checker never validated.
+  #   - HTTP(S)_PROXY / ALL_PROXY (both cases) — a proxy would route the
+  #     PHI-bound Vertex traffic through a third party (observe/redirect, and
+  #     with a planted CA, decrypt).
+  #   - SSL_CERT_FILE / SSL_CERT_DIR / REQUESTS_CA_BUNDLE / CURL_CA_BUNDLE — a
+  #     rogue CA bundle can make a MITM proxy's cert trusted, enabling PHI
+  #     decryption in transit.
+  # Fail closed on all of them.
   local v
-  for v in ${(Mk)parameters:#(GOOSE_*|GCP_*|GOOGLE_*|VERTEX_*|XDG_CONFIG_HOME|XDG_DATA_HOME)}; do
+  for v in ${(Mk)parameters:#(GOOSE_*|GCP_*|GOOGLE_*|VERTEX_*|XDG_CONFIG_HOME|XDG_DATA_HOME|HTTP_PROXY|HTTPS_PROXY|ALL_PROXY|http_proxy|https_proxy|all_proxy|SSL_CERT_FILE|SSL_CERT_DIR|REQUESTS_CA_BUNDLE|CURL_CA_BUNDLE)}; do
     [[ $v == GOOGLE_CLOUD_HIPAA_PROJECT_ID ]] && continue
-    print -ru2 -- "⛔ goose blocked: $v is set — goose honors GOOSE_*/GCP_*/GOOGLE_*/VERTEX_*/XDG_* env overrides that can redirect the provider, model, endpoint, telemetry, or config location. Unset it and retry."
+    print -ru2 -- "⛔ goose blocked: $v is set — it can redirect the provider, model, endpoint, telemetry, config location, or route/decrypt PHI traffic through a proxy. Unset it and retry."
     return 1
   done
 
