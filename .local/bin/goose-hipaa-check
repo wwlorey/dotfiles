@@ -66,6 +66,7 @@ ALLOWED_PROVIDERS = {"gcp_vertex_ai"}
 # GA Vertex models covered by the BAA (mirrors the aichat allowlist). Extend
 # this set to widen what GOOSE_MODEL may name; keep every entry GA.
 GA_MODELS = {
+    "gemini-3.5-flash",       # GA on Vertex 2026-05-19; global-endpoint-only here
     "gemini-2.5-pro",
     "gemini-2.5-flash",
     "gemini-2.5-flash-lite",

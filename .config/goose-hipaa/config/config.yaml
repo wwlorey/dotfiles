@@ -23,8 +23,13 @@
 # confirm them on the first launch; a mismatch shows up immediately.
 
 GOOSE_PROVIDER: gcp_vertex_ai
-GOOSE_MODEL: gemini-2.5-pro          # strongest GA model for harness reasoning
-GCP_LOCATION: us-central1            # regional endpoint (2.5 models; not global)
+GOOSE_MODEL: gemini-3.5-flash        # GA on Vertex (2026-05-19); Sonnet-tier, lower cost
+GCP_LOCATION: global                 # the 3.x Gemini family is global-endpoint-only for
+                                     # this project (regional returns 404). Still Vertex AI
+                                     # under the SAME Google BAA (the BAA attaches to the
+                                     # service, not a region), so global routing is covered;
+                                     # trade-off is worldwide load-balancing = no
+                                     # data-residency guarantee, acceptable under HIPAA.
 GOOSE_TELEMETRY_ENABLED: false       # no PostHog usage-data egress
 
 # A coding harness runs shell commands, so it can exfiltrate PHI over the
