@@ -246,9 +246,7 @@
 
       "Bash(security find-*)",
       "Bash(security dump-*)",
-      "Bash(security export-*)",
-
-      "Bash(aichat:*)"
+      "Bash(security export-*)"
     ]
   },
   "hooks": {
@@ -323,10 +321,6 @@
           {
             "type": "command",
             "command": "python3 $HOME/.claude/hooks/redirect-bash-config-writes.py"
-          },
-          {
-            "type": "command",
-            "command": "python3 $HOME/.claude/hooks/block-aichat.py"
           },
           {
             "type": "command",
