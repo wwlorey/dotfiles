@@ -13,6 +13,13 @@ save: false            # do NOT persist sessions/messages to disk (PHI hygiene)
 save_session: false
 save_shell_history: false   # -e/.shell prompts (potential PHI) must not persist
 
+# REPL prompt: default template minus the role segments ({?role /} and {role}).
+# Under the gate, named roles (-r/--role) are blocked, so the only role ever
+# active is the temporary one created by --prompt, which aichat displays as its
+# TEMP_ROLE_NAME "%%". Dropping the role segments hides that noise, leaving a
+# clean "<session>)" (in a session) or ">" (outside one).
+left_prompt: '{color.green}{?session {?agent {agent}>}{session}}{!session {?agent {agent}>}}{?rag @{rag}}{color.cyan}{?session )}{!session >}{color.reset} '
+
 clients:
   # Must use a real REGION, not "global": aichat 0.30.0 builds the vertexai host
   # as "{location}-aiplatform.googleapis.com" and does NOT special-case "global",
