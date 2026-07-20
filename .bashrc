@@ -135,3 +135,12 @@ if [[ $TERM == alacritty ]]; then export TERM=xterm-256color; fi
 set -o vi
 
 . rc-secret
+
+# Never persist shell or REPL history to disk. Kept after rc-secret so nothing
+# sourced above can re-enable it; .zshrc sources this file, so zsh inherits
+# the exports too. PYTHONSTARTUP covers pythons older than 3.13, which ignore
+# PYTHON_HISTORY.
+unset HISTFILE
+export LESSHISTFILE=-
+export PYTHON_HISTORY=/dev/null
+export PYTHONSTARTUP=$HOME/.config/python/pythonstartup.py

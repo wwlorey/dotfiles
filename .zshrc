@@ -19,13 +19,11 @@ chpwd () {
   [ -n "$TMUX" ] && [ -z "$CLAUDECODE" ] && tmux set-option -qp -t "$TMUX_PANE" @shell_cwd "$PWD"
 }
 
-# History lives in memory only — never written to disk.
+# History lives in memory only — never written to disk (see also the
+# history guards at the end of .bashrc, which this file sources).
 export HISTSIZE=10000
 export SAVEHIST=0
 unset HISTFILE
-# Keep less and the Python REPL from writing history files too.
-export LESSHISTFILE=-
-export PYTHON_HISTORY=/dev/null
 
 # Automatically cd into typed directory
 setopt autocd
