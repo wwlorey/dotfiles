@@ -19,6 +19,7 @@
       "pnpm install*",
       "pnpm run test:e2e*",
       "node*export.js*",
+      "node render.mjs*",
       "cargo*",
       "agent*",
       "open *",
@@ -42,7 +43,9 @@
         "/tmp",
         "/private/tmp",
         "~/Repos/dotfiles",
-        "~/Repos/hooked-on-pa/node_modules/.vite-temp"
+        "~/Repos/hooked-on-pa/node_modules/.vite-temp",
+        "~/Repos/nixosfiles",
+        "~/Career/outskirts-llc/sw/sanctora"
       ]
     },
     "network": {
@@ -59,7 +62,9 @@
         "storage.googleapis.com",
         "api.instantdb.com",
         "api.openai.com",
-        "api.appstoreconnect.apple.com"
+        "api.appstoreconnect.apple.com",
+        "fonts.googleapis.com",
+        "fonts.gstatic.com"
       ],
       "allowLocalBinding": true
     }
