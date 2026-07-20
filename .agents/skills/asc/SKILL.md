@@ -97,7 +97,9 @@ price, localization `INCOMPLETE` when the locale lacks a name or description,
 `screenshot: MISSING` — the usual final READY_TO_SUBMIT blocker), not mere
 existence. Pick a price point with `asc iap price-points --id <iap>` (the
 point's `id` is the `--tier` value). `iap localize` creates the localization,
-or PATCHes the existing one if that locale already has one. `iap price` sets the
+or PATCHes the existing one if that locale already has one. Localizations are
+scoped to the IAP's draft version (ASC API 4.4.1), and `iap localize`
+auto-creates a draft version when the IAP has none. `iap price` sets the
 base/manual price schedule from a single price point (effective immediately
 unless `--start-date` is given). `iap availability` sets the territories; a
 single request covers up to 50, and `--all-territories` fetches the full

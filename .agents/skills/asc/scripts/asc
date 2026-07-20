@@ -551,15 +551,54 @@ def cmd_iap_rename(c, a):
     _emit(c.request("PATCH", f"/v2/inAppPurchases/{a.id}", body=body), a.json)
 
 
+def _iap_version(c, iap_id, editable_only, create=False):
+    """Resolve the id of the in-app purchase's version (ASC API 4.4.1 scopes
+    IAP localizations to a version, not the IAP itself). Picks the entry with
+    the highest attributes.version. With `create`, POSTs a draft version when
+    none exists; otherwise returns None."""
+    params = {"fields[inAppPurchaseVersions]": "version,state", "limit": 200}
+    if editable_only:
+        params["filter[state]"] = (
+            "PREPARE_FOR_SUBMISSION,REJECTED,DEVELOPER_REJECTED")
+    obj = c.request("GET", f"/v2/inAppPurchases/{iap_id}/versions", params)
+    versions = (obj or {}).get("data", [])
+    if versions:
+        def _vkey(r):
+            v = str(r.get("attributes", {}).get("version") or "")
+            return (int(v) if v.isdigit() else -1, v)
+        return max(versions, key=_vkey)["id"]
+    if not create:
+        return None
+    body = {"data": {
+        "type": "inAppPurchaseVersions",
+        "relationships": {
+            "inAppPurchase": {
+                "data": {"type": "inAppPurchases", "id": iap_id}}
+        },
+    }}
+    created = c.request("POST", "/v1/inAppPurchaseVersions", body=body)
+    vid = ((created or {}).get("data") or {}).get("id")
+    if not vid:
+        raise AscError(
+            f"could not create a draft in-app purchase version for {iap_id}; "
+            "create/edit the version in App Store Connect first")
+    return vid
+
+
 def cmd_iap_localize(c, a):
     """Create (or update, if one already exists for the locale) the user-facing
-    localization (display name + description). Editing localization metadata is
-    a safe draft edit; on a live product it is a normal metadata change that
-    goes through review, not a price/availability change, so it is not gated."""
+    localization (display name + description). Localizations are scoped to the
+    IAP's version (ASC API 4.4.1); when the IAP has no editable version yet, a
+    draft version is auto-created. Editing localization metadata is a safe
+    draft edit; on a live product it is a normal metadata change that goes
+    through review, not a price/availability change, so it is not gated."""
     existing_id = None
-    if not c.dry_run:
+    if c.dry_run:
+        vid = "<inAppPurchaseVersion-id>"
+    else:
+        vid = _iap_version(c, a.id, editable_only=True, create=True)
         obj = c.request(
-            "GET", f"/v2/inAppPurchases/{a.id}/inAppPurchaseLocalizations",
+            "GET", f"/v1/inAppPurchaseVersions/{vid}/localizations",
             {"limit": 200})
         for r in (obj or {}).get("data", []):
             if r.get("attributes", {}).get("locale") == a.locale:
@@ -572,7 +611,7 @@ def cmd_iap_localize(c, a):
         body = {"data": {"type": "inAppPurchaseLocalizations",
                          "id": existing_id, "attributes": attrs}}
         _emit(c.request("PATCH",
-                        f"/v1/inAppPurchaseLocalizations/{existing_id}",
+                        f"/v2/inAppPurchaseLocalizations/{existing_id}",
                         body=body), a.json)
     else:
         attrs = {"locale": a.locale, "name": a.name}
@@ -582,11 +621,11 @@ def cmd_iap_localize(c, a):
             "type": "inAppPurchaseLocalizations",
             "attributes": attrs,
             "relationships": {
-                "inAppPurchaseV2": {
-                    "data": {"type": "inAppPurchases", "id": a.id}}
+                "version": {
+                    "data": {"type": "inAppPurchaseVersions", "id": vid}}
             },
         }}
-        _emit(c.request("POST", "/v1/inAppPurchaseLocalizations", body=body),
+        _emit(c.request("POST", "/v2/inAppPurchaseLocalizations", body=body),
               a.json)
 
 
@@ -694,10 +733,15 @@ def _rel_total(obj, rel):
 
 
 def _status_localization(c, iap_id, locale):
-    """(ok, detail). Complete iff the target locale has both name+description."""
+    """(ok, detail). Complete iff the target locale has both name+description.
+    Localizations hang off the IAP's version (ASC API 4.4.1); read-only, so a
+    missing version is reported, never created."""
     try:
+        vid = _iap_version(c, iap_id, editable_only=False)
+        if vid is None:
+            return False, "MISSING (no in-app purchase version)"
         obj = c.request(
-            "GET", f"/v2/inAppPurchases/{iap_id}/inAppPurchaseLocalizations",
+            "GET", f"/v1/inAppPurchaseVersions/{vid}/localizations",
             {"limit": 200})
     except AscError:
         return False, "MISSING"
