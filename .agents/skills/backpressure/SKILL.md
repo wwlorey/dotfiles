@@ -88,6 +88,10 @@ If the project ships a helper script (e.g. `scripts/scope-test-crates.sh` that t
 
 **Caller responsibility.** The caller pipeline (`build`, `changes`) must pass the pre-iteration HEAD or diff range when invoking backpressure for per-iteration verification. Without that input, scoping cannot run and backpressure falls back to full-workspace. The pipeline should also explicitly request per-iteration mode in its invocation context (otherwise full-workspace is the safe default).
 
+## What a green run does not establish
+
+Backpressure proves the suite passes. On a surface carrying a guarantee — a correctness, safety, security, or data-integrity claim — that is the starting position, not the conclusion, because the suite was written by whoever wrote the code and encodes their model of it. Green backpressure plus a self-authored suite never settles "is this ready to ship" for such a surface; the `adversarial-verify` gate does, run by an agent that did not write the code. Report the surface as implemented and not yet independently verified until that gate comes back clean.
+
 ## Spec-compliance check
 
 When a code change touches an `implemented`-status spec — either directly editing the spec or modifying code the spec describes — run a spec-compliance check before reporting done. Any `MISSING` finding fails backpressure. This is the structural defense against visually-unimplemented spec items: spec promises a UI element (a control, a label, a section), implementation drops it, no other test catches the gap.

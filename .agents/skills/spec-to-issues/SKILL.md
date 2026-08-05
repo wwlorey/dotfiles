@@ -51,6 +51,10 @@ Read each spec named in the `refs:` frontmatter for boundary context.
 
 **Thin-spec guard.** If `## Architecture` is one line, `## Testing` is TBD or hand-wavy, or any required H2 section is too thin to drive concrete issues, **STOP** — do not fan out. Route the spec back to the `spec` skill's harden phase before materializing. Thin specs produce thin issues, and the self-check in step 5 will pass vacuously on TBDs.
 
+The same STOP applies when the spec makes absolute claims — *cannot*, *never*, *only*, *by construction*, *structurally*, *unreachable* — and carries no `### Absolutes register`, or carries rows with no violation-attempt test. Those tests are the acceptance criteria for the guarantees, so a spec missing them materializes into a backlog that implements the mechanism and never proves it holds.
+
+**Every registered absolute gets covered.** Each row's violation-attempt test must land in some issue's acceptance criteria — the issue that builds the mechanism is the natural home. An issue claiming a guarantee whose criteria only exercise the sanctioned path is incomplete.
+
 ### 3. Walk the codebase against the spec
 
 For each component the spec describes, find the corresponding code. The point is to surface the **gap**: what does the code already do, what does the spec say it should do, where is the delta?

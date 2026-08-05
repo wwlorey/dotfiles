@@ -39,6 +39,10 @@ What this spec defines, in 1-3 sentences. A reader should know what's in scope a
 
 The shape of the solution. Components, data flow, key decisions. Diagrams in prose or ASCII if useful.
 
+### Absolutes register
+
+Required whenever the spec claims an absolute. One row per claim, with the mechanism that enforces it and the test that attempts to violate it.
+
 ## Dependencies
 
 Other specs this depends on (named here in prose; cross-link via the `refs:` frontmatter field). External libraries, APIs, services this leans on.

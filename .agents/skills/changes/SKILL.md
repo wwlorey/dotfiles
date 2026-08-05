@@ -82,7 +82,7 @@ Worker briefing template:
 > - specs/<stem>.md: sections that may need updating, or "no update needed" with reasoning
 >
 > ## Exit condition
-> A verifiable command + expected outcome that proves this item is shippable (e.g. `bash e2e/foo.sh exits 0`, `pytest passes`, `grep finds X in path`).
+> A verifiable command + expected outcome that proves this item is shippable (e.g. `bash e2e/foo.sh exits 0`, `pytest passes`, `grep finds X in path`). If the item claims a guarantee — a refusal, a confirmation or authorization boundary, an invariant, a limit, a durability or integrity claim — the criteria must include at least one check that attempts the forbidden thing and asserts refusal, reached the way someone bypassing the feature would reach it, plus coverage of whichever substrate boundaries the code touches (concurrency, transactions, IPC, filesystem paths, clock / ordering).
 >
 > ## Evidence (bug items only)
 > The concrete observed failure this plan targets — log line, captured artifact, reproduced error — with where it came from. If evidence is unobtainable, the literal label HYPOTHESIS-FIX plus why.
@@ -110,6 +110,8 @@ Every returned plan goes through this gate before you present it to the user —
 6. **Edge cases.** What inputs should STILL trigger the original behavior? Make the worker prove the fix doesn't break those.
 7. **Silent failures.** Does the fix add observability so future debugging has breadcrumbs?
 8. **Exit condition.** Is it verifiable? If you can't write a check that proves done, the plan isn't ready — send back.
+9. **Adversary acceptance criteria.** When the item claims a guarantee — a refusal, a confirmation or authorization boundary, an invariant, a limit, a durability or integrity claim, or any behavior stated with *cannot* / *never* / *always* / *only* — the exit condition must include at least one automated check that *attempts the forbidden thing and asserts it is refused*, reached the way someone bypassing the feature would reach it (scripted call instead of the interactive prompt, the entry point invoked directly, hostile arguments). A plan whose criteria only exercise the guarantee the intended way proves it works when honored, which is not the claim — send it back.
+10. **Substrate boundary.** Defects cluster where new code meets concurrency, transactions, IPC boundaries, filesystem paths, and clock / ordering assumptions: two writers racing, a lock already held, a precondition checked against a timestamp instead of a version, a path that escapes its root. Make the plan name which of these its code actually touches and how each is covered.
 
 When the plan survives the checklist, present it to the user for explicit approval before moving the item to `approved`.
 
@@ -119,7 +121,7 @@ Once an item is `approved`, queue it. **Only one item implements at a time acros
 
 Before constructing the impl-worker briefing, check your invocation context for caller-supplied policy (typically supplied by `dev`):
 
-- A `## Per-item gate policy (from dev)` section — its bullets become the contents of the briefing's "Required verification gates" section (per the `orchestrate` skill's 7th briefing-checklist item). If absent, omit "Required verification gates" from the briefing and the worker will skip step 5 of the per-sub-piece lifecycle.
+- A `## Per-item gate policy (from dev)` section — its bullets become the contents of the briefing's "Required verification gates" section (per the `orchestrate` skill's "Required verification gates" briefing-checklist item). If absent, omit "Required verification gates" from the briefing and the worker will skip step 5 of the per-sub-piece lifecycle.
 
 For the next-in-queue approved item, spawn an implementation worker:
 
@@ -138,7 +140,7 @@ For the next-in-queue approved item, spawn an implementation worker:
 > 2. Update affected specs alongside code in this commit. Specs live at `<repo>/specs/<stem>.md`. Verify each claim against the new code. If you're rewriting more than half a section, rewrite the whole section. If a spec was `approved` and code now matches it, set frontmatter `status: implemented`. Run `specs/validate` to catch structural problems.
 > 3. Ripple check the touched specs' neighbors (outgoing `refs:` list + incoming `grep -l "<stem>" specs/*.md`). When the neighborhood is small (≤2), inspect inline. When larger, invoke the `audit-specs` skill in scoped mode — pass the neighbor stems as the scope list and the 1-3 sentence diff summary as `DIFF_CONTEXT` so each worker scopes its claim-verification to only the claims plausibly affected by your change. Apply any HIGH/MED drift in this same commit. (See the audit-specs skill for the per-spec worker briefing template; do not re-author it inline.)
 > 4. Run full backpressure for the project's stack. Fix every failure before continuing. If you fan out for parallel checks, inline the `backpressure` skill body into sub-worker briefings.
-> 5. Run any **caller-required verification gates** for this sub-piece. The orchestrator may have included a "Required verification gates" section in this briefing (per the `orchestrate` skill's briefing checklist) — for example, `dev` injects `verify` for sub-pieces that touch user-visible UI / IPC, and `code-review` for non-trivial diffs. Run each gate per its trigger condition. Treat a failing gate the same as a failing backpressure check — fix the underlying issue or revert the sub-piece; do not commit a sub-piece with a gate failure unaddressed. **If the fix touches code, re-run full backpressure (step 4) to confirm nothing else broke before proceeding to step 6.** If no "Required verification gates" section is present, skip this step.
+> 5. Run any **caller-required verification gates** for this sub-piece. The orchestrator may have included a "Required verification gates" section in this briefing (per the `orchestrate` skill's briefing checklist) — for example, `dev` injects `verify` for sub-pieces that touch user-visible UI / IPC, and `code-review` for non-trivial diffs. Run each gate per its trigger condition. Treat a failing gate the same as a failing backpressure check — fix the underlying issue or revert the sub-piece; do not commit a sub-piece with a gate failure unaddressed. **If the fix touches code, re-run full backpressure (step 4) to confirm nothing else broke before proceeding to step 6.** If no "Required verification gates" section is present, skip this step. `adversarial-verify` never appears in this section — it requires an agent that did not write the code, so the orchestrator fires it separately.
 > 6. Log a tracking issue at `<repo>/issues/<slug>.md` with `status: closed`, capturing what changed, design decisions, specs updated. Skip if a sub-piece is genuinely part of a larger logical change that warrants one issue at the end — your call per sub-piece, but err toward one issue per commit.
 > 7. Commit (code + specs + issue) with an imperative <72-char message. Push. If push fails, report and continue — the commit is safe locally.
 >
@@ -146,6 +148,7 @@ For the next-in-queue approved item, spawn an implementation worker:
 >
 > **Inherited rules.**
 > - Specs alongside code — non-negotiable. Do not defer with an issue.
+> - When the approved plan's exit condition includes adversary criteria (a check that attempts the forbidden thing and asserts refusal), those checks ship in the same commit as the code they guard — the sub-piece is not done without them. Never describe a guarantee as holding, enforced, or safe on the strength of tests you wrote: your suite encodes your own mental model of the code. Report what you implemented and which adversary checks you added; an independent `adversarial-verify` agent, spawned by the orchestrator, decides whether the guarantee survives.
 > - Push after each commit. If push fails, report and continue.
 > - If backpressure fails on your own changes and you cannot fix it in this iteration, do not commit broken state; report the blocker.
 > - If the approved plan carries the `HYPOTHESIS-FIX` label, the label propagates: every commit message and the tracking issue name it, an open `<item>-field-verify` tracker must exist before the item closes, and the change is described as "fix attempted, pending verification" — never "fixed." Same discipline when the item is a field-reported bug whose failing scenario cannot be re-run from here (see the `issues` skill's field-reported closing rule).
@@ -178,6 +181,8 @@ Before dequeueing the next item, **check the tree is clean** (`git status`). Wor
 
 When firing per-batch gates, pass the slate's commit range (the SHA range covering items closed since the slate started) in each gate-worker briefing AND require the worker to tag every finding INTRODUCED-BY-SLATE or PRE-EXISTING with a one-line git-log/git-blame justification. Findings handled per the routing rule below.
 
+**`adversarial-verify` is a fresh-context spawn.** When a policy bullet names `adversarial-verify`, the gate worker must be a brand-new agent that did not implement any item in the batch — the implementer can never be its own adversary. The bullet carries the guarantee in plain English and the surface it lives on; put both in the briefing along with the commit range. When a spec covers the surface, take the guarantee and its violation attempt verbatim from that spec's `### Absolutes register` rather than restating them — the register is where the claim and the attempt that would disprove it are already written down, and paraphrasing is how an adversary ends up testing something narrower than the claim. Instruct the worker to: attempt the violation from every route the code permits (scripted invocation instead of the interactive path, the CLI / IPC / API entry point called directly, hostile arguments, two callers at once); probe the boundary between the new code and its substrate — the database (concurrent writers, lock contention, transaction scope, preconditions built on clocks instead of versions), IPC, the filesystem, and ordering assumptions; and treat the green suite as its starting position rather than as evidence.
+
 **Per-finding routing (per `dev`'s gate-failure recovery + no-loose-ends rule):**
 - HIGH severity → auto-spawn a remediation worker (scoped strictly to the failure; do not absorb unrelated work) and continue — surface the failure + fix in the on-completion summary.
 - MED severity tagged INTRODUCED-BY-SLATE → auto-spawn a remediation worker (slate-introduced regression; same treatment as HIGH).
@@ -201,6 +206,7 @@ When all items are `committed` or `blocked`:
 - **Session-close gates.** Look in your invocation context for a `## Session-close gate policy (from dev)` section. If present, AND the aggregated `## New work surfaced` section contains nothing that would queue more items into the current session, fire those session-close gates now. Surface findings in the on-completion summary.
   - Pass the slate's full commit range in each gate-worker briefing and require INTRODUCED-BY-SLATE / PRE-EXISTING tagging per the mid-batch routing rule above.
   - Apply the same routing: HIGH → remediation; MED + INTRODUCED → remediation; MED + PRE-EXISTING → file as tracker; LOW → file as tracker.
+  - **Nothing guaranteed ships unverified.** Fire `adversarial-verify` (fresh-context spawn, per the mid-batch checkpoint section) for every guaranteed surface any item touched this slate that has not already been through it. Do not report the slate complete — or describe any guarantee as holding — while one is outstanding.
   - **No loose ends.** Before declaring the slate complete, every surfaced finding from every gate run this session (per-item + mid-batch + session-close) MUST be in a terminal state: fixed (commit landed), filed as `<repo>/issues/<slug>.md` (open or won't-fix), or explicitly deferred by the user. "Surfaced in the report as prose only" is NOT a terminal state — findings in chat alone are re-discovered by every future gate run, burning cycles forever. The orchestrator (this skill) files the trackers itself (not delegated to a worker); a single `chore(issues): file N session-close gate followups` commit covers them.
 - Do not silently swallow a blocker.
 
@@ -212,7 +218,8 @@ When all items are `committed` or `blocked`:
 - **Sub-workers may NOT spawn further workers.** 3-tier max: orchestrator → impl worker → sub-workers.
 - **Surface plans before implementing.** Each item must reach explicit user approval before its implementation worker spawns.
 - **Specs alongside code — non-negotiable.** Every impl-worker briefing must explicitly require this. No "circle back" issues.
-- **Every plan names an exit condition.** A verifiable command + expected outcome. If a planner can't write one, the plan isn't ready.
+- **Every plan names an exit condition.** A verifiable command + expected outcome. If a planner can't write one, the plan isn't ready. When the item claims a guarantee, that condition must include a check that attempts the forbidden thing and asserts refusal — happy-path-only criteria do not accept a guarantee.
+- **No agent is the sole verifier of code it wrote.** A guaranteed surface is described as "implemented, not independently verified" until a fresh-context `adversarial-verify` agent has tried to break it and come back clean.
 - **If a worker auto-implements** (skips the plan-approval checkpoint and ships code from what was supposed to be a planning spawn), surface this immediately and stop the queue. Do not silently accept the work. Investigate, revert if needed, re-spawn with tighter briefing.
 
 ## Stay above the work

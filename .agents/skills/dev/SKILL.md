@@ -52,8 +52,31 @@ Fire at the natural batch boundary: end of the `changes` slate, exit of the `bui
 | Any item in the batch touched a high-risk surface | `security-review` (branch-level) |
 | Any item in the batch touched code a spec claims behavior about | `audit-specs` in scoped mode (union of touched-neighbor stems across the batch) |
 | Any item produced a non-trivial diff (and `code-review` did NOT already fire per-item) | `code-review` |
+| Any item landed on a surface carrying a guarantee (see "Independent adversarial verification") | `adversarial-verify` (fresh-context agent that did not write the code tries to break the guarantee) |
 
-"Always run; no skip option" means the conditions in the table govern WHICH gates fire, and you fire exactly those autonomously without asking permission — it does NOT mean all three fire every batch. Scale to batch content: a pure-doc / spec-only batch (no high-risk surface, no non-trivial code diff) correctly fires only `audit-specs`; a code-heavy batch fires all that match. If every non-trivial item in the batch already had its `code-review` fire per-item, the batch-level `code-review` condition is already satisfied and does not re-fire. Surface "running per-batch gates now" as a status update.
+"Always run; no skip option" means the conditions in the table govern WHICH gates fire, and you fire exactly those autonomously without asking permission — it does NOT mean every gate fires every batch. Scale to batch content: a pure-doc / spec-only batch (no high-risk surface, no guaranteed surface, no non-trivial code diff) correctly fires only `audit-specs`; a code-heavy batch fires all that match. If every non-trivial item in the batch already had its `code-review` fire per-item, the batch-level `code-review` condition is already satisfied and does not re-fire. Surface "running per-batch gates now" as a status update.
+
+### Independent adversarial verification
+
+An agent may never be the sole verifier of code it wrote. Tests written by an implementer encode the implementer's mental model — they prove the code does what its author believed it does, and the gap between that belief and reality is exactly where defects live. So whenever work lands on a surface carrying a **guarantee** — a correctness, safety, security, or data-integrity claim — a fresh-context agent that did not write that code must attempt to break it. That gate is `adversarial-verify`.
+
+**Triggers.** Any one of these puts the surface in scope:
+
+- A confirmation, authorization, or policy boundary something must cross (human-in-the-loop prompts, permission checks, refusals).
+- An invariant, limit, or validation the code is supposed to enforce.
+- A write path where concurrency, transactions, or ordering can produce a lost update, a stale read, or a partially-applied change.
+- A durability or integrity claim about stored data (at-rest format, migration, backup/restore).
+- Any behavior a spec, README, error message, or issue body states with the words *cannot*, *never*, *always*, or *only*.
+
+**Cadence.** Fires with the per-batch gates, including at mid-batch checkpoints — and again at session-close for every guaranteed surface touched this session that no independent agent has yet tried to break. It is not optional, not skippable, and not satisfiable by the implementer re-running its own suite.
+
+**The adversary's job.** `adversarial-verify` is not a skill invocation; it is a fresh-context Agent spawn whose briefing names the guarantee in plain English, the surface it lives on, and the slate's commit range. Its brief:
+
+- **Attempt the violation.** Reach the forbidden state by any route the code actually permits — scripted invocation instead of the interactive path, the API / IPC / CLI entry point called directly, malformed or hostile arguments, two callers at once. The intended path is the one the implementer already covered; the bypass is the finding.
+- **Probe the boundary between the new code and its substrate.** Defects cluster where new code meets the database (concurrent writers, lock contention, transaction scope, preconditions built on clocks instead of versions), the IPC surface, the filesystem (paths that escape their root, partial writes), and ordering assumptions.
+- **Start from green.** "The suite passes" is the *starting* position, not evidence. Read the existing tests to learn which routes the author had in mind, then take the ones they did not.
+
+**A passing self-authored suite is never sufficient evidence that a guarantee holds.** Until `adversarial-verify` has run and come back clean, describe the surface as "implemented, not independently verified" — never as holding, enforced, or safe. Findings route through Gate-failure recovery like any other gate's.
 
 ### Mid-batch forced checkpoint
 
@@ -72,6 +95,7 @@ Inject the session-close policy into the underlying lifecycle's invocation conte
 
 - `audit-specs` (library-wide)
 - `security-review` (branch-level, full)
+- `adversarial-verify` for every guaranteed surface touched this session that has not already been through it
 
 These replace what would otherwise be scheduled / cron gates. Session-close is the natural moment to run them because you know the working tree has stabilized. `dev`'s job at this layer is: (a) inject the policy on lifecycle invocation, (b) read the on-completion return to confirm the gates ran, (c) handle any drift findings per the gate-failure recovery shape below.
 
@@ -85,14 +109,16 @@ The three cadence policies above reach the underlying lifecycle via your invocat
 
 ## Per-batch gate policy (from dev)
 - <gate> if <condition>
+- adversarial-verify if <condition> — guarantee: <plain-English claim>; surface: <where it lives>
 Mid-batch checkpoint:
 - <trigger condition>
 
 ## Session-close gate policy (from dev)
 - <gate>
+- adversarial-verify for every guaranteed surface touched this session not already independently verified
 ```
 
-Populate the bullets from the per-item / per-batch / session-close gate tables above. The `Mid-batch checkpoint:` sub-section's triggers come from the "Mid-batch forced checkpoint" section, not from the per-batch table. `changes` / `build` know to look for these three section headings in their invocation context (see their bodies). When the user invokes `/changes` or `/build` directly, no policy block appears — the lifecycle runs without injected gates, exactly as it does pre-`dev`.
+Populate the bullets from the per-item / per-batch / session-close gate tables above. The `Mid-batch checkpoint:` sub-section's triggers come from the "Mid-batch forced checkpoint" section, not from the per-batch table. An `adversarial-verify` bullet carries two extra fields — the guarantee stated in plain English and the surface it lives on — so the receiving lifecycle can brief an adversary without re-deriving them; omit the bullet entirely when the routed work touches no guaranteed surface. `changes` and `build` treat an `adversarial-verify` bullet as mandating a *fresh-context* spawn: never the agent that implemented the work, and never a per-item gate handed to the implementation worker. `changes` / `build` know to look for these three section headings in their invocation context (see their bodies). When the user invokes `/changes` or `/build` directly, no policy block appears — the lifecycle runs without injected gates, exactly as it does pre-`dev`.
 
 ## High-risk surfaces
 
@@ -196,13 +222,14 @@ Keep status updates brief — one or two sentences, factual. The end-of-turn rep
 - **Route deterministically.** One user request → one lifecycle. Do not split a single request across `changes` and `build` simultaneously.
 - **Inject gate policy into worker briefings — don't try to wedge it in after the worker returns.** The `orchestrate` skill's briefing checklist includes "Required verification gates" exactly for this. Populate that section per the policy above when spawning the impl worker.
 - **Per-batch and session-close gates run autonomously.** Never pause for permission. They are part of the work, not a checkpoint.
+- **No agent is the sole verifier of code it wrote.** Any guaranteed surface gets `adversarial-verify` from a fresh-context agent before the guarantee is described as holding. A green self-authored suite does not substitute, and the gate is never skipped for schedule.
 - **Gate failures auto-spawn remediation workers at the lifecycle layer.** The actor is the active orchestrator (`changes` or `build`), not `dev`. Never silently swallow a gate failure. Never block the lifecycle on one.
 - **Do not pre-investigate.** Routing decisions come from the user's words, not from grep sweeps. If the user is ambiguous, ask once — do not investigate to disambiguate.
 - **Do not implement.** Implementation happens inside the underlying lifecycle's impl worker (and its sub-workers). `dev` is the orchestrator of orchestrators.
 
 ## Skills, scripts, and MCP tools to reach for
 
-- `orchestrate` — every spawn into an underlying lifecycle goes through orchestrate's briefing checklist. The 7th item ("Required verification gates") is the policy-injection hook.
+- `orchestrate` — every spawn into an underlying lifecycle goes through orchestrate's briefing checklist. The "Required verification gates" item is the policy-injection hook.
 - `changes`, `build` — code-touching lifecycles. Each consumes the gate policy via the orchestrate hook (per the wire format above) and fires gates at the documented cadences.
 - `spec`, `spec-to-issues`, `audit-specs` (standalone) — non-code-touching lifecycles. These run as-is; no gate policy is injected (per the routing-section note above).
 - `backpressure` — runs inside the impl-worker lifecycle as the mechanical pre-commit gate; not directly invoked by `dev`.

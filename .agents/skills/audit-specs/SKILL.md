@@ -28,6 +28,7 @@ Use the `orchestrate` skill. Spawn one general-purpose worker per stem in parall
 - Reads `specs/<stem>.md`
 - Walks the code paths the spec names (Architecture, Dependencies, Testing sections typically point at concrete files under `crates/`, `src/`, etc.; the worker discovers the rest as it reads)
 - For each substantive claim, verifies against current code
+- Verifies the spec's absolutes register against the code — the enforcing mechanism exists, and a violation-attempt test exists and passes
 - Returns a structured drift report
 
 Inline this briefing template in each worker prompt. Substitute three slots per spawn:
@@ -39,7 +40,7 @@ Inline this briefing template in each worker prompt. Substitute three slots per 
 ```
 Goal: Audit `<repo>/specs/<STEM>.md` against the actual code under the project. Report inconsistencies so the caller can decide which specs to revise.
 
-Scope: READ-ONLY. Read the spec, read the codebase. Do NOT edit any files.
+Scope: READ-ONLY. Read the spec, read the codebase. Do NOT edit any files. Running the project's existing tests or build to check what a spec claims is allowed and expected; writing or changing tests is not.
 
 Diff context (optional — present only when the caller is scoping to a recent change; omit or empty for a full-spec audit):
 <DIFF_CONTEXT>
@@ -48,7 +49,10 @@ Procedure:
 1. Read the spec file.
 2. Walk the relevant code paths the spec names (Architecture section, Dependencies, Testing entry points). Path hint: <PATH_HINT>.
 3. For each substantive claim — module/file paths exist, types and signatures match, behaviors implemented, deps listed in Cargo.toml / package.json match, tests entry points exist — verify against code. If `<DIFF_CONTEXT>` is supplied and non-empty, scope verification to ONLY the claims plausibly affected by the diff (touching the same files, the same types, the same behaviors). Pre-existing drift unrelated to the diff is out of scope for this invocation.
-4. Do NOT fabricate findings. Only report what you can verify is wrong.
+4. Verify the spec's absolutes register (an `### Absolutes register` subsection, normally at the end of `## Architecture`). For every row: (a) confirm the enforcing mechanism exists in the code and actually enforces the claim; (b) locate the named violation-attempt test and confirm it attempts the forbidden action rather than exercising the sanctioned path; (c) run it if the project's test entry point makes that cheap, and say whether it passed. A missing mechanism is HIGH. A missing violation-attempt test — or one that only drives the happy path — is a finding, never a pass: HIGH when the claim is a safety, security, or data-integrity guarantee, MED otherwise. If the spec has no register at all yet makes absolute claims, grep it for `cannot|never|always|by construction|structurally|guaranteed|impossible|unreachable|exactly one|only` and report the missing register as a HIGH finding listing the unregistered claims.
+5. Flag conventions dressed as structure. For each sentence asserting a structural guarantee, ask what stops a caller who is actively trying to violate it, assuming that caller holds the same access the sanctioned code holds. If nothing does — no type, no constraint, no process or privilege boundary, no runtime check, only the fact that the shipped code happens not to do the forbidden thing — report it. Quote the spec sentence and name concretely what an adversarial caller would do instead. HIGH when the overclaim covers safety, security, or data integrity; MED otherwise. The spec is not wrong about what the code does; it is wrong about what prevents the alternative, and that is the finding.
+6. When `<DIFF_CONTEXT>` is supplied and non-empty, scope steps 4 and 5 to absolutes whose mechanism or test lives in the touched code.
+7. Do NOT fabricate findings. Only report what you can verify is wrong.
 
 Return format (markdown):
 
@@ -57,6 +61,12 @@ DRIFT: <high|medium|low|none>
 
 Findings:
 - [HIGH|MED|LOW] <section>: <claim> | reality: <what code shows> | <file:line if applicable>
+
+Absolutes:
+- [OK|MISSING-MECHANISM|MISSING-TEST|TEST-FAILS|CONVENTION-NOT-STRUCTURAL] <quoted claim> | mechanism: <what enforces it, or "none found"> | test: <file::name and pass/fail, or "none">
+- ... (write "none registered" if the spec has no register, and pair that with the HIGH finding from step 4)
+
+Every non-OK absolute must ALSO appear in Findings at its severity, so it flows into the new-work and tracker channels below. DRIFT cannot be `none` while any absolute is non-OK.
 
 Summary: <one sentence on overall accuracy>
 
@@ -115,6 +125,8 @@ If there are no MED/LOW findings, emit the literal text `none` under the `## Tra
 If no findings at all, return:
 SPEC: <STEM>
 DRIFT: none
+Absolutes:
+- [OK] <one line per registered absolute, as above>
 Summary: Spec matches code.
 ## New work surfaced
 none
@@ -122,8 +134,8 @@ none
 none
 
 Severity:
-- HIGH: factually wrong (file doesn't exist, type renamed, wrong constant value, behavior changed)
-- MED: stale (missing recent additions, signature drift)
+- HIGH: factually wrong (file doesn't exist, type renamed, wrong constant value, behavior changed); a registered absolute whose enforcing mechanism is absent; a safety, security, or data-integrity absolute with no violation-attempt test or delivered only by convention; absolute claims with no register at all
+- MED: stale (missing recent additions, signature drift); a non-safety absolute whose violation-attempt test is missing or only exercises the sanctioned path
 - LOW: minor wording inaccuracy or unverifiable claim
 
 You are a worker, not an orchestrator. Return text only. Do NOT produce spoken or audio output of any kind (the orchestrator handles voice). Do NOT spawn further workers via the Agent tool. Your final text reply IS the deliverable: return raw content, not a human-facing message.
@@ -137,11 +149,13 @@ Aggregate the workers' findings into a single table sorted by drift level. For e
 - Top 1–3 findings (collapse the rest by count)
 - One-line summary
 
+Carry every non-OK absolute forward into the synthesis at the severity its worker assigned, under a top-level `## Absolutes` section grouped by stem. Do not collapse these into a count and do not let a spec report `none` while one of its absolutes is unverified — an absolute whose violation-attempt test is missing is a finding, not a pass, and the whole point of the register is that nobody gets to assume it.
+
 Highlight HIGH-severity findings prominently and any spec that flips from "none" to anything else since the last audit (if a prior audit log exists). Present to the user (or upward to the caller — e.g. `dev`). **Do not auto-revise.** The decision on revisions lives with the caller; they can hand the findings to `changes` or a per-spec revision pipeline to apply edits.
 
 Also surface a top-level `## New work surfaced` section aggregating every per-spec worker's `## New work surfaced` bullets. Group by stem. If no spec produced HIGH findings, write the literal text `none` under the heading. This is the hook a caller like `dev` uses to auto-route HIGH drift into the changes pipeline.
 
-**MED/LOW drift handling** (updated): MED/LOW drift findings are NOT to be left in the drift-report body alone. Per `dev`'s no-loose-ends rule, the caller (dev / changes / build) MUST file each MED/LOW finding as a tracker issue at `<repo>/issues/<slug>.md` before declaring session-close — otherwise the finding lives only in chat history and every future library-wide audit re-discovers it.
+**MED/LOW drift handling**: MED/LOW drift findings are NOT to be left in the drift-report body alone. Per `dev`'s no-loose-ends rule, the caller (dev / changes / build) MUST file each MED/LOW finding as a tracker issue at `<repo>/issues/<slug>.md` before declaring session-close — otherwise the finding lives only in chat history and every future library-wide audit re-discovers it.
 
 To make filing mechanical, the per-spec worker's return includes a `## Trackers to file` section with ready-to-write file blobs (see the worker briefing template in step 2). The orchestrator aggregates these upward into the top-level synthesis (alongside the drift report and the `## New work surfaced` list) and copies each blob to disk verbatim. No prose-to-file translation; no fields to invent. Aggregate every per-spec worker's `## Trackers to file` block into a top-level `## Trackers to file` section in the synthesis return. The orchestrator's filing step is mechanical: for each `### issues/<slug>.md` header, write the following blob to disk and `git add` it.
 
