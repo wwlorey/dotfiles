@@ -1,0 +1,4 @@
+#!/bin/sh
+# Space-free $BROWSER target: tools like gh split $BROWSER on spaces,
+# so the Brave app-bundle path can't be used directly.
+exec open -a "Brave Browser" "$@"
