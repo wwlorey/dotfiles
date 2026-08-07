@@ -37,6 +37,16 @@ Releasing a file you marked off-limits in a worker's Scope takes the same verifi
 
 **If a duplicate surfaces anyway**, do not let both run and do not silently drop the second. The second worker hasn't written the code, which makes it the right agent to check the first's work independently — re-brief it as an adversarial verifier of what landed, per this skill's stance that an implementer can never verify its own work.
 
+### Staging in a shared working tree
+
+The same fact — other agents are live and their state is not yours to consume — governs how a worker commits. Concurrent workers share one working tree and one index, so a worker stages only the explicit paths it changed itself: `git add <path> <path>`, each file named. Never `git add -A`, never `git add .`, never a bare `git add -u`. Those sweep whatever else is in the tree, and what else is in the tree is another agent's in-flight work — a broad add commits a live worker's staged-but-uncommitted files out from under it, under your message and your issue slug. No content is lost, but attribution is wrong across every commit that swept, and the other worker never learns its work shipped.
+
+A worker cannot assume it is alone in the tree. Before committing, expect `git status` to list files you did not touch, and leave them exactly as they are — do not revert, stash, or clean them. A dirty tree is not evidence that the dirt is yours.
+
+Put this in the briefing of every worker whose task ends in a commit:
+
+> **Stage explicit paths only.** Other agents are working in this same tree right now. `git add <path>` each file you changed, by name — never `git add -A`, `git add .`, or `git add -u`. `git status` will show files you did not touch; leave them alone.
+
 ## Briefing a worker
 
 Workers spawned via the Agent tool do NOT inherit the MEMENTO, the skills index, or your conversation context. They only see what you put in the briefing. Every briefing must contain:

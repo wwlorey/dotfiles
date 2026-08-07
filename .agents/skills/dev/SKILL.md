@@ -68,12 +68,15 @@ An agent may never be the sole verifier of code it wrote. Tests written by an im
 - A durability or integrity claim about stored data (at-rest format, migration, backup/restore).
 - Any behavior a spec, README, error message, or issue body states with the words *cannot*, *never*, *always*, or *only*.
 
-**Cadence.** Fires with the per-batch gates, including at mid-batch checkpoints — and again at session-close for every guaranteed surface touched this session that no independent agent has yet tried to break. It is not optional, not skippable, and not satisfiable by the implementer re-running its own suite.
+**Cadence.** Fires with the per-batch gates, including at mid-batch checkpoints — and again at session-close for every guaranteed surface that has changed since an independent agent last tried to break it. It is not optional, not skippable, and not satisfiable by the implementer re-running its own suite.
+
+**A fix to a guaranteed surface re-enters this gate.** The remediation is itself new code on a guaranteed surface, and it arrives verified only by the agent that wrote it — precisely the condition this gate exists for. So `adversarial-verify` fires again on the fix, with a fresh agent that wrote neither the original code nor the remediation. This holds however the finding arrived: an earlier adversary, a `security-review` HIGH, a `code-review` flag. Closing the exact route that was reported is not evidence the guarantee now holds — the reported route is the one the fixer had in mind, and the adjacent route is the finding.
 
 **The adversary's job.** `adversarial-verify` is not a skill invocation; it is a fresh-context Agent spawn whose briefing names the guarantee in plain English, the surface it lives on, and the slate's commit range. Its brief:
 
 - **Attempt the violation.** Reach the forbidden state by any route the code actually permits — scripted invocation instead of the interactive path, the API / IPC / CLI entry point called directly, malformed or hostile arguments, two callers at once. The intended path is the one the implementer already covered; the bypass is the finding.
 - **Probe the boundary between the new code and its substrate.** Defects cluster where new code meets the database (concurrent writers, lock contention, transaction scope, preconditions built on clocks instead of versions), the IPC surface, the filesystem (paths that escape their root, partial writes), and ordering assumptions.
+- **When the surface under test is a fix, take the sibling operations first.** A remediation constrains the operation the report named; the same forbidden state is usually still reachable through its siblings. `create` is constrained while `update` lets a legitimate owner re-point a link to the same effect; the interactive path is guarded while the scripted one is not; the write is blocked while delete-and-recreate is not. Two ordinary, individually-permitted transactions that land in the forbidden state are as much a finding as one forged call.
 - **Start from green.** "The suite passes" is the *starting* position, not evidence. Read the existing tests to learn which routes the author had in mind, then take the ones they did not.
 
 **A passing self-authored suite is never sufficient evidence that a guarantee holds.** Until `adversarial-verify` has run and come back clean, describe the surface as "implemented, not independently verified" — never as holding, enforced, or safe. Findings route through Gate-failure recovery like any other gate's.
@@ -95,7 +98,7 @@ Inject the session-close policy into the underlying lifecycle's invocation conte
 
 - `audit-specs` (library-wide)
 - `security-review` (branch-level, full)
-- `adversarial-verify` for every guaranteed surface touched this session that has not already been through it
+- `adversarial-verify` for every guaranteed surface that has changed since an independent agent last tried to break it — including surfaces whose only change this session was a remediation
 
 These replace what would otherwise be scheduled / cron gates. Session-close is the natural moment to run them because you know the working tree has stabilized. `dev`'s job at this layer is: (a) inject the policy on lifecycle invocation, (b) read the on-completion return to confirm the gates ran, (c) handle any drift findings per the gate-failure recovery shape below.
 
@@ -115,7 +118,7 @@ Mid-batch checkpoint:
 
 ## Session-close gate policy (from dev)
 - <gate>
-- adversarial-verify for every guaranteed surface touched this session not already independently verified
+- adversarial-verify for every guaranteed surface that has changed since an independent agent last tried to break it, remediations included
 ```
 
 Populate the bullets from the per-item / per-batch / session-close gate tables above. The `Mid-batch checkpoint:` sub-section's triggers come from the "Mid-batch forced checkpoint" section, not from the per-batch table. An `adversarial-verify` bullet carries two extra fields — the guarantee stated in plain English and the surface it lives on — so the receiving lifecycle can brief an adversary without re-deriving them; omit the bullet entirely when the routed work touches no guaranteed surface. `changes` and `build` treat an `adversarial-verify` bullet as mandating a *fresh-context* spawn: never the agent that implemented the work, and never a per-item gate handed to the implementation worker. `changes` / `build` know to look for these three section headings in their invocation context (see their bodies). When the user invokes `/changes` or `/build` directly, no policy block appears — the lifecycle runs without injected gates, exactly as it does pre-`dev`.
@@ -138,12 +141,13 @@ When in doubt, classify as high-risk. The cost of an extra security-review is on
 The shape `dev` defines; the orchestrating pipeline (`changes` or `build`) does the actual spawning. Every gate failure follows the same recovery shape regardless of cadence:
 
 1. **Auto-spawn a remediation worker** scoped strictly to the failure. Do NOT absorb unrelated work into the fix. The briefing names exactly what the gate flagged, the file(s) involved, and the success criterion (the gate passes when re-run). The spawning actor is the active orchestrator (the pipeline that fired the gate — `changes` mid-batch or on-completion, `build` mid-iteration or on-completion). `dev` does not spawn remediation workers directly; it inherits visibility of them via the lifecycle's return.
-2. **Continue the lifecycle.** Do not pause for user input. The fix is part of the work.
-3. **Record the failure + fix.** In the end-of-turn report (which `dev` owns) and in the close-comment of whatever issue the fix landed against. Explicit audit trail.
+2. **Send a guaranteed-surface fix back through `adversarial-verify`.** When the remediation landed on a surface carrying a guarantee, the re-run gate passing in step 1 is the floor, not the close: the same orchestrator fires a fresh `adversarial-verify` spawn on the fix, briefed with the guarantee, the surface, and the remediation's commit range, and given to an agent that wrote neither the original code nor the fix (see "Independent adversarial verification"). Its findings re-enter this recovery shape from step 1.
+3. **Continue the lifecycle.** Do not pause for user input. The fix is part of the work.
+4. **Record the failure + fix.** In the end-of-turn report (which `dev` owns) and in the close-comment of whatever issue the fix landed against. Explicit audit trail.
 
 **MED routing — introduced vs exposed.** A MED-severity finding from any gate routes to a remediation worker IF it's a regression *introduced* by the current slate (the finding cites files or lines that appear in the slate's commit range — `git log <baseline>..HEAD -- <file>` returns ≥1 commit, OR `git blame <baseline>..HEAD <file>` shows the line was modified). Otherwise, it's *pre-existing drift the gate exposed* — file it as a tracker issue (see "No loose ends" rule under Session-close detection) and surface it in the on-completion report. HIGH always remediates. LOW always files-and-surfaces (no remediation).
 
-Audit-specs MED/LOW drift was historically surface-only. That carve-out is folded into the general policy above — spec drift is now subject to the introduced/exposed test like other gate findings.
+Spec drift from `audit-specs` runs under this same policy — no carve-out. A MED/LOW drift finding takes the introduced/exposed test like any other gate's finding.
 
 When firing per-batch or session-close gate workers, the orchestrator MUST:
 
@@ -222,7 +226,7 @@ Keep status updates brief — one or two sentences, factual. The end-of-turn rep
 - **Route deterministically.** One user request → one lifecycle. Do not split a single request across `changes` and `build` simultaneously.
 - **Inject gate policy into worker briefings — don't try to wedge it in after the worker returns.** The `orchestrate` skill's briefing checklist includes "Required verification gates" exactly for this. Populate that section per the policy above when spawning the impl worker.
 - **Per-batch and session-close gates run autonomously.** Never pause for permission. They are part of the work, not a checkpoint.
-- **No agent is the sole verifier of code it wrote.** Any guaranteed surface gets `adversarial-verify` from a fresh-context agent before the guarantee is described as holding. A green self-authored suite does not substitute, and the gate is never skipped for schedule.
+- **No agent is the sole verifier of code it wrote.** Any guaranteed surface gets `adversarial-verify` from a fresh-context agent before the guarantee is described as holding. A fix to that surface is code someone wrote too, so it earns its own independent pass. A green self-authored suite does not substitute, and the gate is never skipped for schedule.
 - **Gate failures auto-spawn remediation workers at the lifecycle layer.** The actor is the active orchestrator (`changes` or `build`), not `dev`. Never silently swallow a gate failure. Never block the lifecycle on one.
 - **Do not pre-investigate.** Routing decisions come from the user's words, not from grep sweeps. If the user is ambiguous, ask once — do not investigate to disambiguate.
 - **Do not implement.** Implementation happens inside the underlying lifecycle's impl worker (and its sub-workers). `dev` is the orchestrator of orchestrators.
