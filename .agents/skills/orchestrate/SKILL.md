@@ -27,6 +27,16 @@ Do the work yourself (no spawn) when:
 
 For multi-step procedures that are worth re-running by name, the work belongs in a **pipeline skill**, not in ad-hoc spawns from this skill. Pipeline skills define the procedure as prompt and delegate the iterative or parallel parts back to this skill. This skill governs the spawn; a pipeline governs the procedure. If you find yourself sequencing several spawns to drive a known kind of work, consider authoring a pipeline skill (see `create-skill`).
 
+### Before you spawn: is someone already holding it?
+
+Before spawning for a specific issue or file, establish that no live worker already holds it. A closed issue and an `idle_notification` are both signals, not states — the same mistake-a-signal-for-a-state error that "Reading worker responses & notifications" covers for completion, applied here to dispatch. A worker routinely closes its issue and keeps running: writing up, pushing, picking up adjacent work. Verify the artifact instead, cheaply and in full: the issue's frontmatter status AND the holder's liveness (its transcript mtime) AND whether it has staged or uncommitted work in the files involved (`git status`, `git log --oneline`). One of the three passing is not an answer.
+
+When a lifecycle orchestrator is already running, route new work through it — a `build` loop owns its backlog queue and will dequeue in order. Spawning alongside a queue-owner is how the same item gets claimed twice.
+
+Releasing a file you marked off-limits in a worker's Scope takes the same verification: a file is free when its holder has **finished**, not when its issue closed.
+
+**If a duplicate surfaces anyway**, do not let both run and do not silently drop the second. The second worker hasn't written the code, which makes it the right agent to check the first's work independently — re-brief it as an adversarial verifier of what landed, per this skill's stance that an implementer can never verify its own work.
+
 ## Briefing a worker
 
 Workers spawned via the Agent tool do NOT inherit the MEMENTO, the skills index, or your conversation context. They only see what you put in the briefing. Every briefing must contain:
