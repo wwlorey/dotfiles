@@ -98,6 +98,26 @@ Every hit is either a real absolute — which earns a row — or loose wording, 
 
 The violation-attempt test acts as an adversary holding whatever access a real caller holds: it performs the forbidden operation directly and asserts it is refused. A test that drives the sanctioned path and observes good behavior proves nothing about "cannot." Every test the register names must also be reachable from the spec's `## Testing` section.
 
+### The instrument and the matcher
+
+Any violation attempt that works by *observing* — grepping captured bytes, walking a directory for leaked files, enumerating spawned processes, diffing a tree — has two halves that fail independently:
+
+- the **instrument**, which collects the observations: the network tap, the filesystem walk, the process capture;
+- the **matcher**, which decides whether what was collected is bad: the grep, the assertion, the comparison.
+
+**An empty capture and a clean capture are the same bytes.** So a passing assertion over an instrument that collected nothing is indistinguishable from a real defence, and it will stay green forever — through refactors, through the introduction of the exact leak it was written to catch.
+
+Most control arms prove only the matcher, because that is the easy half: seed a known-bad artefact and confirm the assertion fires on it. That establishes the grep works. It says nothing about whether the tap was ever attached to anything.
+
+So every observing row needs **two** arms, and the register should name both:
+
+- *matcher bites* — the assertion fires against a deliberately planted violation;
+- *instrument reaches* — the collector demonstrably saw the region where a violation would occur. Assert a floor on what it collected (bytes, files, calls), and place a witness at the far edge of the region it claims to cover rather than somewhere convenient.
+
+Symptoms that the instrument was never proven, worth grepping a suite for: an assertion of `toEqual([])` or `toHaveLength(0)` with no accompanying non-zero floor; a stub or fake that errors on every request, so the code under test aborts before doing the thing being watched; a walk with a file-count or depth cap and no assertion that the cap went unhit; a canary written to whichever directory was easiest rather than the one at risk.
+
+State the scope on the row too. An instrument covers a region, and the row must not claim past it: *"watched `$TMPDIR`, the chart, and `~/Library/Application Support`"* is a defensible claim, where *"the key is never written to disk"* is not, unless the instrument really did watch every disk.
+
 ## Structural guarantees vs conventions
 
 Ask of every guarantee in the spec: **what stops a caller who is actively trying to violate it?** Answer for a caller holding what the sanctioned code holds — the same API surface, the same console, the same database handle, the same process.
