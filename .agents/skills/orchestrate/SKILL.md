@@ -39,13 +39,19 @@ Releasing a file you marked off-limits in a worker's Scope takes the same verifi
 
 ### Staging in a shared working tree
 
-The same fact — other agents are live and their state is not yours to consume — governs how a worker commits. Concurrent workers share one working tree and one index, so a worker stages only the explicit paths it changed itself: `git add <path> <path>`, each file named. Never `git add -A`, never `git add .`, never a bare `git add -u`. Those sweep whatever else is in the tree, and what else is in the tree is another agent's in-flight work — a broad add commits a live worker's staged-but-uncommitted files out from under it, under your message and your issue slug. No content is lost, but attribution is wrong across every commit that swept, and the other worker never learns its work shipped.
+The same fact — other agents are live and their state is not yours to consume — governs how a worker commits. Concurrent workers share one working tree **and one index**, so a worker names its own paths twice: once staging, once committing.
+
+**Stage explicit paths.** `git add <path> <path>`, each file the worker changed itself, by name. Never `git add -A`, never `git add .`, never a bare `git add -u`. Those sweep whatever else is loose in the tree, and what else is in the tree is another agent's in-flight work.
+
+**Commit those same explicit paths.** `git commit -F - -- <path> <path>`, repeating the names, with the message heredoc'd on stdin. A bare `git commit` ships *everything currently staged* — and the index is shared, so another worker's `git add` has already put its files there and your commit takes them.
+
+Both halves are load-bearing and each closes a different hole: the explicit add keeps you from sweeping in another agent's **unstaged** work; the explicit commit pathspec keeps you from sweeping in another agent's **already-staged** work. Disciplined adds alone do not save you — they control only what *you* put in the index, never what someone else put there. When a commit sweeps, no content is lost, but the absorbed files ship under your message and your issue slug, attribution is wrong across every commit that swept, and the other worker only discovers it after the fact.
 
 A worker cannot assume it is alone in the tree. Before committing, expect `git status` to list files you did not touch, and leave them exactly as they are — do not revert, stash, or clean them. A dirty tree is not evidence that the dirt is yours.
 
 Put this in the briefing of every worker whose task ends in a commit:
 
-> **Stage explicit paths only.** Other agents are working in this same tree right now. `git add <path>` each file you changed, by name — never `git add -A`, `git add .`, or `git add -u`. `git status` will show files you did not touch; leave them alone.
+> **Name your paths twice — staging and committing.** Other agents are working in this same tree right now, and you share one index with them. `git add <path>` each file you changed, by name — never `git add -A`, `git add .`, or `git add -u`. Then commit those same paths explicitly: `git commit -F - -- <path> <path>`, message heredoc'd on stdin. A bare `git commit` ships everything currently staged, including files another agent staged and has not committed yet. `git status` will show files you did not touch; leave them alone.
 
 ## Briefing a worker
 
